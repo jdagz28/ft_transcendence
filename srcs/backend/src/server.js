@@ -1,4 +1,5 @@
 const fastify = require('fastify')
+//! Define other server options
 const serverOptions = {
     logger: true
 }
@@ -8,13 +9,35 @@ const app = fastify(serverOptions)
 app.route({
     url: '/',
     method: 'GET',
-    handler: myHandler
+    onRequest: async (request, reply) => {
+        if (!isAuthenticated(request)) {
+            return reply.redirect('/login');
+        }
+    },
+    handler: indexHandler
 })
 
-function myHandler (request, reply) {
+app.route({
+    url: '/login',
+    method: 'GET',
+    handler: loginHandler
+})
+
+function isAuthenticated (request) {
+    /**
+     * ! Implement authenticated user check
+     * * session-cookie, JWT, etc.
+     */
+    return false;
+}
+
+async function indexHandler (request, reply) {
     reply.send({ helloFrom: this.server.address() })
 }
 
+async function loginHandler (request, reply) {
+    reply.send({ helloFrom: '/login' })
+}
 
 app.listen({
     port: 4242,
