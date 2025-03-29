@@ -3,13 +3,52 @@ services:
     container_name: backend
     build: ./backend
     image: backend:fastify
+    volumes:
+      - db-sqlite:/data/sqlite
     ports:
       - "4242:4242"
+    depends_on:
+      - database
     networks:
       - transcendence
+    restart: always
     profiles:
       - backend
       - userManagement
+
+  database:
+    container_name: database
+    build: ./database
+    image: database:sqlite
+    volumes:
+      - db-sqlite:/data/sqlite
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - userManagement
+
+  adminer:
+    container_name: adminer
+    build: ./adminer
+    image: adminer:adminer
+    depends_on:
+      - database
+    ports:
+      - "8080:8080"
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - userManagement
+
+volumes:
+  db-sqlite:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/ft_transcendence/sqlite
+      o: bind
 
 networks:
   transcendence:

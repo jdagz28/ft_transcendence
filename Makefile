@@ -1,8 +1,10 @@
 SRCS_DIR		:= ./srcs/
+DB_DIR			:= /home/ft_transcendence/sqlite
 
 COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
 user-up:
+	sudo mkdir -p ${DB_DIR}
 	docker compose -f $(COMPOSE_FILE) --profile userManagement up -d
 
 user-down:
@@ -20,6 +22,9 @@ user-build:
 
 accessbackend:
 	docker exec -it backend bash
+
+accessdb:
+	docker exec -it database bash
 
 stop-containers:
 	@if [ -n "$$(docker container ls -aq)" ]; then \
