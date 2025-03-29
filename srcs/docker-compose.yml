@@ -1,0 +1,17 @@
+services:
+  backend:
+    container_name: backend
+    build: ./backend
+    image: backend:fastify
+    ports:
+      - "4242:4242"
+    networks:
+      - transcendence
+    profiles:
+      - backend
+      - userManagement
+
+networks:
+  transcendence:
+    driver: bridge
+    name: transcendence

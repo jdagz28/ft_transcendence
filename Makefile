@@ -1,18 +1,25 @@
-dev-up:
-	docker compose -f $(COMPOSE_FILE) --profile dev up -d
+SRCS_DIR		:= ./srcs/
 
-dev-down:
-	docker compose -f $(COMPOSE_FILE) --profile dev down
+COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
-dev-start:
-	docker compose -f $(COMPOSE_FILE) --profile dev start
+user-up:
+	docker compose -f $(COMPOSE_FILE) --profile userManagement up -d
 
-dev-stop:
-	docker compose -f $(COMPOSE_FILE) --profile dev stop
+user-down:
+	docker compose -f $(COMPOSE_FILE) --profile userManagement down
 
-dev-build:
-	docker compose -f $(COMPOSE_FILE) --profile dev build
+user-start:
+	docker compose -f $(COMPOSE_FILE) --profile userManagement start
 
+user-stop:
+	docker compose -f $(COMPOSE_FILE) --profile userManagement stop
+
+user-build:
+	docker compose -f $(COMPOSE_FILE) --profile userManagement build
+
+
+accessbackend:
+	docker exec -it backend bash
 
 stop-containers:
 	@if [ -n "$$(docker container ls -aq)" ]; then \
@@ -39,7 +46,5 @@ clean: stop-containers remove-containers remove-images remove-networks
 
 prune: clean
 	docker system prune --volumes
-
-re: clean all
 
 .PHONY:
