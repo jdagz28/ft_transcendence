@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DB_FILE="/data/sqlite/transcendence.sqlite"
+DB_FILE="/data/sqlite/${DB_NAME}.sqlite"
 
 # Create database file if it doesn't exist
 if [ ! -f "$DB_FILE" ]; then

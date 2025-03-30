@@ -1,3 +1,4 @@
+const db = require('./database')
 const fastify = require('fastify')
 //! Define other server options
 const serverOptions = {
