@@ -3,7 +3,7 @@ FROM node:23-bullseye
 COPY package*.json ./
 RUN npm install
 
-COPY ./src ./app
+COPY ./ ./app
 WORKDIR /app
 
 EXPOSE 3000
