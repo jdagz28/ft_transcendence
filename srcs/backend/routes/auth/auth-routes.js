@@ -11,7 +11,10 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:signup')
       },
-      handler: 
+      handler: signup
     })
   }
 )
+
+async function signup (request, reply) {
+  
