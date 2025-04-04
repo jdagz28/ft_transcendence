@@ -15,4 +15,4 @@ async function connectToDatabase(fastify, options) {
   fastify.decorate('db', db)
 }
 
-module.exports = fp(connectToDatabase);
+module.exports = fp(connectToDatabase, { name: 'database' })
