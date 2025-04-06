@@ -1,4 +1,5 @@
 'use strict'
+
 const fp = require('fastify-plugin')
 const schemas = require('./schemas/loader')
 
@@ -10,7 +11,11 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       return new Promise((resolve, reject) => {
         const query = 'SELECT * FROM users WHERE username = ?'
         fastify.db.get(query, [username], (err, row) => {
-          if (err) return reject(err)
+          if (err) {
+            console.error(`Error in readUser for username "${username}":`, err)
+            return reject(err)
+          }
+          console.log(`readUser - username: "${username}", result:`, row)
           resolve(row)
         })
       })
@@ -20,14 +25,17 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const { username, password, salt, email } = user
         const query = 'INSERT INTO users (username, password, salt, email) VALUES (?, ?, ?, ?)'
         fastify.db.run(query, [username, password, salt, email], function(err) {
-          if (err) return reject(err)
+          if (err) {
+            console.error(`Error in createUser for username "${username}":`, err)
+            return reject(err)
+          }
+          console.log(`createUser - new user ID: ${this.lastID}`)
           resolve(this.lastID)
         })
       })
     }
   })
 }, {
-  encapsulate: true,
-
+  name: 'userAutoHooks',
   dependencies: ['database']
 })

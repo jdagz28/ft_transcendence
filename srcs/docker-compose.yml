@@ -6,7 +6,7 @@ services:
     volumes:
       - db-sqlite:/data/sqlite
     ports:
-      - "4242:4242"
+      - "4242:3000"
     depends_on:
       - database
     env_file:

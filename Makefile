@@ -21,7 +21,7 @@ user-build:
 
 
 accessbackend:
-	docker exec -it backend bash
+	docker exec -it backend sh
 
 accessdb:
 	docker exec -it database bash
