@@ -21,3 +21,13 @@ Run the test cases.
 ## Learn More
 
 To learn Fastify, check out the [Fastify documentation](https://fastify.dev/docs/latest/).
+
+## Database
+Make sure to have the correct permissions for database file and folder.
+```
+sudo chown $USER:$USER /home/ft_transcendence/sqlite/transcendence.sqlite
+sudo chmod 664 /home/ft_transcendence/sqlite/transcendence.sqlite
+
+sudo chown $USER:$USER /home/ft_transcendence/sqlite
+sudo chmod 755 /home/ft_transcendence/sqlite
+```

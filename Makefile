@@ -4,7 +4,7 @@ DB_DIR			:= /home/ft_transcendence/sqlite
 COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
 user-up:
-	sudo mkdir -p ${DB_DIR}
+	sudo mkdir -p $(DB_DIR)
 	docker compose -f $(COMPOSE_FILE) --profile userManagement up -d
 
 user-down:
@@ -50,6 +50,7 @@ clean: stop-containers remove-containers remove-images remove-networks
 
 
 prune: clean
+	sudo rm -rf $(DB_DIR)
 	docker system prune --volumes
 
 .PHONY:

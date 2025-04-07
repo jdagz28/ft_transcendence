@@ -20,6 +20,19 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         })
       })
     },
+    async readUserByEmail(email) {
+      return new Promise((resolve, reject) => {
+        const query = 'SELECT * FROM users WHERE email = ?'
+        fastify.db.get(query, [email], (err, row) => {
+          if (err) {
+            console.error(`Error in readUser for email "${email}":`, err)
+            return reject(err)
+          }
+          console.log(`readUserByEmail - email: "${email}", result:`, row)
+          resolve(row)
+        })
+      })
+    },
     async createUser(user) {
       return new Promise((resolve, reject) => {
         const { username, password, salt, email } = user

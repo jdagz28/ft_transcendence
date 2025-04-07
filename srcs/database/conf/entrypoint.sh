@@ -12,7 +12,7 @@ if [ ! -f "$DB_FILE" ]; then
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL
+  password TEXT NOT NULL,
   salt TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE
 );
