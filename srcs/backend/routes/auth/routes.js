@@ -48,7 +48,7 @@ module.exports = fp(
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
-    });
+    })
 
     fastify.post('/authenticate', {
       schema: {
@@ -76,9 +76,26 @@ module.exports = fp(
 
         request.user = user
         console.log('Authenticated User: ' + user)
-        return { token: "Issue authentication token" }
+        return refreshHandler(request, reply)
       }
-    });
+    })
+
+    fastify.post('/refresh', {
+      onRequest: fastify.authenticate,
+      schema: {
+        headers: fastify.getSchema('schema:auth:token-header'),
+        response: {
+          200: fastify.getSchema('schema:auth:token')
+        }
+      },
+      handler: refreshHandler
+    })
+
+    async function refreshHandler(request, reply) {
+      const token = await request.generateToken()
+      return { token }
+    }
+
   }, {
     name: 'auth-routes',
     dependencies: [ 'userAutoHooks' ]
