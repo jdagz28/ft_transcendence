@@ -80,6 +80,14 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/logout', {
+      onRequest: fastify.authenticate,
+      handler: async function logoutHandler (request, reply) {
+        request.revokeToken()
+        reply.code(204)
+      }
+    })
+
     fastify.post('/refresh', {
       onRequest: fastify.authenticate,
       schema: {
