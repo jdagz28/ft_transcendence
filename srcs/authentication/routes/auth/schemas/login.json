@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "$id": "schema:auth:login",
+  "required": [
+    "username",
+    "password"
+  ],
+  "properties": {
+    "username": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_]{3,20}$",
+      "minLength": 3,
+      "maxLength": 20
+    },
+    "password": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 100
+    }
+  }
+}

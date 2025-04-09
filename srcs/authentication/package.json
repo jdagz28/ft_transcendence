@@ -1,0 +1,27 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "This project was bootstrapped with Fastify-CLI.",
+  "main": "app.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "start": "fastify start -l info -a 0.0.0.0 app.js",
+    "dev": "DB_PATH=/home/ft_transcendence/sqlite/ DB_NAME=transcendence JWT_EXPIRE_IN=1h JWT_SECRET=8afd8ebee7de8c938bfec5e51e9f661d436c3c207de9fe36f383baeff504e04e8e59b082503421b656a8c451a2597323c892e129eb5fe5f29b42042fb9e5e80e fastify start -w -l info -P app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/autoload": "^6.0.0",
+    "@fastify/jwt": "^9.1.0",
+    "@fastify/sensible": "^6.0.0",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.9.1",
+    "fastify": "^5.0.0",
+    "fastify-cli": "^7.4.0",
+    "fastify-plugin": "^5.0.0"
+  }
+}

@@ -1,0 +1,46 @@
+services:
+  authentication:
+    container_name: authentication
+    build: ./authentication
+    image: authentication:fastify
+    volumes:
+      - db-sqlite:/data/sqlite
+    ports:
+      - "4242:3000"
+    # depends_on:
+    #   - database
+    env_file:
+      - ../secrets/.env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - authentication
+      - backend
+
+  # database:
+  #   container_name: database
+  #   build: ./database
+  #   image: database:sqlite
+  #   volumes:
+  #     - db-sqlite:/data/sqlite:Z
+  #   env_file:
+  #     - ../secrets/.env
+  #   networks:
+  #     - transcendence
+  #   restart: no #always
+  #   profiles:
+  #     - userManagement
+
+volumes:
+  db-sqlite:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/ft_transcendence/sqlite
+      o: bind
+
+networks:
+  transcendence:
+    driver: bridge
+    name: transcendence
