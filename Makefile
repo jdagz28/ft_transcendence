@@ -3,26 +3,26 @@ DB_DIR			:= /home/ft_transcendence/sqlite
 
 COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
-user-up:
+auth-up:
 	sudo mkdir -p $(DB_DIR)
 	sudo chmod 777 $(DB_DIR) # change
-	docker compose -f $(COMPOSE_FILE) --profile userManagement up -d
+	docker compose -f $(COMPOSE_FILE) --profile authentication up -d
 
-user-down:
-	docker compose -f $(COMPOSE_FILE) --profile userManagement down
+auth-down:
+	docker compose -f $(COMPOSE_FILE) --profile authentication down
 
-user-start:
-	docker compose -f $(COMPOSE_FILE) --profile userManagement start
+auth-start:
+	docker compose -f $(COMPOSE_FILE) --profile authentication start
 
-user-stop:
-	docker compose -f $(COMPOSE_FILE) --profile userManagement stop
+auth-stop:
+	docker compose -f $(COMPOSE_FILE) --profile authentication stop
 
-user-build:
-	docker compose -f $(COMPOSE_FILE) --profile userManagement build
+auth-build:
+	docker compose -f $(COMPOSE_FILE) --profile authentication build
 
 
-accessbackend:
-	docker exec -it backend sh
+accessauth:
+	docker exec -it authentication sh
 
 accessdb:
 	docker exec -it database bash

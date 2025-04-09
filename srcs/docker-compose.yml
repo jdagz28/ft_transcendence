@@ -1,8 +1,8 @@
 services:
-  backend:
-    container_name: backend
-    build: ./backend
-    image: backend:fastify
+  authentication:
+    container_name: authentication
+    build: ./authentication
+    image: authentication:fastify
     volumes:
       - db-sqlite:/data/sqlite
     ports:
@@ -15,8 +15,8 @@ services:
       - transcendence
     restart: always
     profiles:
+      - authentication
       - backend
-      - userManagement
 
   # database:
   #   container_name: database
@@ -38,7 +38,7 @@ volumes:
     driver_opts:
       type: none
       device: /home/ft_transcendence/sqlite
-      o: bind,uid=1000,gid=1000 
+      o: bind
 
 networks:
   transcendence:
