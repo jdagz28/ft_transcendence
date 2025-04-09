@@ -11,7 +11,9 @@ RUN npm ci --only-production --ignore-scripts
 FROM node:23-alpine
 
 # dumb-init registers signal handlers for every signal that can be caught
-RUN apk update && apk add --no-cache dumb-init
+RUN apk update && apk add --no-cache dumb-init sqlite curl 
+RUN mkdir -p /data/sqlite && \
+    chown -R node:node /data/sqlite 
 
 # Copy production dependencies from the builder app
 WORKDIR /app
