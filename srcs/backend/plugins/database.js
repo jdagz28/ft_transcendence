@@ -1,35 +1,45 @@
 'use strict'
 
-const sqlite3 = require('sqlite3').verbose();
-const fp = require('fastify-plugin');
+const Database = require('better-sqlite3')
+const fp = require('fastify-plugin')
 
-async function databaseConnector(fastify, options) {
-  const db = new sqlite3.Database(`${process.env.DB_PATH}${process.env.DB_NAME}.sqlite`,  
-    // const db = new sqlite3.Database(`/home/ft_transcendence/sqlite/transcendence.sqlite`, 
-      sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-      if (err) {
-        fastify.log.error('Could not connect to database', err)
-      } else {
-        fastify.log.info('Connected to the SQLite database')
-      }
-    })
 
-  db.prepare('SELECT 1').get((err, row) => {
-    if (err) {
-      fastify.log.error('Preliminary test query failed', err)
-    } else {
-      fastify.log.info('Preliminary test query succeeded:', row)
-    }
-  });
+async function databaseConnector(fastify) {
+  if (!process.env.DB_PATH || !process.env.DB_NAME) {
+    fastify.log.fatal('Missing DB_PATH or DB_NAME in environment')
+    process.exit(1)
+  }
 
-  fastify.decorate('db', db)
-  fastify.addHook('onClose', (instance, done) => {
-  if (instance.db) {
+  try {
+    const db = new Database(
+      `${process.env.DB_PATH}${process.env.DB_NAME}.sqlite`,
+      { verbose: fastify.log.debug } 
+    )
+
+    db.pragma('journal_mode = WAL'); 
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE
+      );
+    `);
+
+    fastify.log.info('Database schema validated')
+    
+    fastify.decorate('db', db)
+    
+    fastify.addHook('onClose', (instance) => {
       instance.db.close()
-    }
-    done()
-  })
+    });
 
-} 
+  } catch (err) {
+    fastify.log.fatal('Database initialization failed:', err)
+    process.exit(1)
+  }
+}
+
 
 module.exports = fp(databaseConnector, { name: 'database' })
