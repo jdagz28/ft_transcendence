@@ -5,6 +5,7 @@ COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
 user-up:
 	sudo mkdir -p $(DB_DIR)
+	sudo chmod 777 $(DB_DIR) # change
 	docker compose -f $(COMPOSE_FILE) --profile userManagement up -d
 
 user-down:
