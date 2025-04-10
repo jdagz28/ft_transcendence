@@ -90,16 +90,17 @@ class Obj {
   }
 
   moveBall() {
-    ctx.clearRect(0, 0, DocWidth + 100, DocHeight)
     DrawPads(Pad1YPos, Pad2YPos)
     if (dirY) this.y += this.speed
     if (dirX) this.x += this.speed
     if (!dirY) this.y -= this.speed
     if (!dirX) this.x -= this.speed
-    drawCenterLine
+    if (this.y < 0) dirY = true
+    if (this.y > DocHeight) dirY = false
+    checkCollision(this.y, this.x)
     this.drawBall()
+    drawCenterLine()
   }
-  
 }
 
 function drawCenterLine() {
@@ -115,13 +116,36 @@ function drawCenterLine() {
   ctx.setLineDash([]);
 }
 
+function checkCollision(ballY, ballX) {
+  const leftPaddleCenterX = 50 + 12.5;
+  const rightPaddleCenterX = DocWidth - 50 - 12.5;
+  
+  const distanceLeft = Math.abs(ballX - leftPaddleCenterX);
+  const distanceRight = Math.abs(ballX - rightPaddleCenterX);
+  
+  const collisionThreshold = 15;
+  
+  if (distanceLeft < collisionThreshold &&
+      ballY > (Pad1YPos - paddleHeight / 2) &&
+      ballY < (Pad1YPos + paddleHeight / 2)) {
+    dirX = true; 
+  }
+  
+  if (distanceRight < collisionThreshold &&
+      ballY > (Pad2YPos - paddleHeight / 2) &&
+      ballY < (Pad2YPos + paddleHeight / 2)) {
+    dirX = false;
+  }
+}
+
+
 function MoveBallLoop(ball) {
   if (WKeyState && Pad1YPos > paddleHeight / 2) Pad1YPos -= 10
   if (SKeyState && Pad1YPos < DocHeight - paddleHeight / 2) Pad1YPos += 10
   if (ArrowUpKeyState && Pad2YPos > paddleHeight / 2) Pad2YPos -= 10
   if (ArrowDownKeyState && Pad2YPos < DocHeight - paddleHeight / 2) Pad2YPos += 10
 
-  ctx.clearRect(0, 0, DocWidth + 100, DocHeight)
+  ctx.clearRect(0, 0, DocWidth, DocHeight)
 
   drawCenterLine()
   DrawPads(Pad1YPos, Pad2YPos)
@@ -129,8 +153,6 @@ function MoveBallLoop(ball) {
   ball.moveBall()
   if (RequestFrame) requestAnimationFrame(() => { MoveBallLoop(ball) })
 }
-
-
 
 
 canvasSetup()
