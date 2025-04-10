@@ -1,7 +1,8 @@
 var canvas = document.querySelector("canvas")
 var ctx = canvas.getContext('2d')
 
-
+var Player1Score = 0
+var Player2Score = 0
 var paddleHeight = 200
 var RequestFrame = false
 var WKeyState = false
@@ -43,7 +44,7 @@ document.addEventListener('keyup', (e) => {
 
 var DocHeight,DocWidth
 function canvasSetup() {
-  DocHeight = window.innerHeight * 0.75
+  DocHeight = window.innerHeight 
   DocWidth = window.innerWidth
   canvas.height = DocHeight
   canvas.width = DocWidth
@@ -97,10 +98,39 @@ class Obj {
     if (!dirX) this.x -= this.speed
     if (this.y < 0) dirY = true
     if (this.y > DocHeight) dirY = false
+    if (this.x > DocWidth) {
+      dirX = GenerateRandomDir();
+      dirY = GenerateRandomDir();
+      this.y = DocHeight / 2
+      this.x = DocWidth / 2
+      Player1Score++;
+      RequestFrame = false
+      ctx.clearRect(0, 0, DocWidth, DocHeight)
+      DrawPads(Pad1YPos, Pad2YPos)
+      drawCenterLine()
+      this.drawBall()
+    }
+    if (this.x < 0) {
+      dirX = GenerateRandomDir();
+      dirY = GenerateRandomDir();
+      this.y = DocHeight / 2
+      this.x = DocWidth / 2
+      Player2Score++;
+      RequestFrame = false
+      ctx.clearRect(0, 0, DocWidth, DocHeight)
+      DrawPads(Pad1YPos, Pad2YPos)
+      drawCenterLine()
+      this.drawBall()
+    }
     checkCollision(this.y, this.x)
-    this.drawBall()
     drawCenterLine()
+    this.drawBall()
   }
+}
+
+function GenerateRandomDir() {
+
+  return Boolean(Math.floor(Math.random() * 2))
 }
 
 function drawCenterLine() {
