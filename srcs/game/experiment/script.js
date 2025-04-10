@@ -12,6 +12,15 @@ var ArrowDownKeyState = false
 var dirX = false
 var dirY = false
 
+canvas.onclick = () => {
+  if (!RequestFrame) {
+    var ball = new Obj(DocWidth / 2, DocHeight / 2, 15)
+    ball.drawBall()
+    RequestFrame = true
+    MoveBallLoop(ball)
+  }
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.key == "w")
     WKeyState = true
@@ -49,13 +58,16 @@ function canvasSetup() {
   canvas.height = DocHeight
   canvas.width = DocWidth
   canvas.style.backgroundColor = "black"
-  drawCenterLine()
-
+  
   Pad1YPos = DocHeight / 2
   Pad2YPos = DocHeight / 2
   DrawPads(Pad1YPos, Pad2YPos)
 
+  dirX = GenerateRandomDir()
+  dirY = GenerateRandomDir()
+
   var ball = new Obj(DocWidth / 2, DocHeight / 2, 15)
+  drawCenterLine()
   ball.drawBall()
 }
 
@@ -71,7 +83,7 @@ class Obj {
   constructor(x, y, width, height) {
     this.color = "white"
     this.x = x
-    this.y = height !== undefined ? y - (height / 2) : y;
+    this.y = height !== undefined ? y - (height / 2) : y
     this.width = width
     this.height = height
     this.speed = 8
@@ -99,11 +111,11 @@ class Obj {
     if (this.y < 0) dirY = true
     if (this.y > DocHeight) dirY = false
     if (this.x > DocWidth) {
-      dirX = GenerateRandomDir();
-      dirY = GenerateRandomDir();
+      dirX = GenerateRandomDir()
+      dirY = GenerateRandomDir()
       this.y = DocHeight / 2
       this.x = DocWidth / 2
-      Player1Score++;
+      Player1Score++
       RequestFrame = false
       ctx.clearRect(0, 0, DocWidth, DocHeight)
       DrawPads(Pad1YPos, Pad2YPos)
@@ -111,11 +123,11 @@ class Obj {
       this.drawBall()
     }
     if (this.x < 0) {
-      dirX = GenerateRandomDir();
-      dirY = GenerateRandomDir();
+      dirX = GenerateRandomDir()
+      dirY = GenerateRandomDir()
       this.y = DocHeight / 2
       this.x = DocWidth / 2
-      Player2Score++;
+      Player2Score++
       RequestFrame = false
       ctx.clearRect(0, 0, DocWidth, DocHeight)
       DrawPads(Pad1YPos, Pad2YPos)
@@ -134,37 +146,38 @@ function GenerateRandomDir() {
 }
 
 function drawCenterLine() {
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 3;
-  ctx.setLineDash([10, 10]);
+  ctx.strokeStyle = "white"
+  ctx.lineWidth = 3
+  ctx.setLineDash([10, 10])
   
-  ctx.beginPath();
-  ctx.moveTo(DocWidth / 2, 0);
-  ctx.lineTo(DocWidth / 2, DocHeight);
-  ctx.stroke();
+  ctx.beginPath()
+  ctx.moveTo(DocWidth / 2, 0)
+  ctx.lineTo(DocWidth / 2, DocHeight)
+  ctx.stroke()
   
-  ctx.setLineDash([]);
+  ctx.setLineDash([])
+  drawScore()
 }
 
 function checkCollision(ballY, ballX) {
-  const leftPaddleCenterX = 50 + 12.5;
-  const rightPaddleCenterX = DocWidth - 50 - 12.5;
+  const leftPaddleCenterX = 50 + 12.5
+  const rightPaddleCenterX = DocWidth - 50 - 12.5
   
-  const distanceLeft = Math.abs(ballX - leftPaddleCenterX);
-  const distanceRight = Math.abs(ballX - rightPaddleCenterX);
+  const distanceLeft = Math.abs(ballX - leftPaddleCenterX)
+  const distanceRight = Math.abs(ballX - rightPaddleCenterX)
   
-  const collisionThreshold = 15;
+  const collisionThreshold = 15
   
   if (distanceLeft < collisionThreshold &&
       ballY > (Pad1YPos - paddleHeight / 2) &&
       ballY < (Pad1YPos + paddleHeight / 2)) {
-    dirX = true; 
+    dirX = true 
   }
   
   if (distanceRight < collisionThreshold &&
       ballY > (Pad2YPos - paddleHeight / 2) &&
       ballY < (Pad2YPos + paddleHeight / 2)) {
-    dirX = false;
+    dirX = false
   }
 }
 
@@ -183,6 +196,16 @@ function MoveBallLoop(ball) {
   ball.moveBall()
   if (RequestFrame) requestAnimationFrame(() => { MoveBallLoop(ball) })
 }
+
+function drawScore() {
+  ctx.font = "200px sans-serif"
+  ctx.fillStyle = "white"
+  ctx.textAlign = "right" 
+  ctx.fillText(Player1Score, (DocWidth / 2) - 100, 200)
+  ctx.textAlign = "left" 
+  ctx.fillText(Player2Score, (DocWidth / 2) + 100, 200)
+}
+
 
 
 canvasSetup()
