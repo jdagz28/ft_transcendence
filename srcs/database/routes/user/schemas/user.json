@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "$id": "schema:user:user",
+  "required": [
+    "id",
+    "username",
+    "password"
+  ],
+  "properties": {
+    "id": { "type": "number" },
+    "username": { "type": "string" },
+    "email": { "type": "string" },
+    "password": { "type": "string" },
+    "salt": { "type": "string" }
+  }
+}
