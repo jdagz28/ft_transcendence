@@ -12,9 +12,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:register')
       },
-      handler: async function register (request, reply) {
-        console.log('Database instance:', fastify.db)
-        
+      handler: async function register (request, reply) {        
         try {
           console.log('Attempting to read user by username:', request.body.username)
           const existingUser = await fastify.usersDataSource.readUser(request.body.username)
@@ -24,27 +22,68 @@ module.exports = fp(
             throw err
           }
           
-          console.log('Attempting to read user by email:', request.body.email)
-          const emailExists = await fastify.usersDataSource.readUserByEmail(request.body.email)
-          if (emailExists) {
-            const err = new Error('Email already exists')
-            err.statusCode = 409
-            throw err
-          }
+      //     console.log('Attempting to read user by email:', request.body.email)
+      //     const emailExists = await fastify.usersDataSource.readUserByEmail(request.body.email)
+      //     if (emailExists) {
+      //       const err = new Error('Email already exists')
+      //       err.statusCode = 409
+      //       throw err
+      //     }
         
-          const { hash, salt } = await generateHash(request.body.password)
-          console.log('Password hashed successfully.')
+      //     const { hash, salt } = await generateHash(request.body.password)
+      //     console.log('Password hashed successfully.')
 
-          const newUserId = await fastify.usersDataSource.createUser({
-            username: request.body.username,
-            password: hash,
-            salt,
-            email: request.body.email,
-          })
-          console.log('User created with ID:', newUserId)
-          reply.status(201).send({ userId: newUserId })
+      //     const newUserId = await fastify.usersDataSource.createUser({
+      //       username: request.body.username,
+      //       password: hash,
+      //       salt,
+      //       email: request.body.email,
+      //     })
+      //     console.log('User created with ID:', newUserId)
+      //     reply.status(201).send({ userId: newUserId })
         } catch (err) {
           console.error('Failed to create user:', err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/getUser', {
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['username'],
+          properties: {
+            username: { type: 'string' }
+          }
+        },
+        response: { 
+          200: {
+            type: 'object',
+            properties: {
+              username: { type: 'string' },
+              password: { type: 'string' },
+              email: { type: 'string' }
+            }
+          }
+        }
+      },
+      handler: async function  getUser (request, reply) {
+        try {
+          console.log('Reading user')
+          const user = await fastify.usersDataSource.readUser(request.query.username)
+          if (!user) {
+            const err = new Error('User do not exist')
+            err.statusCode = 404
+            throw err
+          }
+          return {
+            username: user.username,
+            password: user.password,
+            email: user.email
+          }
+        } catch (err) {
+          console.error('Failed to get user:', err)
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
