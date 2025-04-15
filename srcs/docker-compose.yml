@@ -40,7 +40,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/ft_transcendence/sqlite
+      device: ../data/ft_transcendence/sqlite
       o: bind
 
 networks:
