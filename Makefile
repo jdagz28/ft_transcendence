@@ -1,11 +1,11 @@
 SRCS_DIR		:= ./srcs/
-DB_DIR			:= /home/ft_transcendence/sqlite
+DB_DIR			:= ./data/ft_transcendence/sqlite
 
 COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
 auth-up:
-	sudo mkdir -p $(DB_DIR)
-	sudo chmod 777 $(DB_DIR) # change
+	mkdir -p $(DB_DIR)
+	#  chmod 777 $(DB_DIR) # change
 	docker compose -f $(COMPOSE_FILE) --profile authentication up -d
 
 auth-down:
@@ -51,7 +51,7 @@ clean: stop-containers remove-containers remove-images remove-networks
 
 
 prune: clean
-	sudo rm -rf $(DB_DIR)
+	#  rm -rf $(DB_DIR)
 	docker system prune --volumes
 
 .PHONY:
