@@ -17,6 +17,17 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`readUser error: ${err.message}`)
         throw new Error('User lookup failed')
       }
+    },
+
+    async readUserByEmail(email) {
+      try {
+        const response = await axios.get('http://database:1919/users/${email}');
+        fastify.log.info(`readUserByemail: ${email} ->`, response.data)
+        return response.data
+      } catch (err) {
+        fastify.log.error(`readUserByEmail error: ${err.message}`)
+        throw new Error('User lookup failed')
+      }
     }
 
     // async readUser(username) {

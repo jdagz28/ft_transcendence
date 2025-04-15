@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "$id": "schema:user:getEmail",
+  "required": [
+    "email"
+  ],
+  "properties": {
+    "emaail": { "type": "string" }
+  }
+}

@@ -26,8 +26,29 @@ module.exports = fp(
           return { error: 'Internal Server Error' }
         }          
       }
-    })
+    }),
 
+    fastify.get('/users/:email', {
+      schema: {
+        params: fastify.getSchema('schema:user:getEmail')
+      },
+      response: { 200: fastify.getSchema('schema:user:user')},
+      handler: async function getEmail (request, reply) {
+        try {
+          const { email } = request.params;
+          constuser = await fastify.dbUsers.getUserByEmail(email)
+          if (!user) {
+            fastify.log.error('User not found')
+            reply.code(404)
+          }
+          return { error: 'User not found'}
+        } catch (err) {
+          fastify.log.error(`Error retrieving user: ${err.message}`)
+          reply.code(500)
+          return { error: 'Internal Server Error`'}
+        }
+      } 
+    })
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database']
