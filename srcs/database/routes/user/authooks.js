@@ -8,28 +8,15 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
   fastify.decorate('dbUsers', {
     async getUserByUsername(username) {
-      try {
         const query = fastify.db.prepare('SELECT * FROM users WHERE username = ?')
         const row = query.get(username)
-        console.log(`readUser: ${username} -> %`, row)
-        fastify.log.debug(`readUser: ${username} -> %`, row)
         return row
-      } catch (err) {
-        fastify.log.error(`readUser error: ${err.message}`)
-        throw new Error('User lookup failed')
-      }
     },
 
     async getUserByEmail(email) {
-      try {
         const query = fastify.db.prepare('SELECT * FROM users WHERE email = ?')
         const row = query.get(email)
-        fastify.log.debug(`readUserByEmail: ${email} -> %j`, row)
         return row
-      } catch (err) {
-        fastify.log.error(`readUserByEmail error: ${err.message}`)
-        throw new Error('Email lookup failed')
-      }
     },
 
     async createUser(user) {

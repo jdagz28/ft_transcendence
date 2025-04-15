@@ -52,9 +52,13 @@ module.exports = fp(
       schema: {
         querystring: {
           type: 'object',
-          required: ['username'],
+          anyOf: [
+            { required: ['username'] },  
+            { required: ['email'] }     
+          ],
           properties: {
-            username: { type: 'string' }
+            username: { type: 'string' },
+            email: { type: 'string', format: 'email' }
           }
         },
         response: { 
@@ -70,8 +74,16 @@ module.exports = fp(
       },
       handler: async function  getUser (request, reply) {
         try {
-          console.log('Reading user')
-          const user = await fastify.usersDataSource.readUser(request.query.username)
+          console.log('Request username:', request.query.username)
+          console.log('Request email:', request.query.email)
+          if (request.query.username) {
+            console.log('Reading user')
+            const user = await fastify.usersDataSource.readUser(request.query.username)
+          } 
+          else if (request.query.email) {
+            console.log('Reading user by email')
+            const user = await fastify.usersDataSource.readUser(request.query.email) 
+          }
           if (!user) {
             const err = new Error('User do not exist')
             err.statusCode = 404
