@@ -12,9 +12,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:register')
       },
-      handler: async function register (request, reply) {
-        console.log('Database instance:', fastify.db)
-        
+      handler: async function register (request, reply) {        
         try {
           console.log('Attempting to read user by username:', request.body.username)
           const existingUser = await fastify.usersDataSource.readUser(request.body.username)
@@ -23,9 +21,9 @@ module.exports = fp(
             err.statusCode = 409
             throw err
           }
-          
+
           console.log('Attempting to read user by email:', request.body.email)
-          const emailExists = await fastify.usersDataSource.readUserByEmail(request.body.email)
+          const emailExists = await fastify.usersDataSource.readUser(request.body.email)
           if (emailExists) {
             const err = new Error('Email already exists')
             err.statusCode = 409
@@ -45,6 +43,43 @@ module.exports = fp(
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
           console.error('Failed to create user:', err)
+          const status = err.statusCode || 500;
+          reply.status(status).send({ error: err.message });
+        }
+      }
+    })
+
+    fastify.get('/getUser', {
+      schema: {
+        body: fastify.getSchema('schema:auth:getUser'),
+        },
+        response: { 
+          200: fastify.getSchema('schema:auth:user')
+      },
+      handler: async function  getUser (request, reply) {
+        try {
+          const { username, email } = request.query;
+          let user;
+
+          if (username) {
+            console.log('Reading user by username:', username);
+            user = await fastify.usersDataSource.readUser(username);
+          } else if (email) {
+            console.log('Reading user by email:', email);
+            user = await fastify.usersDataSource.readUser(email); 
+          }
+          if (!user) {
+            const err = new Error('User do not exist')
+            err.statusCode = 404
+            throw err
+          }
+          return {
+            username: user.username,
+            password: user.password,
+            email: user.email
+          }
+        } catch (err) {
+          console.error('Failed to get user:', err)
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }

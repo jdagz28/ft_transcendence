@@ -1,0 +1,21 @@
+{
+    "type": "object",
+    "$id": "schema:user:getUser",
+    "anyOf": [
+      {
+        "type": "object",
+        "required": ["username"],
+        "properties": {
+          "username": { "type": "string" }
+        }
+      },
+      {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" }
+        }
+      }
+    ]
+  }
+  

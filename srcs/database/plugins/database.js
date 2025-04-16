@@ -1,4 +1,5 @@
 'use strict'
+
 const Database = require('better-sqlite3');
 const fp = require('fastify-plugin');
 const fs = require('fs');
@@ -10,12 +11,10 @@ async function databaseConnector(fastify) {
     process.exit(1);
   }
 
-  // Build the database path from environment variables
   const databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME}.sqlite`);
   fastify.log.debug(`Database path: ${databasePath}`);
 
   let db;
-
   if (fs.existsSync(databasePath)) {
     fastify.log.info(`Database already exists at: ${databasePath}`);
     db = new Database(databasePath, { verbose: fastify.log.debug });
@@ -23,7 +22,6 @@ async function databaseConnector(fastify) {
     fastify.log.info(`Creating new database at: ${databasePath}`);
     db = new Database(databasePath, { verbose: fastify.log.debug });
     
-    // Set journal mode and create the "users" table
     try {
       db.pragma('journal_mode = WAL'); 
       db.exec(`

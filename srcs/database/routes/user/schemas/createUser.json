@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "$id": "schema:user:createUser",
+  "required": [
+    "username",
+    "password",
+    "salt",
+    "email"
+  ],
+  "properties": {
+    "username": { "type": "string" },
+    "email": { 
+      "type": "string",
+      "format": "email"
+    },
+    "password": { "type": "string" },
+    "salt": { "type": "string" }
+  }
+}

@@ -5,7 +5,7 @@ COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
 auth-up:
 	mkdir -p $(DB_DIR)
-	#  chmod 777 $(DB_DIR) # change
+	# chmod -R 777 $(DB_DIR) #change
 	docker compose -f $(COMPOSE_FILE) --profile authentication up -d
 
 auth-down:
