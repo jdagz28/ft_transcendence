@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:user:register",
+  "$id": "schema:user:createUser",
   "required": [
     "username",
     "password",
@@ -8,9 +8,11 @@
     "email"
   ],
   "properties": {
-    "id": { "type": "number" },
     "username": { "type": "string" },
-    "email": { "type": "string" },
+    "email": { 
+      "type": "string",
+      "format": "email"
+    },
     "password": { "type": "string" },
     "salt": { "type": "string" }
   }

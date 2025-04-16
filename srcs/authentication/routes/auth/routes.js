@@ -29,19 +29,18 @@ module.exports = fp(
             err.statusCode = 409
             throw err
           }
-
         
-      //     const { hash, salt } = await generateHash(request.body.password)
-      //     console.log('Password hashed successfully.')
+          const { hash, salt } = await generateHash(request.body.password)
+          console.log('Password hashed successfully.')
 
-      //     const newUserId = await fastify.usersDataSource.createUser({
-      //       username: request.body.username,
-      //       password: hash,
-      //       salt,
-      //       email: request.body.email,
-      //     })
-      //     console.log('User created with ID:', newUserId)
-      //     reply.status(201).send({ userId: newUserId })
+          const newUserId = await fastify.usersDataSource.createUser({
+            username: request.body.username,
+            password: hash,
+            salt,
+            email: request.body.email,
+          })
+          console.log('User created with ID:', newUserId)
+          reply.status(201).send({ userId: newUserId })
         } catch (err) {
           console.error('Failed to create user:', err)
           const status = err.statusCode || 500;
@@ -52,34 +51,10 @@ module.exports = fp(
 
     fastify.get('/getUser', {
       schema: {
-        querystring: {
-          anyOf: [
-            {
-              type: 'object',
-              required: ['username'],
-              properties: {
-                username: { type: 'string' }
-              }
-            },
-            {
-              type: 'object',
-              required: ['email'],
-              properties: {
-                email: { type: 'string', format: 'email' }
-              }
-            }
-          ]
+        body: fastify.getSchema('schema:auth:getUser'),
         },
         response: { 
-          200: {
-            type: 'object',
-            properties: {
-              username: { type: 'string' },
-              password: { type: 'string' },
-              email: { type: 'string' }
-            }
-          }
-        }
+          200: fastify.getSchema('schema:auth:user')
       },
       handler: async function  getUser (request, reply) {
         try {

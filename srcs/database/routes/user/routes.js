@@ -31,6 +31,22 @@ module.exports = fp(
           return { error: 'Internal Server Error' }
         }          
       }
+    }),
+
+    fastify.post('/users', {
+      schema: {
+        body: fastify.getSchema('schema:user:createUser'),
+      },
+      handler: async function createUser (request, reply) {
+        try {
+          const newUserId = await fastify.dbUsers.createUser(request.body)
+          console.log('User created with ID:', newUserId)
+          reply.status(201).send({ userId: newUserId })
+        } catch (err) {
+          fastify.log.error(`Error creating user: ${err.message}`)
+          reply.code(500).send({ error: 'User creation failed' })
+        }
+      }
     })
 
   }, {
