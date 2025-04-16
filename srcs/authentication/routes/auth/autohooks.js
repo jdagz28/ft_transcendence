@@ -9,9 +9,17 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
   fastify.decorate('usersDataSource', {
     async readUser(usernameORemail) {
-      console.log('Looking for:', usernameORemail)
-      const response = await axios.get(`http://database:1919/users/${usernameORemail}`);
-      return response.data
+      try {
+        console.log('Looking for:', usernameORemail)
+        const response = await axios.get(`http://database:1919/users/${usernameORemail}`)
+        return response.data
+      } catch (err) {
+        if (err.response && err.response.status === 404) {
+          console.log('User not found')
+          return null
+        }
+        throw err
+      }
     },
 
     // async readUser(username) {

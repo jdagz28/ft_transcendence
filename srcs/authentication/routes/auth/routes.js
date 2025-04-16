@@ -21,14 +21,15 @@ module.exports = fp(
             err.statusCode = 409
             throw err
           }
-          
-      //     console.log('Attempting to read user by email:', request.body.email)
-      //     const emailExists = await fastify.usersDataSource.readUserByEmail(request.body.email)
-      //     if (emailExists) {
-      //       const err = new Error('Email already exists')
-      //       err.statusCode = 409
-      //       throw err
-      //     }
+
+          console.log('Attempting to read user by email:', request.body.email)
+          const emailExists = await fastify.usersDataSource.readUser(request.body.email)
+          if (emailExists) {
+            const err = new Error('Email already exists')
+            err.statusCode = 409
+            throw err
+          }
+
         
       //     const { hash, salt } = await generateHash(request.body.password)
       //     console.log('Password hashed successfully.')
@@ -43,7 +44,8 @@ module.exports = fp(
       //     reply.status(201).send({ userId: newUserId })
         } catch (err) {
           console.error('Failed to create user:', err)
-          reply.status(500).send({ error: 'Internal Server Error' })
+          const status = err.statusCode || 500;
+          reply.status(status).send({ error: err.message });
         }
       }
     })
