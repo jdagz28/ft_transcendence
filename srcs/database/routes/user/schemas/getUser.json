@@ -2,11 +2,21 @@
   "type": "object",
   "$id": "schema:user:getUser",
   "anyOf": [
-    { "required": ["username"] },
-    { "required": ["email"] }
-  ],
-  "properties": {
-    "username": { "type": "string" },
-    "email": { "type": "string", "format": "email" }
-  }
+    {
+      "type": "object",
+      "required": ["username"],
+      "properties": {
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["email"],
+      "properties": {
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      }
+    }
+  ]
 }

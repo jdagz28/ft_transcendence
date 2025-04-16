@@ -51,15 +51,22 @@ module.exports = fp(
     fastify.get('/getUser', {
       schema: {
         querystring: {
-          type: 'object',
           anyOf: [
-            { required: ['username'] },  
-            { required: ['email'] }     
-          ],
-          properties: {
-            username: { type: 'string' },
-            email: { type: 'string', format: 'email' }
-          }
+            {
+              type: 'object',
+              required: ['username'],
+              properties: {
+                username: { type: 'string' }
+              }
+            },
+            {
+              type: 'object',
+              required: ['email'],
+              properties: {
+                email: { type: 'string', format: 'email' }
+              }
+            }
+          ]
         },
         response: { 
           200: {
@@ -74,15 +81,15 @@ module.exports = fp(
       },
       handler: async function  getUser (request, reply) {
         try {
-          console.log('Request username:', request.query.username)
-          console.log('Request email:', request.query.email)
-          if (request.query.username) {
-            console.log('Reading user')
-            const user = await fastify.usersDataSource.readUser(request.query.username)
-          } 
-          else if (request.query.email) {
-            console.log('Reading user by email')
-            const user = await fastify.usersDataSource.readUser(request.query.email) 
+          const { username, email } = request.query;
+          let user;
+
+          if (username) {
+            console.log('Reading user by username:', username);
+            user = await fastify.usersDataSource.readUser(username);
+          } else if (email) {
+            console.log('Reading user by email:', email);
+            user = await fastify.usersDataSource.readUser(email); 
           }
           if (!user) {
             const err = new Error('User do not exist')
