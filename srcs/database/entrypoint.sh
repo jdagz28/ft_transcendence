@@ -14,7 +14,7 @@ if ! chown -R node:node /data/sqlite 2>/dev/null; then
   echo "Warning: Could not change ownership of /data/sqlite. Ensure that the volume is mounted with correct permissions."
 fi
 
-if ! chmod -R 775 /data/sqlite 2>/dev/null; then
+if ! chmod -R 777 /data/sqlite 2>/dev/null; then
   echo "Warning: Could not change permissions for /data/sqlite."
 fi
 
