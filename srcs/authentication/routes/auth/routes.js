@@ -186,10 +186,11 @@ module.exports = fp(
           const existingEmail = await fastify.usersDataSource.readUser(email)
           if (existingUser || existingEmail) {
             console.log(`User ${username} or email ${email} already exists`)
-            request.username = user || existingEmail;
+            request.user = username
             return refreshHandler(request, reply)
           }
-
+          
+          //! TEMPORARY PASSWORD
           const { hash, salt } = await generateHash(process.env.REMOTE_TEMP_PASSWORD)
           const newUserId = await fastify.usersDataSource.createUser({
             username,

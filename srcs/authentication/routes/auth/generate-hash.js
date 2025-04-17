@@ -12,3 +12,5 @@ async function generateHash(password, salt) {
 }
 
 module.exports = generateHash
+
+//! TO IMPLEMENT OUR OWN HASHING FUNCTION

@@ -25,6 +25,8 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
     revokedTokens.set(this.user.jti, true)
   })
 
+
+  //! TO IMPLEMENT OUR OWN JWT FUNCTION
   fastify.decorateRequest('generateToken', async function() {
     const token = await fastify.jwt.sign({
       id: String(this.user._id),
@@ -37,7 +39,7 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
     return token
   })
 
-  
+
 
 }), {
   name: 'authentication-plugin'
