@@ -36,6 +36,9 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
 
     return token
   })
+
+  
+
 }), {
   name: 'authentication-plugin'
 }

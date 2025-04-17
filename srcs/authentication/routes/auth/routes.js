@@ -139,6 +139,77 @@ module.exports = fp(
       return { token }
     }
 
+    fastify.get('/auth/42', {
+      handler: async function handler42 (request, reply) {
+        const authorizeURL = 'https://api.intra.42.fr/oauth/authorize'
+        const params = new URLSearchParams({
+          client_id: process.env.CLIENT_UID_42,
+          redirect_uri: process.env.CLIENT_REDIRECT_URI_42,
+          response_type: 'code',
+        })
+        reply.redirect(`${authorizeURL}?${params.toString()}`)
+      }
+    })
+
+    fastify.get('/auth/42/callback', {
+      schema: {
+        response: {
+          200: fastify.getSchema('schema:auth:token')
+        }
+      },
+      handler: async function handler42Callback (request, reply) {
+        const code = request.query.code
+        if (!code) {
+          const err = new Error('No code provided')
+          err.statusCode = 400
+          throw err
+        }
+
+        try {
+          const tokenResponse = await fastify.remoteAuth42.auth(code)
+          if (!tokenResponse) {
+            const err = new Error('Failed to authenticate with 42')
+            err.statusCode = 401
+            throw err
+          }
+
+          const accessToken = tokenResponse.data.access_token
+          const userResponse = await fastify.remoteAuth42.getUser(accessToken)
+          if (!userResponse) {
+            const err = new Error('Failed to get user data from 42')
+            err.statusCode = 401
+            throw err
+          }
+
+          const { login: username, email } = userResponse
+          const existingUser = await fastify.usersDataSource.readUser(username)
+          const existingEmail = await fastify.usersDataSource.readUser(email)
+          if (existingUser || existingEmail) {
+            console.log(`User ${username} or email ${email} already exists`)
+            request.username = user || existingEmail;
+            return refreshHandler(request, reply)
+          }
+
+          const { hash, salt } = await generateHash(process.env.REMOTE_TEMP_PASSWORD)
+          const newUserId = await fastify.usersDataSource.createUser({
+            username,
+            password: hash,
+            salt,
+            email
+          })
+          if (!newUserId) {
+            const err = new Error('Failed to create user')
+            err.statusCode = 500
+            throw err
+          }
+          console.log('Remote user created with ID:', newUserId)
+          reply.status(201).send({ userId: newUserId })
+        } catch (err) {
+        console.error('Error during 42 authentication:', err)
+        reply.status(err.statusCode || 500).send({ error: err.message })
+        }
+      }
+    })
   }, {
     name: 'auth-routes',
     dependencies: [ 'userAutoHooks' ]
