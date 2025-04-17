@@ -210,6 +210,84 @@ module.exports = fp(
         reply.status(err.statusCode || 500).send({ error: err.message })
         }
       }
+    }),
+
+    fastify.get('/auth/google', {
+      handler: async function handlerGoogle (request, reply) {
+        const authorizeURL = 'https://accounts.google.com/o/oauth2/v2/auth'
+        const params = new URLSearchParams({
+          client_id: process.env.CLIENT_ID_GOOGLE,
+          redirect_uri: process.env.CLIENT_REDIRECT_URI_GOOGLE,
+          response_type: 'code',
+          scope: 'email profile',
+          access_type: 'offline',
+          prompt: 'consent'
+        })
+        reply.redirect(`${authorizeURL}?${params}`)
+      }
+    })
+
+    fastify.get('/auth/google/callback', {
+      schema: {
+        response: {
+          200: fastify.getSchema('schema:auth:token')
+        }
+      },
+      handler: async function handlerGoogleCallback (request, reply) {
+        console.log('Google callback received')
+        const code = request.query.code
+        if (!code) {
+          const err = new Error('No code provided')
+          err.statusCode = 400
+          throw err
+        }
+
+        try {
+          const tokenResponse = await fastify.remoteAuthGoogle.auth(code)
+          if (!tokenResponse) {
+            const err = new Error('Failed to authenticate with Google')
+            err.statusCode = 401
+            throw err
+          }
+
+          const accessToken = tokenResponse.data.access_token
+          const userResponse = await fastify.remoteAuthGoogle.getUser(accessToken)
+          if (!userResponse) {
+            const err = new Error('Failed to get user data from Google')
+            err.statusCode = 401
+            throw err
+          }
+
+          const { email } = userResponse
+          const username = email.split('@')[0]
+          const existingUser = await fastify.usersDataSource.readUser(username)
+          const existingEmail = await fastify.usersDataSource.readUser(email)
+          if (existingUser || existingEmail) {
+            console.log(`User ${username} or email ${email} already exists`)
+            request.user = username
+            return refreshHandler(request, reply)
+          }
+          
+          //! TEMPORARY PASSWORD
+          const { hash, salt } = await generateHash(process.env.REMOTE_TEMP_PASSWORD)
+          const newUserId = await fastify.usersDataSource.createUser({
+            username,
+            password: hash,
+            salt,
+            email
+          })
+          if (!newUserId) {
+            const err = new Error('Failed to create user')
+            err.statusCode = 500
+            throw err
+          }
+          console.log('Remote user created with ID:', newUserId)
+          reply.status(201).send({ userId: newUserId })
+        } catch (err) {
+        console.error('Error during Google authentication:', err)
+        reply.status(err.statusCode || 500).send({ error: err.message })
+        }
+      }
     })
   }, {
     name: 'auth-routes',

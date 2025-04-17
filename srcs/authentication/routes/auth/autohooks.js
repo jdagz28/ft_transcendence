@@ -69,6 +69,41 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     }
 
+  }),
+
+  fastify.decorate('remoteAuthGoogle', {
+    async auth(code) {
+      try {
+        const response = await axios.post('https://oauth2.googleapis.com/token', null, {
+          params: {
+            grant_type: 'authorization_code',
+            client_id: process.env.CLIENT_ID_GOOGLE,
+            client_secret: process.env.CLIENT_SECRET_GOOGLE,
+            redirect_uri: process.env.CLIENT_REDIRECT_URI_GOOGLE,
+            grant_type: 'authorization_code',
+            code: code
+          }
+        })
+        return response
+      } catch (err) {
+        fastify.log.error(`authGoogle error: ${err.message}`)
+        throw new Error('Authorization failed')
+      }
+    },
+
+    async getUser(accessToken) {
+      try {
+        const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        })
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getUser error: ${err.message}`)
+        throw new Error('Failed to get user data')
+      }
+    }
   })
 }, {
   name: 'userAutoHooks'
