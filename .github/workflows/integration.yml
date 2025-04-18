@@ -1,8 +1,6 @@
 name: Integration
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   pull_request_target:
@@ -35,11 +33,3 @@ jobs:
           excludeTitle: 'true'
           checkAllCommitMessages: 'false'
 
-      - name: Check Commit Message
-        uses: gsactions/commit-message-checker@v2
-        with:
-          pattern: '^(FEATURE|FIX|DOCUMENTATION|STYLE|TEST|DEVOPS|REFACTOR|REVERT): .+|^Merge pull request #[0-9]+ from [\w\-]+\/[\w\-].*'
-          error: '<PR type>: <description>".'
-          excludeDescription: 'true'
-          excludeTitle: 'true'
-          checkAllCommitMessages: 'false'
