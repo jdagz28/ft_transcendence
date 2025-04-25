@@ -4,9 +4,11 @@ services:
     build: ./authentication
     image: authentication:fastify
     ports:
-      - "${AUTH_PORT}:3000"
+      - "${AUTH_PORT}:${AUTH_PORT}"
     depends_on:
       - database
+    environment:
+      - PORT=${AUTH_PORT}
     env_file:
       - ../secrets/.env
     networks:
@@ -23,6 +25,8 @@ services:
     image: database:sqlite
     volumes:
       - db-sqlite:/data/sqlite:rw,z
+    environment:
+      - PORT=${DB_PORT}
     env_file:
       - ../secrets/.env
     networks:

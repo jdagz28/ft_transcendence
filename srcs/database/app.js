@@ -5,6 +5,7 @@ const AutoLoad = require('@fastify/autoload')
 
 // Pass --options via CLI arguments in command to enable these options.
 const options = {}
+
 module.exports = async function (fastify, opts) {
   // Place here your custom code!
   // fastify.register(AutoLoad, {
@@ -34,12 +35,6 @@ module.exports = async function (fastify, opts) {
     options: Object.assign({}, opts)
   })
 
-  fastify.listen({ port: process.env.DB_PORT, host: '0.0.0.0' }, function (err, address) {
-    if (err) {
-      fastify.log.error(err)
-      process.exit(1)
-    }
-  })
 }
 
-module.exports.options = optionss
+module.exports.options = options
