@@ -4,7 +4,7 @@ services:
     build: ./authentication
     image: authentication:fastify
     ports:
-      - "4242:3000"
+      - "${AUTH_PORT}:3000"
     depends_on:
       - database
     env_file:
@@ -15,6 +15,7 @@ services:
     profiles:
       - authentication
       - backend
+      - development
 
   database:
     container_name: database
@@ -26,13 +27,13 @@ services:
       - ../secrets/.env
     networks:
       - transcendence
-    # user: "1000:1000"
     ports:
-      - "1919:1919"
+      - "${DB_PORT}:1919"
     restart: always
     profiles:
       - authentication
       - backend
+      - development
 
 volumes:
   db-sqlite:

@@ -51,7 +51,7 @@ module.exports = fp(
 
     fastify.get('/getUser', {
       schema: {
-        body: fastify.getSchema('schema:auth:getUser'),
+        querystring: { $ref: 'schema:user:getUser' },
         },
         response: { 
           200: fastify.getSchema('schema:auth:user')

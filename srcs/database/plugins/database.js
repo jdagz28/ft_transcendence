@@ -3,6 +3,7 @@
 const Database = require('better-sqlite3');
 const fp = require('fastify-plugin');
 const fs = require('fs');
+const { create } = require('node:domain');
 const path = require('node:path');
 
 async function databaseConnector(fastify) {
@@ -11,7 +12,12 @@ async function databaseConnector(fastify) {
     process.exit(1);
   }
 
-  const databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME}.sqlite`);
+  let databasePath 
+  if (process.env.NODE_ENV !== 'production') {
+    databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME_DEV}.sqlite`);
+  } else {
+    databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME}.sqlite`);
+  }
   fastify.log.debug(`Database path: ${databasePath}`);
 
   let db;
@@ -23,20 +29,57 @@ async function databaseConnector(fastify) {
     db = new Database(databasePath, { verbose: fastify.log.debug });
     
     try {
-      db.pragma('journal_mode = WAL'); 
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT NOT NULL UNIQUE,
-          password TEXT NOT NULL,
-          salt TEXT NOT NULL,
-          email TEXT NOT NULL UNIQUE
-        );
-      `);
+      db.pragma('journal_mode = WAL');
+      db.pragma('foreign_keys = ON');
+      createUsersTable();
+      createOAuthTable();
+      createUserTokenTable();
       fastify.log.info("Created 'users' table successfully.");
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
     }
+  }
+
+  function createUsersTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL UNIQUE,
+          password TEXT NOT NULL,
+          salt TEXT NOT NULL,
+          created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          nickname TEXT UNIQUE
+      );
+    `);
+  }
+
+  function createOAuthTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS oauth (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          provider TEXT NOT NULL,
+          user_id INTEGER NOT NULL,
+          provider_uid TEXT NOT NULL,
+          created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE (provider, provider_uid)
+      );
+    `);
+  }
+
+  function createUserTokenTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_token (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          mfa_token TEXT NOT NULL,
+          mfa_valid DATETIME NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
   }
 
   fastify.decorate('db', db);

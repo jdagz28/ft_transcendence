@@ -33,6 +33,13 @@ module.exports = async function (fastify, opts) {
     cascadeHooks: true,
     options: Object.assign({}, opts)
   })
+
+  fastify.listen({ port: process.env.DB_PORT, host: '0.0.0.0' }, function (err, address) {
+    if (err) {
+      fastify.log.error(err)
+      process.exit(1)
+    }
+  })
 }
 
-module.exports.options = options
+module.exports.options = optionss
