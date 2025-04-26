@@ -10,7 +10,7 @@ services:
     environment:
       - PORT=${AUTH_PORT}
     env_file:
-      - ../secrets/.env
+      - .env
     networks:
       - transcendence
     restart: always
@@ -28,7 +28,7 @@ services:
     environment:
       - PORT=${DB_PORT}
     env_file:
-      - ../secrets/.env
+      - .env
     networks:
       - transcendence
     ports:

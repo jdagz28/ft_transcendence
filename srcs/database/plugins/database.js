@@ -12,12 +12,8 @@ async function databaseConnector(fastify) {
     process.exit(1);
   }
 
-  let databasePath 
-  if (process.env.NODE_ENV !== 'production') {
-    databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME_DEV}.sqlite`);
-  } else {
-    databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME}.sqlite`);
-  }
+  const databasePath = path.join(process.env.DB_PATH, `${process.env.DB_NAME}.sqlite`);
+  
   fastify.log.debug(`Database path: ${databasePath}`);
 
   let db;

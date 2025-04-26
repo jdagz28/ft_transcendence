@@ -21,6 +21,9 @@ dev-stop:
 dev-build:
 	docker compose -f $(COMPOSE_FILE) --profile development build
 
+testAccounts:
+	@chmod +x dev_testAccounts.sh
+	@./dev_testAccounts.sh
 
 accessauth:
 	docker exec -it authentication sh
