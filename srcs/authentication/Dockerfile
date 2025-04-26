@@ -3,6 +3,8 @@ FROM node:23-slim as builder
 
 WORKDIR /builder
 COPY package.json package-lock.json ./
+COPY ./entrypoint.sh /
+RUN chmod +x /entrypoint.sh
 
 # Install production dependencies
 RUN npm ci --only-production
@@ -19,10 +21,12 @@ RUN mkdir -p /data/sqlite && chown -R node:node /data/sqlite
 WORKDIR /app
 COPY --from=builder /builder/node_modules ./node_modules
 COPY . .
+COPY /entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # run app with low permissions level user
 USER node
 
-ENTRYPOINT ["dumb-init"]
-CMD ["npm", "start"]
+ENTRYPOINT ["dumb-init", "/entrypoint.sh"]
+# CMD ["npm", "start"]
 # CMD ["npm", "run", "dev"]

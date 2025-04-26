@@ -8,8 +8,8 @@
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "start": "FASTIFY_PORT=1919 fastify start -l info app.js",
-    "dev": "FASTIFY_PORT=1919 DB_PATH=/home/ft_transcendence/sqlite/ DB_NAME=transcendence JWT_EXPIRE_IN=1h JWT_SECRET=8afd8ebee7de8c938bfec5e51e9f661d436c3c207de9fe36f383baeff504e04e8e59b082503421b656a8c451a2597323c892e129eb5fe5f29b42042fb9e5e80e fastify start -w -l info -P app.js"
+    "start": "fastify start -o -l info app.js",
+    "dev": "fastify start -o -w -l info app.js"
   },
   "keywords": [],
   "author": "",
