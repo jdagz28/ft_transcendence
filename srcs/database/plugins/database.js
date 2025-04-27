@@ -30,6 +30,9 @@ async function databaseConnector(fastify) {
       createUsersTable();
       createOAuthTable();
       createUserTokenTable();
+      createUserAvatarsTable();
+      createUserFriendsTable();
+      createUserBlocksTable();
       fastify.log.info("Created 'users' table successfully.");
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
@@ -74,6 +77,43 @@ async function databaseConnector(fastify) {
           mfa_token TEXT NOT NULL,
           mfa_valid DATETIME NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
+  function createUserAvatarsTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_avatars (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          avatar BLOB NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
+  function createUserFriendsTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_friends (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id_a INTEGER NOT NULL,
+          user_id_b INTEGER NOT NULL,
+          created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id_a) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id_b) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
+  function createUserBlocksTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_blocks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          blocker_id INTEGER NOT NULL,
+          blocked_user_id INTEGER NOT NULL,
+          created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (blocked_user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
