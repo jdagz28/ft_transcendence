@@ -291,6 +291,6 @@ module.exports = fp(
     })
   }, {
     name: 'auth-routes',
-    dependencies: [ 'userAutoHooks' ]
+    dependencies: [ 'authAutoHooks' ]
 })
 
