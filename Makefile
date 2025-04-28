@@ -53,7 +53,6 @@ remove-networks:
 
 clean: stop-containers remove-containers remove-images remove-networks
 
-
 prune: clean
 	rm -rf $(DB_DIR)
 	docker system prune --volumes
