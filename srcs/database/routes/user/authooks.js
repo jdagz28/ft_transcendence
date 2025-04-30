@@ -30,7 +30,40 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`createUser error: ${err.message}`)
         throw new Error('User creation failed')
       }
+    },
+
+    async getUserProfile(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT users.id,
+            users.username,
+            users.email,
+            users.created,
+            avatar.avatar AS avatar_blob
+          FROM users
+          LEFT JOIN avatar ON users.id = avatar.user_id
+          WHERE users.id = ?
+        `)
+
+        const row = query.get(userId)
+        if (!row) {
+          fastify.log.error('User not found')
+          throw new Error('User not found')
+        }
+
+        return {
+          id: row.id,
+          username: row.username,
+          email: row.email,
+          created: row.created,
+          avatar: row.avatar_blob
+        }
+      } catch (err) {
+        fastify.log.error(`getUserProfile error: ${err.message}`)
+        throw new Error('User profile retrieval failed')
+      }
     }
+
   })
 }, {
   name: 'userAutoHooks',

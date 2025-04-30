@@ -13,14 +13,19 @@ module.exports = fp(
     // created
     // change avatar
     fastify.get('/me', {
+      schema: {
+        response: {
+          200: fastify.getSchema('schema:user:userProfile')
+        }
+      },
       onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
+      handler: async function userProfileHandler (request, reply) {
           try {
-            const user = await fastify.usersDataSource.getMe(request.user.username)
+            const user = await fastify.usersDataSource.getMeById(request.user.id)
             if (!user) {
               return reply.status(404).send({ error: 'User not found' })
             }
-            return reply.status(200).send(user)
+            return reply.send(me)
           } catch (err) {
             fastify.log.error(`Error fetching user: ${err.message}`)
             return reply.status(500).send({ error: 'Internal Server Error' })
@@ -28,6 +33,7 @@ module.exports = fp(
       }
     })
   
+    /**
     // User Profile Account Settings / security
     // email, (change email)
     // password, (change password)
@@ -81,7 +87,7 @@ module.exports = fp(
     })
 
     // User change password
-    fastify.post('/me/settings/changePassword', {
+    fastify.put('/me/settings/changePassword', {
       onRequest: [fastify.authenticate],
       handler: async (request, reply) => {
 
@@ -89,7 +95,7 @@ module.exports = fp(
     })
 
     // User change email
-    fastify.post('/me/settings/changeEmail', {
+    fastify.put('/me/settings/changeEmail', {
       onRequest: [fastify.authenticate],
       handler: async (request, reply) => {
 
@@ -121,7 +127,7 @@ module.exports = fp(
     })
 
     // User disable MFA
-    fastify.post('/me/settings/disableMFA', {
+    fastify.delete('/me/settings/disableMFA', {
       onRequest: [fastify.authenticate],
       handler: async (request, reply) => {
 
@@ -129,7 +135,7 @@ module.exports = fp(
     })
     
     // User enable MFA
-    fastify.post('/me/settings/enableMFA', {
+    fastify.put('/me/settings/enableMFA', {
       onRequest: [fastify.authenticate],
       handler: async (request, reply) => {
 
@@ -145,7 +151,7 @@ module.exports = fp(
     })
 
     // User remove friend
-    fastify.post('/me/removeFriend', {
+    fastify.delete('/me/removeFriend', {
       onRequest: [fastify.authenticate],
       handler: async (request, reply) => {
 
@@ -161,11 +167,15 @@ module.exports = fp(
     })
 
     // User unblock user
-    fastify.post('/me/unblockUser', {
+    fastify.delete('/me/unblockUser', {
       onRequest: [fastify.authenticate],
       handler: async (request, reply) => {
 
       }
     })
+    */
+  }, {
+    name: 'userRoutes',
+    dependencies: [ 'userAutoHooks']
   }
 )

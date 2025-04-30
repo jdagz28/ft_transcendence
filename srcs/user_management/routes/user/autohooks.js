@@ -8,10 +8,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('usersDataSource', {
-    async getMe(username) {
+    async getMeById(id) {
       try {
-        console.log('Getting all data for: ', username)
-        const response = await axios.get(`http://database:1919/profile/${username}`)
+        console.log('Getting all data for: ', id)
+        const response = await axios.get('http://database:1919/users/profile', { params: { id } })
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {

@@ -289,6 +289,21 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.post('/auth/verify', {
+      schema: fastify.getSchema('schema:auth:verify'),
+      response: {
+        200: fastify.getSchema('schema:auth:verify-response')
+      },
+      handler: async function tokenVerificationHandler(request) {
+        try {
+          const user = await fastify.jwt.verify(request.body.token)
+          return { valid: true, user }
+        } catch (err) {
+          return { valid: false, user: null }
+        }
+      }
+    })
   }, {
     name: 'auth-routes',
     dependencies: [ 'authAutoHooks' ]

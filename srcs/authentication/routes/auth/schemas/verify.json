@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "$id": "schema:auth:verify",
+  "additionalProperties": false,
+  "required": ["token"],
+  "properties": {
+    "token": {
+      "type": "string",
+      "minLength": 10
+    }
+  }
+}

@@ -49,6 +49,29 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/profile', {
+      schema: { 
+        params: fastify.getSchema('schema:user:getProfile')
+      },
+      response: { 
+        200: fastify.getSchema('schema:user:userProfile')
+      },
+      handler: async function getUserProfile(request, reply) {
+        try {
+          const userId = request.user.id
+          const userProfile = await fastify.dbUsers.getUserProfile(userId)
+          if (!userProfile) {
+            reply.code(404).send({ error: 'User profile not found' })
+          } else {
+            reply.send(userProfile)
+          }
+        } catch (err) {
+          fastify.log.error(`Error retrieving user profile: ${err.message}`)
+          reply.code(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database']
