@@ -29,7 +29,7 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
   //! TO IMPLEMENT OUR OWN JWT FUNCTION
   fastify.decorateRequest('generateToken', async function() {
     const token = await fastify.jwt.sign({
-      id: String(this.user._id),
+      id: String(this.user.id),
       username: this.user.username
     }, {
       jti: String(Date.now()),

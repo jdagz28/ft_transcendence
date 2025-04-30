@@ -25,10 +25,10 @@ module.exports = fp(
             if (!user) {
               return reply.status(404).send({ error: 'User not found' })
             }
-            return reply.send(me)
+            return reply.send(user)
           } catch (err) {
             fastify.log.error(`Error fetching user: ${err.message}`)
-            return reply.status(500).send({ error: 'Internal Server Error' })
+            return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
           }
       }
     })

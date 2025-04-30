@@ -51,14 +51,14 @@ module.exports = fp(
 
     fastify.get('/users/profile', {
       schema: { 
-        params: fastify.getSchema('schema:user:getProfile')
+        querystring: fastify.getSchema('schema:user:getProfile')
       },
       response: { 
         200: fastify.getSchema('schema:user:userProfile')
       },
       handler: async function getUserProfile(request, reply) {
         try {
-          const userId = request.user.id
+          const userId = request.query.id
           const userProfile = await fastify.dbUsers.getUserProfile(userId)
           if (!userProfile) {
             reply.code(404).send({ error: 'User profile not found' })

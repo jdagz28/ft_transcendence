@@ -3,6 +3,6 @@
   "$id": "schema:user:getProfile",
   "required": [ "id" ],
   "properties": {
-    "id": { "type": "integer" }
+    "id": { "type": "string" }
   }
 }

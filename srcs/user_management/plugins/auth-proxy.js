@@ -11,13 +11,13 @@ const authApi = axios.create({
 
 module.exports = fp(async function authProxy (fastify) {
   fastify.decorate('authenticate', async function (request, reply) {
-    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
+    const token = request.headers.authorization?.replace(/^Bearer\s+/i, '')
     if (!token) {
       return reply.code(401).send({ error: 'Missing token' })
     }
 
     try {
-      const { data } = await authApi.get('/auth/verify', { token })
+      const { data } = await authApi.get('/auth/verify', { params: { token } })
       if (!data.valid) {
         return reply.code(401).send({ error: 'Invalid token' })
       }

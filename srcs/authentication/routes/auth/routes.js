@@ -102,14 +102,20 @@ module.exports = fp(
           throw err
         }
 
-        const { hash } = await bcrypt.compare(request.body.password, user.password)
-        if (hash !== user.hash) {
-          const err = new Error('Incorrect password provided')
+        const passWordMatch  = await bcrypt.compare(request.body.password, user.password)
+        if (!passWordMatch) {
+          const err = new Error('Invalid password')
           err.statusCode = 401
           throw err
         }
-
-        request.user = user
+        console.log('User authenticated successfully')
+        console.log('User details:', user)
+        // request.user = user
+        request.user = {
+          id: user.id,
+          username: user.username,
+        }
+        console.log('User ID:', request.user.id)
         console.log('Authenticated User: ' + user)
         return refreshHandler(request, reply)
       }
@@ -290,14 +296,17 @@ module.exports = fp(
       }
     })
 
-    fastify.post('/auth/verify', {
+    fastify.get('/auth/verify', {
       schema: fastify.getSchema('schema:auth:verify'),
       response: {
         200: fastify.getSchema('schema:auth:verify-response')
       },
       handler: async function tokenVerificationHandler(request) {
         try {
-          const user = await fastify.jwt.verify(request.body.token)
+          const cleanToken =  request.query.token.replace(/^"|"$/g, '')
+          console.log('Verifying token:', cleanToken)
+          const user = await fastify.jwt.verify(cleanToken)
+          console.log('Token verified, user:', user)
           return { valid: true, user }
         } catch (err) {
           return { valid: false, user: null }

@@ -39,9 +39,9 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
             users.username,
             users.email,
             users.created,
-            avatar.avatar AS avatar_blob
+            user_avatars.avatar AS avatar_blob
           FROM users
-          LEFT JOIN avatar ON users.id = avatar.user_id
+          LEFT JOIN user_avatars ON users.id = user_avatars.user_id
           WHERE users.id = ?
         `)
 
