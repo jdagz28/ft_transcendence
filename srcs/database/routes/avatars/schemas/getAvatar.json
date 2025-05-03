@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:avatar:getAvatar",
+  "required": [ "userId" ],
+  "properties": {
+    "userId": { "type": "string" }
+  }
+}

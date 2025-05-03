@@ -11,7 +11,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async getMeById(id) {
       try {
         console.log('Getting all data for: ', id)
-        const response = await axios.get('http://database:1919/users/profile', { params: { id } })
+        const response = await axios.get('http://database:1919/me', { params: { id } })
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
