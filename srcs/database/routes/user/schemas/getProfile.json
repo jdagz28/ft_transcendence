@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:me:getProfile",
+  "$id": "schema:user:getProfile",
   "required": [ "id" ],
   "properties": {
     "id": { "type": "string" }

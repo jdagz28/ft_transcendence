@@ -1,17 +1,16 @@
 'use strict'
 
 const fp = require('fastify-plugin')
-const schemas = require('./schemas/loader')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function me (fastify, opts) {
     fastify.get('/me', {
       schema: { 
-        querystring: fastify.getSchema('schema:user:getProfile')
+        querystring: fastify.getSchema('schema:me:getProfile')
       },
       response: { 
-        200: fastify.getSchema('schema:user:userProfile')
+        200: fastify.getSchema('schema:me:userProfile')
       },
       handler: async function getUserProfile(request, reply) {
         try {

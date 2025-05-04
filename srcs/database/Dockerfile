@@ -17,12 +17,14 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 COPY . .
 
+RUN npm rebuild better-sqlite3 --build-from-source
+
 # start to build the app image
 FROM node:23-slim
 
 # dumb-init registers signal handlers for every signal that can be caught
 RUN apt-get update && \
-    apt-get install -y  --no-install-recommends dumb-init sqlite3 && \
+    apt-get install -y  --no-install-recommends dumb-init && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy production dependencies from the builder app

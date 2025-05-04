@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:me:userProfile",
+  "$id": "schema:user:userProfile",
   "required": [
     "username",
     "email",

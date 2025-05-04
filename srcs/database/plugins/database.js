@@ -94,6 +94,7 @@ async function databaseConnector(fastify) {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
           avatar BLOB NOT NULL,
+          mime_type TEXT NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);

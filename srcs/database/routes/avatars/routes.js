@@ -7,28 +7,30 @@ const schemas = require('./schemas/loader')
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function avatarRoutes (fastify, opts) {
-    fastify.register(schemas)
+    await fastify.register(schemas)
 
     fastify.get('/avatars/:userId', {
       schema: {
-        parapms: fastify.getSchema('getAvatar'),
+        params: fastify.getSchema('schema:avatar:getAvatar'),
       },
       handler: async function getAvatar (request, reply) {
         try {
+          const { userId } = request.params
           const query = fastify.db.prepare(`
-            SELECT avatar FROM user_avatars WHERE user_id = ?
+            SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
           `)
-          const row = query.get(id)
-      
-          if (!row || !row.avatar) {
-            return reply.code(404).send('Avatar not found')
+          const row = query.get(userId)
+          let avatarBuffer = row?.avatar
+          let mimeType = row?.mime_type
+          
+          if (!avatarBuffer && fastify.defaultAssets.defaultAvatar) {
+            avatarBuffer = fastify.defaultAssets.defaultAvatar
+            mimeType     = fastify.defaultAssets.defaultAvatarMime
           }
       
-          const avatarBuffer = row.avatar
-          const type = await fileTypeFromBuffer(avatarBuffer)
-      
-          if (!type || !type.mime.startsWith('image/')) {
-            return reply.code(415).send('Unsupported image format')
+          if (!avatarBuffer && !mimeType) {
+            reply.code(404).send('Avatar not found')
+            return
           }
       
           reply
