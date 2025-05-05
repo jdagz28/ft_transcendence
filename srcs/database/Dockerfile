@@ -24,7 +24,7 @@ FROM node:23-slim
 
 # dumb-init registers signal handlers for every signal that can be caught
 RUN apt-get update && \
-    apt-get install -y  --no-install-recommends dumb-init && \
+    apt-get install -y  --no-install-recommends dumb-init sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy production dependencies from the builder app

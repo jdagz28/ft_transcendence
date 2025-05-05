@@ -14,8 +14,7 @@
             "type":  { "const": "Buffer" },
             "data":  { 
               "type": "array", 
-              "items": { "type": "integer" 
-              } 
+              "items": { "type": "integer" } 
             }
         }}
       ]

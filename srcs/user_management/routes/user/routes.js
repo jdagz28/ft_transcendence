@@ -33,6 +33,22 @@ module.exports = fp(
       }
     })
   
+    fastify.post('/me/settings/uploadAvatar', {
+      schema: {
+        body: fastify.getSchema('schema:me:avatar')
+      },
+      handler: async function avatarHandler (request, reply) {
+        const { userId, avatar } = request.body
+        try {
+          await fastify.usersDataSource.createAvatar(userId, avatar)
+          reply.send({ success: true })
+        } catch (err) {
+          reply.status(500).send({ error: 'UserMgmt: Failed to update avatar' })
+        }
+      }
+    })
+
+
     /**
     // User Profile Account Settings / security
     // email, (change email)

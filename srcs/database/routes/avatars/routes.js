@@ -1,13 +1,10 @@
 'use strict'
 
 const fp = require('fastify-plugin')
-const schemas = require('./schemas/loader')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function avatarRoutes (fastify, opts) {
-    await fastify.register(schemas)
-
     fastify.get('/avatars/:userId', {
       schema: {
         params: fastify.getSchema('schema:avatar:getAvatar'),
@@ -43,8 +40,26 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/avatars/upload', {
+      schema: {
+        consumes: ['multipart/form-data'],
+        body: fastify.getSchema('schema:avatar:upload')
+      },
+      handler: async function avatarHandler (request, reply) {
+        try {
+          const parts = await request.multipart()
+          const buffer = await parts.file.avatar.toBuffer()
+          const userId = Number(parts.fields.userId.value)
+          await fastify.dbAvatars.createAvatar(userId, buffer)
+          reply.send({ success: true })
+        } catch (err) {
+          reply.status(500).send({ error: 'Failed to update avatar' })
+        }
+      }
+    })
+
   }, {
     name: 'avatar',
-    dependencies: ['database']
+    dependencies: ['database', 'avatarAutohooks']
 })
 

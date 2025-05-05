@@ -30,23 +30,6 @@ module.exports = fp(
         }
       }
     })
-
-    fastify.post('/me/changeAvatar', {
-      schema: {
-        body: fastify.getSchema('schema:me:avatar')
-      },
-      handler: async function (request, reply) {
-        const { userId, avatar } = request.body
-        try {
-          console.log('Received avatar:', avatar)
-          console.log('User ID:', userId)
-          await fastify.dbMe.createAvatar(userId, avatar)
-          reply.send({ success: true })
-        } catch (err) {
-          reply.status(500).send({ error: 'Failed to update avatar' })
-        }
-      }
-    })
   }, 
   { 
     name: 'me',

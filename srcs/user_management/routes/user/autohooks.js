@@ -20,6 +20,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         }
         throw err 
       }
+    },
+
+    async createAvatar(userId, avatar) {
+      try {
+        const response = await axios.post('http://database:1919/avatars/upload', { userId, avatar })
+        console.log('Avatar uploaded successfully:', response.data) //! DELETE
+        return response.data
+      } catch (err) {
+        throw err
+      }
     }
   })
 }, {
