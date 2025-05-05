@@ -3,14 +3,14 @@
 
 const fp = require('fastify-plugin')
 const schemas = require('./schemas/loader')
-const fileTypeFromBuffer = require('file-type').fileTypeFromBuffer
+const fileTypeFromBuffer = require('file-type')
 
 
 module.exports = fp(async function meAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('dbMe', {
-    async getUserProfile(userId) {
+    async getUserProfile( userId) {
       try {
         const query = fastify.db.prepare(`
           SELECT users.id,
@@ -30,8 +30,7 @@ module.exports = fp(async function meAutoHooks (fastify, opts) {
           throw new Error('User not found')
         }
 
-        const baseUrl = `${request.protocol}://${request.headers.host}`
-        const avatarUrl = `${baseUrl}/avatars/${row.id}`
+        const avatarUrl = `/avatars/${row.id}` 
 
         return {
           id: row.id,
@@ -50,8 +49,9 @@ module.exports = fp(async function meAutoHooks (fastify, opts) {
     
     async createAvatar(userId, avatar) {
       try {
+        const avatarBuffer = Buffer.isBuffer(avatar) ? avatar : Buffer.from(avatar)
         const type = await fileTypeFromBuffer(avatarBuffer)
-        if (!type || !['image/jpeg', 'image/png', 'image/svg+xml'].includes(type.mime)) {
+        if (!type || !['image/jpeg', 'image/png', 'image/jpg'].includes(type.mime)) {
           throw new Error(`Unsupported image format: ${type?.mime || 'unknown'}`)
         }    
         const mimeType = type.mime

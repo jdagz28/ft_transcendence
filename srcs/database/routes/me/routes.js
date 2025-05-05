@@ -19,6 +19,9 @@ module.exports = fp(
           if (!userProfile) {
             reply.code(404).send({ error: 'User profile not found' })
           } else {
+            const baseURL = request.protocol + '://' + request.hostname + process.env.DB_PORT
+            const url =  baseURL + userProfile.avatar.url
+            userProfile.avatar.url = url
             reply.send(userProfile)
           }
         } catch (err) {

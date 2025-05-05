@@ -32,20 +32,6 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email, nickname) VALUES (?, ?, ?, ?, ?)`)
         const result = query.run(username, password, salt, email, nickname)
         fastify.log.debug(`createUser: ${username} -> ID ${result.lastInsertRowid}`)
-        try { 
-          const url = 'http://localhost:1919/me/changeAvatar';
-          const response = await axios.post(url, {
-            userId: result.lastInsertRowid, 
-            avatar: fastify.defaultAvatar
-          })
-          if (response.status !== 200) {
-            throw new Error('Failed to assign default avatar')
-          }
-        }
-        catch (error) {
-          fastify.log.error(`Error /me/changeAvatar: ${error.message}`)
-          throw new Error('Avatar assignment failed')
-        }
         return result.lastInsertRowid
       } catch (err) {
         fastify.log.error(`createUser error: ${err.message}`)

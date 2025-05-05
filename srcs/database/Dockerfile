@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 # Install production dependencies
 RUN npm ci --omit=dev  
 
-COPY default_avatar.svg ./
+COPY default_avatar.png ./
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 COPY . .
@@ -30,7 +30,7 @@ RUN apt-get update && \
 # Copy production dependencies from the builder app
 WORKDIR /app
 COPY --from=builder /builder/node_modules ./node_modules
-COPY --from=builder /builder/default_avatar.svg ./
+COPY --from=builder /builder/default_avatar.png ./
 COPY --from=builder /builder/entrypoint.sh /entrypoint.sh
 COPY --from=builder /builder ./
 

@@ -1,7 +1,6 @@
 'use strict'
 
 const fp = require('fastify-plugin')
-const { fileTypeFromBuffer } = require('file-type')
 const schemas = require('./schemas/loader')
 
 module.exports.prefixOverride = ''
