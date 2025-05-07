@@ -5,6 +5,7 @@ const fp = require('fastify-plugin')
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function userRoutes (fastify, opts) {
+
     // General user profile
     // username
     // email
@@ -35,12 +36,33 @@ module.exports = fp(
   
     fastify.put('/users/me/settings/avatar', {
       schema: {
-        body: fastify.getSchema('schema:users:uploadAvatar'),
+        consumes: ['multipart/form-data']
       },
+      onRequest: [fastify.authenticate],
       handler: async function avatarHandler (request, reply) {
-        const { userId, avatar } = request.body
+        fastify.log.info({ body: request.body }, 'multipart body debug')
+
         try {
-          await fastify.usersDataSource.createAvatar(userId, avatar)
+          const userId = Number(request.user.id)
+          if (!userId) {
+            return reply.status(400).send({ error: 'UserMgmt: Invalid user ID' })
+          }
+          const avatarFile = request.body.avatar
+          if (!avatarFile) {
+            return reply.status(400).send({ error: 'UserMgmt: No avatar file provided' })
+          }
+          const avatarBuf = await avatarFile.toBuffer()
+
+          const FormData = require('form-data')
+          const form = new FormData()
+          form.append('userId', userId)
+          form.append('avatar', avatarBuf, {
+            filename: avatarFile.filename,
+            contentType: avatarFile.mimetype
+          })
+          console.log('Form data:', form)
+
+          await fastify.usersDataSource.createAvatar(form)
           reply.send({ success: true })
         } catch (err) {
           reply.status(500).send({ error: 'UserMgmt: Failed to update avatar' })

@@ -110,10 +110,10 @@ module.exports = fp(
       }
     })
 
-    fastify.put('/user/me/avatar', {
+    fastify.put('/users/me/avatar', {
       schema: {
         consumes: ['multipart/form-data'],
-        body: fastify.getSchema('schema:users:uploadAvatar')
+        // body: fastify.getSchema('schema:users:uploadAvatar')
       },
       handler: async function avatarHandler (request, reply) {
         try {

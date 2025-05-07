@@ -22,9 +22,9 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async createAvatar(userId, avatar) {
+    async createAvatar(form) {
       try {
-        const response = await axios.put('http://database:1919/users/me/avatar', { userId, avatar })
+        const response = await axios.put('http://database:1919/users/me/avatar', form, { headers: form.getHeaders() })
         console.log('Avatar uploaded successfully:', response.data) //! DELETE
         return response.data
       } catch (err) {
