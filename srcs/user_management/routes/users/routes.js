@@ -12,30 +12,30 @@ module.exports = fp(
     // nickname
     // created
     // change avatar
-    fastify.get('/me', {
+    fastify.get('/users/me', {
       schema: {
         response: {
-          200: fastify.getSchema('schema:user:userProfile')
+          200: fastify.getSchema('schema:users:userProfile')
         }
       },
       onRequest: [fastify.authenticate],
       handler: async function userProfileHandler (request, reply) {
-          try {
-            const user = await fastify.usersDataSource.getMeById(request.user.id)
-            if (!user) {
-              return reply.status(404).send({ error: 'User not found' })
-            }
-            return reply.send(user)
-          } catch (err) {
-            fastify.log.error(`Error fetching user: ${err.message}`)
-            return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        try {
+          const user = await fastify.usersDataSource.getMeById(request.user.id)
+          if (!user) {
+            return reply.status(404).send({ error: 'User not found' })
           }
+          return reply.send(user)
+        } catch (err) {
+          fastify.log.error(`Error fetching user: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
       }
     })
   
-    fastify.post('/me/settings/uploadAvatar', {
+    fastify.put('/users/me/settings/avatar', {
       schema: {
-        body: fastify.getSchema('schema:me:avatar')
+        body: fastify.getSchema('schema:users:uploadAvatar'),
       },
       handler: async function avatarHandler (request, reply) {
         const { userId, avatar } = request.body

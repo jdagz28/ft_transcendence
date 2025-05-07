@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:me:avatar",
+  "$id": "schema:users:uploadAvatar",
   "required": [
     "userId",
     "avatar"

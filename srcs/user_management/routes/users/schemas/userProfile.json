@@ -1,13 +1,7 @@
 {
   "type": "object",
-  "$id": "schema:user:userProfile",
-  "required": [
-    "username",
-    "email",
-    "nickname",
-    "created",
-    "avatar"
-  ],
+  "$id": "schema:users:userProfile",
+  "required": ["username", "email"],
   "properties": {
     "username": { "type": "string" },
     "email": { "type": "string", "format": "email" },
@@ -15,7 +9,6 @@
     "created": { "type": "string", "format": "date-time" },
     "avatar": {
       "type": "object",
-      "$id": "#/properties/avatar",
       "properties": {
         "url": { "type": "string", "format": "uri" }
       },

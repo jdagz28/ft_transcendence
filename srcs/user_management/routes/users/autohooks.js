@@ -10,12 +10,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
   fastify.decorate('usersDataSource', {
     async getMeById(id) {
       try {
-        console.log('Getting all data for: ', id)
-        const response = await axios.get('http://database:1919/me', { params: { id } })
+        console.log('Getting all data for: ', id) //! DELETE
+        const response = await axios.get('http://database:1919/users/me', { params: { id } })
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
-          console.log('User not found')
+          fastify.log.error(`User with ID ${id} not found`)
           return null
         }
         throw err 
@@ -24,7 +24,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async createAvatar(userId, avatar) {
       try {
-        const response = await axios.post('http://database:1919/avatars/upload', { userId, avatar })
+        const response = await axios.put('http://database:1919/users/me/avatar', { userId, avatar })
         console.log('Avatar uploaded successfully:', response.data) //! DELETE
         return response.data
       } catch (err) {

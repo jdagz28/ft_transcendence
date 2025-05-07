@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:user:createUser",
+  "$id": "schema:users:createUser",
   "required": [
     "username",
     "password",
