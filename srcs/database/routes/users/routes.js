@@ -83,11 +83,12 @@ module.exports = fp(
       handler: async function getAvatar (request, reply) {
         try {
           const { userId } = request.params
+          console.log('Fetching avatar for user ID:', userId) //! DELETE
           const query = fastify.db.prepare(`
             SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
           `)
           const row = query.get(userId)
-          fastify.log(`Avatar for user ${userId}: ${row ? 'found' : 'not found'}`) //! DELETE
+          console.log('Row:', row) //! DELETE
           let avatarBuffer = row?.avatar
           let mimeType = row?.mime_type
           
@@ -102,7 +103,7 @@ module.exports = fp(
           }
       
           reply
-            .header('Content-Type', type.mime)
+            .header('Content-Type', mimeType)
             .header('Cache-Control', 'public, max-age=3600')
             .send(avatarBuffer)
         } catch (err) { 
