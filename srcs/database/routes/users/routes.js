@@ -64,7 +64,7 @@ module.exports = fp(
           if (!userProfile) {
             reply.code(404).send({ error: 'User profile not found' })
           } else {
-            const baseURL = request.protocol + '://' + request.hostname + process.env.DB_PORT
+            const baseURL = request.protocol + "://localhost:" + process.env.USER_PORT
             const url =  baseURL + userProfile.avatar.url
             userProfile.avatar.url = url
             reply.send(userProfile)
@@ -87,6 +87,7 @@ module.exports = fp(
             SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
           `)
           const row = query.get(userId)
+          fastify.log(`Avatar for user ${userId}: ${row ? 'found' : 'not found'}`) //! DELETE
           let avatarBuffer = row?.avatar
           let mimeType = row?.mime_type
           

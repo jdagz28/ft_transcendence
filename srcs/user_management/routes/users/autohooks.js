@@ -22,7 +22,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async createAvatar(form) {
+    async createAvatar(request, form) {
       try {
         const INTERNAL_KEY = process.env.INTERNAL_KEY
         if (!INTERNAL_KEY) {

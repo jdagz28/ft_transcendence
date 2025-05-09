@@ -63,10 +63,31 @@ module.exports = fp(
           })
           console.log('Form data:', form)
 
-          await fastify.usersDataSource.createAvatar(form)
+          await fastify.usersDataSource.createAvatar(request, form)
           reply.send({ success: true })
         } catch (err) {
           reply.status(500).send({ error: 'UserMgmt: Failed to update avatar' })
+        }
+      }
+    })
+
+    fastify.get('/users/:userId/avatar', {
+      onRequest: [fastify.authenticate],
+      handler: async function avatarHandler (request, reply) {
+        try {
+          const userId = request.params.userId
+          fastify.log.info(`Fetching avatar for user ID: ${userId}`)
+          const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/avatar`, {
+            responseType: 'arraybuffer'
+          })
+          if (response.status !== 200) {
+            return reply.status(404).send({ error: 'UserMgmt: Avatar not found' })
+          }
+          reply.type(response.headers['content-type'])
+          return reply.send(response.data)
+        } catch (err) {
+          fastify.log.error(`Error fetching avatar: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
         }
       }
     })
