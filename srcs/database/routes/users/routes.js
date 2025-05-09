@@ -111,19 +111,21 @@ module.exports = fp(
       }
     })
 
-    //! NOT YET FULLY WORKING
     fastify.put('/users/me/avatar', {
       schema: {
         consumes: ['multipart/form-data'],
-        // body: fastify.getSchema('schema:users:uploadAvatar')
       },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey], 
       handler: async function avatarHandler (request, reply) {
         try {
-          const parts = await request.multipart()
-          const buffer = await parts.file.avatar.toBuffer()
-          const userId = Number(parts.fields.userId.value)
-          await fastify.dbUsers.createAvatar(userId, buffer)
-          reply.send({ success: true })
+          const { avatar, userId } = request.body;
+          if (!avatar)
+            return reply.badRequest('No avatar file provided');
+          const uid = Number(request.user.id)
+          if (!uid) 
+            return reply.badRequest('Missing user ID');
+          await fastify.dbUsers.createAvatar(uid, await avatar.toBuffer());
+          reply.send({ success: true });
         } catch (err) {
           reply.status(500).send({ error: 'Failed to update avatar' })
         }
@@ -134,6 +136,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:updateUser'),
       },
+      onRequest: [fastify.checkInternalKey],
       handler: async function updateUserDetailsHandler(request, reply) {
         const { userId } = request.params
         const { field, value } = request.body
@@ -152,6 +155,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:updatePassword'),
       },
+      onRequest: [fastify.checkInternalKey],
       handler: async function updatePasswordHandler(request, reply) {
         try {
           await fastify.dbUsers.updatePassword(request.params.userId, request.body.password, request.body.salt)

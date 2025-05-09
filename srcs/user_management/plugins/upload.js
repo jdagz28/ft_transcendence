@@ -12,4 +12,6 @@ module.exports = fp(async function (fastify, opts) {
       fileSize: 5 * 1024 * 1024
     }
   })
+}, {
+  name: 'upload-plugin'
 })

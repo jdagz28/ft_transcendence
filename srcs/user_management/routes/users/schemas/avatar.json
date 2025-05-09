@@ -6,7 +6,7 @@
     "avatar"
   ],
   "properties": {
-    "userId": { "type": "integer" },
+    "userId": { "type": "string"},
     "avatar": {
       "oneOf": [
         { "type": "string" },

@@ -3,6 +3,7 @@
 const fp = require('fastify-plugin')
 const schemas = require('./schemas/loader')
 const axios = require('axios')
+const { fileTypeFromBuffer } = require('file-type')
 
 module.exports = fp(async function userAutoHooks (fastify, opts) {
   fastify.register(schemas)

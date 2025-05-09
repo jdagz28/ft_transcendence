@@ -24,10 +24,35 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async createAvatar(form) {
       try {
-        const response = await axios.put(`http://database:${process.env.DB_PORT}/users/me/avatar`, form, { headers: form.getHeaders() })
+        const INTERNAL_KEY = process.env.INTERNAL_KEY
+        if (!INTERNAL_KEY) {
+          throw new Error('INTERNAL_KEY is not set')
+        }
+        const authHeader = request.headers['authorization'];
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '');
+        if (!token) {
+          throw new Error('Missing token')
+        }
+
+
+        const response = await axios.put(`http://database:${process.env.DB_PORT}/users/me/avatar`, 
+          form,
+          { headers: {
+            ...form.getHeaders(),
+            'x-internal-key': INTERNAL_KEY,
+            'Authorization': `Bearer ${token}`,
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+           })
         console.log('Avatar uploaded successfully:', response.data) //! DELETE
         return response.data
       } catch (err) {
+        console.error('DB service error:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });              
         throw err
       }
     }
