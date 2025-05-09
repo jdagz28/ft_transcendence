@@ -1,6 +1,7 @@
 'use strict'
 
 const fp = require('fastify-plugin')
+const axios = require('axios')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
@@ -110,6 +111,7 @@ module.exports = fp(
       }
     })
 
+    //! NOT YET FULLY WORKING
     fastify.put('/users/me/avatar', {
       schema: {
         consumes: ['multipart/form-data'],
@@ -124,6 +126,39 @@ module.exports = fp(
           reply.send({ success: true })
         } catch (err) {
           reply.status(500).send({ error: 'Failed to update avatar' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId', {
+      schema: {
+        body: fastify.getSchema('schema:users:updateUser'),
+      },
+      handler: async function updateUserDetailsHandler(request, reply) {
+        const { userId } = request.params
+        const { field, value } = request.body
+
+        try {
+          await fastify.dbUsers.updateUserDetails(userId, field, value)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error updating user details: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to update user details' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId/password', {
+      schema: {
+        body: fastify.getSchema('schema:users:updatePassword'),
+      },
+      handler: async function updatePasswordHandler(request, reply) {
+        try {
+          await fastify.dbUsers.updatePassword(request.params.userId, request.body.password, request.body.salt)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error updating password: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to update password' })
         }
       }
     })

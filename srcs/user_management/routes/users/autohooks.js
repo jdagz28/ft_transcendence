@@ -11,7 +11,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async getMeById(id) {
       try {
         console.log('Getting all data for: ', id) //! DELETE
-        const response = await axios.get('http://database:1919/users/me', { params: { id } })
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/me`, { params: { id } })
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -24,7 +24,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async createAvatar(form) {
       try {
-        const response = await axios.put('http://database:1919/users/me/avatar', form, { headers: form.getHeaders() })
+        const response = await axios.put(`http://database:${process.env.DB_PORT}/users/me/avatar`, form, { headers: form.getHeaders() })
         console.log('Avatar uploaded successfully:', response.data) //! DELETE
         return response.data
       } catch (err) {

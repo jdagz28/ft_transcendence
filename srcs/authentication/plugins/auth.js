@@ -2,6 +2,8 @@
 
 const fp = require('fastify-plugin')
 const jwt = require('@fastify/jwt')
+const bcrypt = require('bcrypt')
+
 
 module.exports = fp(async function authenticationPlugin (fastify, opts) {
   const revokedTokens = new Map()
@@ -26,7 +28,6 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
   })
 
 
-  //! TO IMPLEMENT OUR OWN JWT FUNCTION
   fastify.decorateRequest('generateToken', async function() {
     const token = await fastify.jwt.sign({
       id: String(this.user.id),
@@ -40,6 +41,12 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
   })
 
 
+  fastify.decorate('generateHash', async function generateHash (password) {
+    const salt = await bcrypt.genSalt(10)
+    const hash = await bcrypt.hash(password, salt)
+  
+    return { salt, hash }
+  })
 
 }), {
   name: 'authentication-plugin'

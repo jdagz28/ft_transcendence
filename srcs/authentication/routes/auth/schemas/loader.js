@@ -11,4 +11,5 @@ module.exports = fp(async function schemaLoaderPlugin (fastify, opts) {
   fastify.addSchema(require('./getUser.json'))
   fastify.addSchema(require('./verify.json'))
   fastify.addSchema(require('./verify-response.json'))
+  fastify.addSchema(require('./changePassword.json'))
 })

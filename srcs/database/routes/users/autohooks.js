@@ -95,6 +95,40 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`createAvatar error: ${err.message}`)
         throw new Error('Avatar creation failed')
       }
+    },
+
+    async updateUserDetails(userId, field, value) {
+      const allowedFields = ['nickname', 'username', 'email']
+      if (!allowedFields.includes(field)) {
+        throw new Error('Invalid field for update')
+      }
+
+      const query = fastify.db.prepare(`
+        UPDATE users
+          SET ${field} = ?
+        WHERE id = ?
+      `)
+
+      const result = query.run(value, userId)
+      if (result.changes === 0) {
+        fastify.log.error(`Failed to update user ${userId} field ${field}`)
+        throw new Error('User update failed')
+      }
+      return true
+    },
+
+    async updatePassword(userId, hashedPassword, salt) {
+      const query = fastify.db.prepare(`
+        UPDATE users
+          SET password = ?, salt = ?
+        WHERE id = ?
+      `)
+      const result = query.run(hashedPassword, salt, userId)
+      if (result.changes === 0) {
+        fastify.log.error(`Failed to update password for user ${userId}`)
+        throw new Error('Password update failed')
+      }
+      return true
     }
 
   })

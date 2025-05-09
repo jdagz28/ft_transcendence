@@ -1,6 +1,7 @@
 'use strict'
 
 const fp = require('fastify-plugin')
+const axios = require('axios')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
@@ -71,6 +72,79 @@ module.exports = fp(
     })
 
 
+    // User change password
+    fastify.put('/me/settings/changePassword', {
+      schema: {
+        body: fastify.getSchema('schema:users:changePassword')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function changePassword (request, reply) {
+        try {
+          const userId = request.user.id
+          const { newPassword } = request.body
+
+          const response = await axios.put(`http://database:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, { userId, newPassword })
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to change password' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error changing password: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
+
+    /*
+    // User change email
+    fastify.put('/me/settings/changeEmail', {
+      onRequest: [fastify.authenticate],
+      handler: async (request, reply) => {
+
+      }
+    })
+
+    // User change avatar
+    fastify.post('/me/settings/changeAvatar', {
+      onRequest: [fastify.authenticate],
+      handler: async (request, reply) => {
+
+      }
+    })
+
+    // User change nickname
+    fastify.post('/me/settings/changeNickname', {
+      onRequest: [fastify.authenticate],
+      handler: async (request, reply) => {
+
+      }
+    })
+
+    // User generate MFA
+    fastify.post('/me/settings/generateMFA', {
+      onRequest: [fastify.authenticate],
+      handler: async (request, reply) => {
+
+      }
+    })
+
+    // User disable MFA
+    fastify.delete('/me/settings/disableMFA', {
+      onRequest: [fastify.authenticate],
+      handler: async (request, reply) => {
+
+      }
+    })
+    
+    // User enable MFA
+    fastify.put('/me/settings/enableMFA', {
+      onRequest: [fastify.authenticate],
+      handler: async (request, reply) => {
+
+      }
+    })
+  */
+
     /**
     // User Profile Account Settings / security
     // email, (change email)
@@ -124,61 +198,6 @@ module.exports = fp(
       }
     })
 
-    // User change password
-    fastify.put('/me/settings/changePassword', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User change email
-    fastify.put('/me/settings/changeEmail', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User change avatar
-    fastify.post('/me/settings/changeAvatar', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User change nickname
-    fastify.post('/me/settings/changeNickname', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User generate MFA
-    fastify.post('/me/settings/generateMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User disable MFA
-    fastify.delete('/me/settings/disableMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-    
-    // User enable MFA
-    fastify.put('/me/settings/enableMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
 
     // User add friend
     fastify.post('/me/addFriend', {
