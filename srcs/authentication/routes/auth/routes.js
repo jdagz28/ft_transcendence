@@ -304,7 +304,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:changePassword'),
       },
-      onRequest: fastify.authenticate,
+      onRequest: [fastify.authenticate, fastify.checkInternalKey], 
       handler: async function changePasswordHandler(request, reply) {
         const { passwrod, userId } = request.body
 

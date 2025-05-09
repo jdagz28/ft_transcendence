@@ -34,7 +34,6 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('Missing token')
         }
 
-
         const response = await axios.put(`http://database:${process.env.DB_PORT}/users/me/avatar`, 
           form,
           { headers: {

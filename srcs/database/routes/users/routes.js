@@ -160,7 +160,7 @@ module.exports = fp(
       onRequest: [fastify.checkInternalKey],
       handler: async function updatePasswordHandler(request, reply) {
         try {
-          await fastify.dbUsers.updatePassword(request.params.userId, request.body.password, request.body.salt)
+          await fastify.dbUsers.updatePassword(request.user.id, request.body.password, request.body.salt)
           return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error updating password: ${err.message}`)

@@ -94,7 +94,7 @@ module.exports = fp(
 
 
     // User change password
-    fastify.put('/me/settings/changePassword', {
+    fastify.put('/users/me/settings/changePassword', {
       schema: {
         body: fastify.getSchema('schema:users:changePassword')
       },
@@ -103,8 +103,17 @@ module.exports = fp(
         try {
           const userId = request.user.id
           const { newPassword } = request.body
+          const rawAuth = (request.headers.authorization || '')
+          .replace(/^"|"$/g, '')
 
-          const response = await axios.put(`http://database:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, { userId, newPassword })
+          const response = await axios.put(`http://authentication:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, 
+            { newPassword },
+            {
+              headers: {
+                Authorization: rawAuth,                
+                'x-internal-key': process.env.INTERNAL_KEY
+              }
+          })
           if (response.status !== 200) {
             return reply.status(500).send({ error: 'UserMgmt: Failed to change password' })
           }
@@ -116,15 +125,24 @@ module.exports = fp(
       }
     })
 
-    /*
+    
     // User change email
-    fastify.put('/me/settings/changeEmail', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
+    // fastify.put('/me/settings/changeEmail', {
+    //   schema: {
+    //     body: fastify.getSchema('schema:users:changeEmail')
+    //   },
+    //   onRequest: [fastify.authenticate],
+    //   handler: async function changeEmail(request, reply) {
+    //     try {
+    //       const userId = request.user.id
+    //       const { newEmail } = request.body
 
-      }
-    })
+    //       const reesponse: 
+    //     }
+    //   }
+    // })
 
+/*
     // User change avatar
     fastify.post('/me/settings/changeAvatar', {
       onRequest: [fastify.authenticate],
