@@ -2,6 +2,7 @@
 
 const fp = require('fastify-plugin')
 const axios = require('axios')
+const jwt = require('@fastify/jwt')
 
 const authApi = axios.create({
   baseURL: `http://authentication:${process.env.AUTH_PORT}`,

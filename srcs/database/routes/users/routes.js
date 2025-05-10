@@ -142,6 +142,7 @@ module.exports = fp(
       handler: async function updateUserDetailsHandler(request, reply) {
         const { userId } = request.params
         const { field, value } = request.body
+        
 
         try {
           await fastify.dbUsers.updateUserDetails(userId, field, value)
@@ -157,7 +158,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:updatePassword'),
       },
-      onRequest: [fastify.checkInternalKey],
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function updatePasswordHandler(request, reply) {
         try {
           await fastify.dbUsers.updatePassword(request.user.id, request.body.password, request.body.salt)

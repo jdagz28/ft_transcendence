@@ -2,7 +2,7 @@
 
 const fp = require('fastify-plugin')
 const bcrypt = require('bcrypt')
-// const generateHash = require('./generate-hash')
+const axios = require('axios')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
@@ -304,17 +304,24 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:changePassword'),
       },
-      onRequest: [fastify.authenticate, fastify.checkInternalKey], 
+      onRequest: [fastify.authenticate], 
       handler: async function changePasswordHandler(request, reply) {
-        const { passwrod, userId } = request.body
+        const { newPassword } = request.body
+        const userId = request.params.userId
+        const rawAuth = request.headers.authorization
 
         try {
-          const { hash, salt } = await fastify.generateHash(password)
+          const { salt, hash } = await fastify.generateHash(newPassword)
+          console.log ('Generated hash and salt:', { hash, salt })
           const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/password`, { 
-            field: 'password',
-            value: { password: hash, salt}
+            password: hash,
+            salt: salt
+          },{
+            headers: {
+              Authorization: rawAuth,                
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
           })
-
         } catch (err) {
           fastify.log.error(`Auth: password change failed for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to change password' })

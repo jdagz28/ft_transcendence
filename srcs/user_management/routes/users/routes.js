@@ -103,8 +103,7 @@ module.exports = fp(
         try {
           const userId = request.user.id
           const { newPassword } = request.body
-          const rawAuth = (request.headers.authorization || '')
-          .replace(/^"|"$/g, '')
+          const rawAuth = request.headers.authorization
 
           const response = await axios.put(`http://authentication:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, 
             { newPassword },
