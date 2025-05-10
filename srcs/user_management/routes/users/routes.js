@@ -92,8 +92,6 @@ module.exports = fp(
       }
     })
 
-
-    // User change password
     fastify.put('/users/me/settings/changePassword', {
       schema: {
         body: fastify.getSchema('schema:users:changePassword')
@@ -125,21 +123,35 @@ module.exports = fp(
     })
 
     
-    // User change email
-    // fastify.put('/me/settings/changeEmail', {
-    //   schema: {
-    //     body: fastify.getSchema('schema:users:changeEmail')
-    //   },
-    //   onRequest: [fastify.authenticate],
-    //   handler: async function changeEmail(request, reply) {
-    //     try {
-    //       const userId = request.user.id
-    //       const { newEmail } = request.body
+    fastify.put('/users/me/settings/changeEmail', {
+      schema: {
+        body: fastify.getSchema('schema:users:changeEmail')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function changeEmail(request, reply) {
+        try {
+          const userId = request.user.id
+          const { newEmail } = request.body
+          const rawAuth = request.headers.authorization
 
-    //       const reesponse: 
-    //     }
-    //   }
-    // })
+          const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
+            { field: 'email', value: newEmail },
+            {
+              headers: {
+                Authorization: rawAuth,
+                'x-internal-key': process.env.INTERNAL_KEY
+              }
+            })
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to change email' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error changing email: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
 
 /*
     // User change avatar

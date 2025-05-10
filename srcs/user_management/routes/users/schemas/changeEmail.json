@@ -1,9 +1,9 @@
 {
   "type": "object",
   "$id": "schema:users:changeEmail",
-  "required": [ "email" ],
+  "required": [ "newEmail" ],
   "properties": {
-    "email": {
+    "newEmail": {
       "type": "string",
       "format": "email"
     }

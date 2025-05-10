@@ -134,7 +134,7 @@ module.exports = fp(
       }
     })
 
-    fastify.put('/users/:userId', {
+    fastify.put('/users/:userId/updateDetails', {
       schema: {
         body: fastify.getSchema('schema:users:updateUser'),
       },
