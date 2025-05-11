@@ -77,7 +77,7 @@ module.exports = fp(
         try {
           const userId = request.params.userId
           fastify.log.info(`Fetching avatar for user ID: ${userId}`)
-          const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/avatar`, {
+          const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/avatar`, {
             responseType: 'arraybuffer'
           })
           if (response.status !== 200) {
@@ -103,7 +103,7 @@ module.exports = fp(
           const { newPassword } = request.body
           const rawAuth = request.headers.authorization
 
-          const response = await axios.put(`http://authentication:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, 
+          const response = await axios.put(`${request.protocol}://authentication:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, 
             { newPassword },
             {
               headers: {
@@ -134,7 +134,7 @@ module.exports = fp(
           const { newEmail } = request.body
           const rawAuth = request.headers.authorization
 
-          const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
+          const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
             { field: 'email', value: newEmail },
             {
               headers: {
@@ -153,6 +153,69 @@ module.exports = fp(
       }
     })
 
+    fastify.put('/me/settings/changeUsername', {
+      schema: {
+        body: fastify.getSchema('schema:users:changeUsername')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function changeUsername(request, reply) {
+        try {
+          const userId = request.user.id
+          const { newUsername } = request.body
+          const rawAuth = request.headers.authorization
+
+          const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
+            { field: 'username', value: newUsername },
+            {
+              headers: {
+                Authorization: rawAuth,
+                'x-internal-key': process.env.INTERNAL_KEY
+              }
+            })
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to change username' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error changing username: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+
+      }
+    })
+
+    fastify.put('/me/settings/changeNickname', {
+      schema: {
+        body: fastify.getSchema('schema:users:changeNickname')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function changeNickname(request, reply) {
+        try {
+          const userId = request.user.id
+          const { newNickname } = request.body
+          const rawAuth = request.headers.authorization
+
+          const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
+            { field: 'nickname', value: newNickname },
+            {
+              headers: {
+                Authorization: rawAuth,
+                'x-internal-key': process.env.INTERNAL_KEY
+              }
+            })
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to change nickname' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error changing nickname: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+
+      }
+    })
+
+
 /*
     // User change avatar
     fastify.post('/me/settings/changeAvatar', {
@@ -162,13 +225,7 @@ module.exports = fp(
       }
     })
 
-    // User change nickname
-    fastify.post('/me/settings/changeNickname', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
 
-      }
-    })
 
     // User generate MFA
     fastify.post('/me/settings/generateMFA', {
