@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "$id": "schema:users:uploadAvatar",
+  "required": [
+    "userId",
+    "avatar"
+  ],
+  "properties": {
+    "userId": { "type": "string"},
+    "avatar": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object", "properties": {
+            "type":  { "const": "Buffer" },
+            "data":  { 
+              "type": "array", 
+              "items": { "type": "integer" } 
+            }
+        }}
+      ]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:user:getUser",
+  "$id": "schema:users:getUser",
   "anyOf": [
     {
       "type": "object",

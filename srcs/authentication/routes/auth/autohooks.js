@@ -4,14 +4,14 @@ const fp = require('fastify-plugin')
 const schemas = require('./schemas/loader')
 const axios = require('axios')
 
-module.exports = fp(async function userAutoHooks (fastify, opts) {
+module.exports = fp(async function authAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('usersDataSource', {
     async readUser(usernameORemail) {
       try {
         console.log('Looking for:', usernameORemail)
-        const response = await axios.get(`http://database:1919/users/${usernameORemail}`)
+        const response = await axios.get(`http://database:1919/users/search/${usernameORemail}`)
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -106,5 +106,5 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     }
   })
 }, {
-  name: 'userAutoHooks'
+  name: 'authAutoHooks'
 })

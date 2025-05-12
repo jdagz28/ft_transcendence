@@ -1,5 +1,5 @@
 {
-  "name": "database",
+  "name": "usermanagement",
   "version": "1.0.0",
   "description": "This project was bootstrapped with Fastify-CLI.",
   "main": "app.js",
@@ -8,22 +8,21 @@
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "start": "fastify start -o -l info app.js",
-    "dev": "fastify start -o -w -l info app.js"
+    "start": "fastify start -l info app.js",
+    "dev": "fastify start -w -l info -P app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@fastify/autoload": "^6.0.0",
+    "@fastify/jwt": "^9.1.0",
     "@fastify/multipart": "^9.0.3",
     "@fastify/sensible": "^6.0.0",
     "axios": "^1.9.0",
-    "bcrypt": "^5.1.1",
-    "better-sqlite3": "^11.9.1",
     "fastify": "^5.0.0",
     "fastify-cli": "^7.4.0",
     "fastify-plugin": "^5.0.0",
-    "file-type": "^20.5.0"
+    "fp": "^0.1.0"
   }
 }

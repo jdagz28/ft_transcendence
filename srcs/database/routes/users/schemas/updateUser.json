@@ -1,0 +1,54 @@
+{
+  "$id": "schema:users:updateUser",
+  "type": "object",
+  "required": ["field", "value"],
+  "additionalProperties": false,
+
+  "properties": {
+    "field": {
+      "type": "string",
+      "enum": ["username", "email", "nickname"]
+    },
+    "value": { "type": "string" }
+  },
+
+  "allOf": [
+    {                                    
+      "if": { "properties": { "field": { "const": "username" } } },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9_]+$"
+          }
+        }
+      }
+    },
+    {                                    
+      "if": { "properties": { "field": { "const": "email" } } },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          }
+        }
+      }
+    },
+    {                                     
+      "if": { "properties": { "field": { "const": "nickname" } } },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "string", 
+            "minLength": 1,
+            "maxLength": 50
+          }
+        }
+      }
+    }
+  ]
+}

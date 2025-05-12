@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "$id": "schema:users:changeEmail",
+  "required": [ "newEmail" ],
+  "properties": {
+    "newEmail": {
+      "type": "string",
+      "format": "email"
+    }
+  }
+}

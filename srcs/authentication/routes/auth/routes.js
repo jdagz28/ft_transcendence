@@ -2,19 +2,17 @@
 
 const fp = require('fastify-plugin')
 const bcrypt = require('bcrypt')
-
-const generateHash = require('./generate-hash')
+const axios = require('axios')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function applicationAuth (fastify, opts) {
-    fastify.post('/register', {
+    fastify.post('/auth/register', {
       schema: {
         body: fastify.getSchema('schema:auth:register')
       },
       handler: async function register (request, reply) {        
         try {
-          console.log('Attempting to read user by username:', request.body.username)
           const existingUser = await fastify.usersDataSource.readUser(request.body.username)
           if (existingUser) {
             const err = new Error('Username already exists')
@@ -22,7 +20,6 @@ module.exports = fp(
             throw err
           }
 
-          console.log('Attempting to read user by email:', request.body.email)
           const emailExists = await fastify.usersDataSource.readUser(request.body.email)
           if (emailExists) {
             const err = new Error('Email already exists')
@@ -30,8 +27,7 @@ module.exports = fp(
             throw err
           }
         
-          const { hash, salt } = await generateHash(request.body.password)
-          console.log('Password hashed successfully.')
+          const { hash, salt } = await fastify.generateHash(request.body.password)
 
           const newUserId = await fastify.usersDataSource.createUser({
             username: request.body.username,
@@ -39,7 +35,6 @@ module.exports = fp(
             salt,
             email: request.body.email,
           })
-          console.log('User created with ID:', newUserId)
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
           console.error('Failed to create user:', err)
@@ -49,43 +44,7 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/getUser', {
-      schema: {
-        querystring: { $ref: 'schema:user:getUser' },
-        },
-        response: { 
-          200: fastify.getSchema('schema:auth:user')
-      },
-      handler: async function  getUser (request, reply) {
-        try {
-          const { username, email } = request.query;
-          let user;
-
-          if (username) {
-            console.log('Reading user by username:', username);
-            user = await fastify.usersDataSource.readUser(username);
-          } else if (email) {
-            console.log('Reading user by email:', email);
-            user = await fastify.usersDataSource.readUser(email); 
-          }
-          if (!user) {
-            const err = new Error('User do not exist')
-            err.statusCode = 404
-            throw err
-          }
-          return {
-            username: user.username,
-            password: user.password,
-            email: user.email
-          }
-        } catch (err) {
-          console.error('Failed to get user:', err)
-          reply.status(500).send({ error: 'Internal Server Error' })
-        }
-      }
-    })
-
-    fastify.post('/authenticate', {
+    fastify.post('/auth/authenticate', {
       schema: {
         body: fastify.getSchema('schema:auth:login'),
         response: {
@@ -93,7 +52,6 @@ module.exports = fp(
         }
       },
       handler: async function authenticateHandler(request, reply) {
-        console.log('Checking user details in database')
 
         const user = await this.usersDataSource.readUser(request.body.username)
         if (!user) {
@@ -102,20 +60,21 @@ module.exports = fp(
           throw err
         }
 
-        const { hash } = await bcrypt.compare(request.body.password, user.password)
-        if (hash !== user.hash) {
-          const err = new Error('Incorrect password provided')
+        const passWordMatch  = await bcrypt.compare(request.body.password, user.password)
+        if (!passWordMatch) {
+          const err = new Error('Invalid password')
           err.statusCode = 401
           throw err
         }
-
-        request.user = user
-        console.log('Authenticated User: ' + user)
+        request.user = {
+          id: user.id,
+          username: user.username,
+        }
         return refreshHandler(request, reply)
       }
     })
 
-    fastify.post('/logout', {
+    fastify.post('/auth/logout', {
       onRequest: fastify.authenticate,
       handler: async function logoutHandler (request, reply) {
         request.revokeToken()
@@ -123,7 +82,7 @@ module.exports = fp(
       }
     })
 
-    fastify.post('/refresh', {
+    fastify.post('/auth/refresh', {
       onRequest: fastify.authenticate,
       schema: {
         headers: fastify.getSchema('schema:auth:token-header'),
@@ -191,7 +150,7 @@ module.exports = fp(
           }
           
           //! TEMPORARY PASSWORD
-          const { hash, salt } = await generateHash(process.env.REMOTE_TEMP_PASSWORD)
+          const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD)
           const newUserId = await fastify.usersDataSource.createUser({
             username,
             password: hash,
@@ -203,7 +162,6 @@ module.exports = fp(
             err.statusCode = 500
             throw err
           }
-          console.log('Remote user created with ID:', newUserId)
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
         console.error('Error during 42 authentication:', err)
@@ -269,7 +227,7 @@ module.exports = fp(
           }
           
           //! TEMPORARY PASSWORD
-          const { hash, salt } = await generateHash(process.env.REMOTE_TEMP_PASSWORD)
+          const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD)
           const newUserId = await fastify.usersDataSource.createUser({
             username,
             password: hash,
@@ -289,8 +247,56 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.get('/auth/verify', {
+      schema: fastify.getSchema('schema:auth:verify'),
+      response: {
+        200: fastify.getSchema('schema:auth:verify-response')
+      },
+      handler: async function tokenVerificationHandler(request) {
+        try {
+          const cleanToken =  request.query.token.replace(/^"|"$/g, '')
+          console.log('Verifying token:', cleanToken)
+          const user = await fastify.jwt.verify(cleanToken)
+          console.log('Token verified, user:', user)
+          return { valid: true, user }
+        } catch (err) {
+          return { valid: false, user: null }
+        }
+      }
+    })
+
+    fastify.put('/auth/:userId/changePassword', {
+      schema: {
+        body: fastify.getSchema('schema:auth:changePassword'),
+      },
+      onRequest: [fastify.authenticate], 
+      handler: async function changePasswordHandler(request, reply) {
+        const { newPassword } = request.body
+        const userId = request.params.userId
+        const rawAuth = request.headers.authorization
+
+        try {
+          const { salt, hash } = await fastify.generateHash(newPassword)
+          console.log ('Generated hash and salt:', { hash, salt })
+          const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/password`, { 
+            password: hash,
+            salt: salt
+          },{
+            headers: {
+              Authorization: rawAuth,                
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          })
+        } catch (err) {
+          fastify.log.error(`Auth: password change failed for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to change password' })
+        }
+      }
+    })
+
   }, {
     name: 'auth-routes',
-    dependencies: [ 'userAutoHooks' ]
+    dependencies: [ 'authAutoHooks']
 })
 

@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "$id": "schema:auth:verify-response",
+  "required": ["valid", "user"],
+  "properties": {
+      "valid": { "type": "boolean" },
+      "user": {
+        "oneOf": [
+          { "$ref": "schema:auth:getUser" },
+          { "type": "null" }
+        ]
+      }
+    }
+}
