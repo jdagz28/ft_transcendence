@@ -9,4 +9,5 @@ module.exports = fp(async function schemaLoaderPlugin (fastify, opts) {
   fastify.addSchema(require('./changeEmail.json'))
   fastify.addSchema(require('./changeNickname.json'))
   fastify.addSchema(require('./changeUsername.json'))
+  fastify.addSchema(require('./getUserByUsername.json'))
 })

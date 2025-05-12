@@ -7,7 +7,7 @@ const axios = require('axios')
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function applicationAuth (fastify, opts) {
-    fastify.post('/register', {
+    fastify.post('/auth/register', {
       schema: {
         body: fastify.getSchema('schema:auth:register')
       },
@@ -44,41 +44,7 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/getUser', {
-      schema: {
-        querystring: { $ref: 'schema:user:getUser' },
-        },
-        response: { 
-          200: fastify.getSchema('schema:auth:user')
-      },
-      handler: async function  getUser (request, reply) {
-        try {
-          const { username, email } = request.query;
-          let user;
-
-          if (username) {
-            user = await fastify.usersDataSource.readUser(username);
-          } else if (email) {
-            user = await fastify.usersDataSource.readUser(email); 
-          }
-          if (!user) {
-            const err = new Error('User do not exist')
-            err.statusCode = 404
-            throw err
-          }
-          return {
-            username: user.username,
-            password: user.password,
-            email: user.email
-          }
-        } catch (err) {
-          console.error('Failed to get user:', err)
-          reply.status(500).send({ error: 'Internal Server Error' })
-        }
-      }
-    })
-
-    fastify.post('/authenticate', {
+    fastify.post('/auth/authenticate', {
       schema: {
         body: fastify.getSchema('schema:auth:login'),
         response: {
@@ -108,7 +74,7 @@ module.exports = fp(
       }
     })
 
-    fastify.post('/logout', {
+    fastify.post('/auth/logout', {
       onRequest: fastify.authenticate,
       handler: async function logoutHandler (request, reply) {
         request.revokeToken()
@@ -116,7 +82,7 @@ module.exports = fp(
       }
     })
 
-    fastify.post('/refresh', {
+    fastify.post('/auth/refresh', {
       onRequest: fastify.authenticate,
       schema: {
         headers: fastify.getSchema('schema:auth:token-header'),

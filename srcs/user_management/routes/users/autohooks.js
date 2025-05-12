@@ -8,14 +8,29 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('usersDataSource', {
-    async getMeById(id) {
+    async getMeById(request, id) {
       try {
         console.log('Getting all data for: ', id) //! DELETE
-        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/me`, { params: { id } })
+        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/users/me`, { params: { id } })
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
           fastify.log.error(`User with ID ${id} not found`)
+          return null
+        }
+        throw err 
+      }
+    },
+
+    async getUserByUsername(request, username) {
+      try {
+        console.log('Getting all data for: ', username) //! DELETE
+        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}` +
+                `/users/${encodeURIComponent(username)}`)
+        return response.data
+      } catch (err) {
+        if (err.response && err.response.status === 404) {
+          fastify.log.error(`User with username ${username} not found`)
           return null
         }
         throw err 
@@ -34,7 +49,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('Missing token')
         }
 
-        const response = await axios.put(`http://database:${process.env.DB_PORT}/users/me/avatar`, 
+        const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/me/avatar`, 
           form,
           { headers: {
             ...form.getHeaders(),

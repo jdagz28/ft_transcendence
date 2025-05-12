@@ -6,7 +6,8 @@ const axios = require('axios')
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function applicationAuth (fastify, opts) {
-    fastify.get('/users/:username', {
+    //! Separate email search? 
+    fastify.get('/users/search/:username', {
       schema: {
         params: fastify.getSchema('schema:users:getUser')
       },
@@ -170,6 +171,29 @@ module.exports = fp(
       }
     })
       
+    fastify.get('/users/:username', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      response: { 200: fastify.getSchema('schema:users:userProfile')},
+      handler: async function getUserByUsername (request, reply) {
+        try {
+          const { username } = request.params
+          console.log('Looking for:', username) //! DELETE
+          const user = await fastify.dbUsers.getUserByUsername(username)
+          if (!user) {
+            fastify.log.error('User not found')
+            reply.code(404);
+            return { error: 'User not found' }
+          }
+          return user
+        } catch (err) {
+          fastify.log.error(`Error retrieving user by username: ${err.message}`)
+          reply.code(500)
+          return { error: 'Internal Server Error' }
+        }          
+      }
+    })
 
   }, {
     name: 'user',

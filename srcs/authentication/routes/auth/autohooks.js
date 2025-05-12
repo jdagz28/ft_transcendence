@@ -11,7 +11,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async readUser(usernameORemail) {
       try {
         console.log('Looking for:', usernameORemail)
-        const response = await axios.get(`http://database:1919/users/${usernameORemail}`)
+        const response = await axios.get(`http://database:1919/users/search/${usernameORemail}`)
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
