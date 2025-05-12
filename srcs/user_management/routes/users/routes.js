@@ -153,7 +153,7 @@ module.exports = fp(
       }
     })
 
-    fastify.put('/me/settings/changeUsername', {
+    fastify.put('/users/me/settings/changeUsername', {
       schema: {
         body: fastify.getSchema('schema:users:changeUsername')
       },
@@ -184,7 +184,7 @@ module.exports = fp(
       }
     })
 
-    fastify.put('/me/settings/changeNickname', {
+    fastify.put('/users/me/settings/changeNickname', {
       schema: {
         body: fastify.getSchema('schema:users:changeNickname')
       },
