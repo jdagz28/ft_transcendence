@@ -7,13 +7,6 @@ module.exports.prefixOverride = ''
 module.exports = fp(
   async function userRoutes (fastify, opts) {
 
-    // General user profile
-    // username
-    // email
-    // avatar
-    // nickname
-    // created
-    // change avatar
     fastify.get('/users/me', {
       schema: {
         response: {
@@ -237,6 +230,32 @@ module.exports = fp(
       }
     })
 
+    // User add friend
+    fastify.put('/users/:username/addFriend', {
+      onRequest: [fastify.authenticate],
+      handler: async function addFriendHandler (request, reply) {
+        try {
+          const userId = request.user.id
+          const friendUsername = request.params.username
+          const response = await fastify.usersDataSource.addFriend(request, userId, friendUsername)
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error adding friend: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
+
+    // User remove friend
+    // fastify.delete('/me/removeFriend', {
+    //   onRequest: [fastify.authenticate],
+    //   handler: async (request, reply) => {
+
+    //   }
+    // })
     /*
     // User Friends
     fastify.get('/:username/friends', {
@@ -272,22 +291,6 @@ module.exports = fp(
       }
     })
 
-
-    // User add friend
-    fastify.post('/me/addFriend', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User remove friend
-    fastify.delete('/me/removeFriend', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
 
     // User block user
     fastify.post('/me/blockUser', {

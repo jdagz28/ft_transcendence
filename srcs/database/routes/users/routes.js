@@ -195,6 +195,25 @@ module.exports = fp(
       }
     })
 
+    fastify.put('/users/:username/friends', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername'),
+        body: fastify.getSchema('schema:users:addFriend')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function addFriendHandler(request, reply) {
+        try {
+          const { userId } = request.user.id
+          const { friendId } = request.body
+          await fastify.dbUsers.sendFriendRequest(userId, friendId)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error adding friend: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to add friend' })
+        }
+      }
+    })
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database']
