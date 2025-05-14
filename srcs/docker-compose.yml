@@ -58,6 +58,26 @@ services:
       - backend
       - development
 
+  chat:
+    container_name: chat
+    build: ./chat
+    image: chat:fastify
+    ports:
+      - "${CHAT_PORT}:${CHAT_PORT}"
+    depends_on:
+      - database
+    environment:
+      - PORT=${CHAT_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - authentication
+      - backend
+      - development
+
 volumes:
   db-sqlite:
     driver: local
