@@ -230,14 +230,14 @@ module.exports = fp(
       }
     })
 
-    // User add friend
     fastify.put('/users/:username/addFriend', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
       onRequest: [fastify.authenticate],
       handler: async function addFriendHandler (request, reply) {
         try {
-          const userId = request.user.username
-          const friendUsername = request.params.username
-          const response = await fastify.usersDataSource.addFriend(request, userId, friendUsername)
+          const response = await fastify.usersDataSource.addFriend(request)
           if (response.status !== 200) {
             return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
           }
@@ -249,13 +249,46 @@ module.exports = fp(
       }
     })
 
-    // User remove friend
-    // fastify.delete('/me/removeFriend', {
-    //   onRequest: [fastify.authenticate],
-    //   handler: async (request, reply) => {
+    fastify.delete('/users/me/friends', {
+      schema: {
+        body: fastify.getSchema('schema:users:removeFriend')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function removeFriendHandler (request, reply) {
+        try {
+          const response = await fastify.usersDataSource.removeFriend(request)
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to remove friend' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error removing friend: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
 
-    //   }
-    // })
+      }
+    })
+
+    fastify.post('/users/me/friends', {
+      schema: {
+        body: fastify.getSchema('schema:users:respondFriendRequest')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function addFriendHandler (request, reply) {
+        try {
+          const response = await fastify.usersDataSource.respondFriendRequest(request)
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error adding friend: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
+
+
     /*
     // User Friends
     fastify.get('/:username/friends', {

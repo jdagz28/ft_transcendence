@@ -176,47 +176,19 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async respondFriendRequest(userId, friendId, status) {
+    async removeFriend(userId, friend) {
       try {
-        if (!['accepted', 'declined'].includes(status)) {
-          throw new Error('Invalid status')
+        const friendId = await fastify.getUserId(friend)
+        if (friendId === userId) {
+          fastify.log.error(`User ${userId} is not a friend of themselves`)
+          throw new Error('Cannot remove self as friend')
         }
-        const check = fastify.db.prepare(`
-          SELECT * FROM friend_requests
-          WHERE requester_id = ? AND requested_id = ? AND status = 'pending'
-        `)
-        const row = check.get(userId, friendId)
-        if (!row) {
-          fastify.log.error(`No pending friend request from ${userId} to ${friendId}`)
-          throw new Error('No pending friend request')
-        }
-        const query = fastify.db.prepare(`
-          UPDATE friend_requests
-          SET status = ?, 
-            responded = datetime('now')
-          WHERE requester_id = ? AND requested_id = ?
-        `)
-        const result = query.run(status, friendId, userId)
-        if (result.changes === 0) {
-          fastify.log.error(`No such friend request}`)
-          throw new Error('Friend request not found')
-        }
-        if (status === 'accepted') {
-          const insertQuery = fastify.db.prepare(`
-            INSERT INTO user_friends (user_id_a, user_id_b)
-            VALUES (?, ?)
-          `)
-          insertQuery.run(userId, friendId)
-        }
-        return true
-      } catch (err) {
-        fastify.log.error(`respondFriendRequest error: ${err.message}`)
-        throw new Error('Respond to friend request failed')
-      }
-    },
 
-    async removeFriend(userId, friendId) {
-      try {
+        if (!friendId) {
+          fastify.log.error(`Invalid friend ID: ${friendId}`)
+          throw new Error('Invalid friend ID')
+        }
+
         const query = fastify.db.prepare(`
           DELETE FROM user_friends
           WHERE (user_id_a = ? AND user_id_b = ?) OR (user_id_a = ? AND user_id_b = ?)
@@ -230,6 +202,56 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(`removeFriend error: ${err.message}`)
         throw new Error('Delete friend failed')
+      }
+    },
+
+    async respondFriendRequest(userId, friend, action) {
+      try {
+        const friendId = await fastify.getUserId(friend)
+        if (friendId === userId) {
+          fastify.log.error(`User ${userId} can not respond to their own request`)
+          throw new Error('Cannot respond to own request')
+        }
+
+        if (!friendId) {
+          fastify.log.error(`Invalid friend ID: ${friendId}`)
+          throw new Error('Invalid friend ID')
+        }
+
+        if (!['accept', 'decline'].includes(action)) {
+          throw new Error('Invalid action')
+        }
+        const check = fastify.db.prepare(`
+          SELECT * FROM friend_requests
+          WHERE requester_id = ? AND recipient_id = ? AND status = 'pending'
+        `)
+        const row = check.get(friendId, userId)
+        if (!row) {
+          fastify.log.error(`No pending friend request from ${friendId} to ${userId}`)
+          throw new Error('No pending friend request')
+        }
+        const query = fastify.db.prepare(`
+          UPDATE friend_requests
+          SET status = ?, 
+            responded = datetime('now')
+          WHERE requester_id = ? AND recipient_id = ?
+        `)
+        const result = query.run(action, friendId, userId)
+        if (result.changes === 0) {
+          fastify.log.error(`No such friend request}`)
+          throw new Error('Friend request not found')
+        }
+        if (action === 'accept') {
+          const insertQuery = fastify.db.prepare(`
+            INSERT INTO user_friends (user_id_a, user_id_b)
+            VALUES (?, ?)
+          `)
+          insertQuery.run(userId, friendId)
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`respondFriendRequest error: ${err.message}`)
+        throw new Error('Respond to friend request failed')
       }
     },
 

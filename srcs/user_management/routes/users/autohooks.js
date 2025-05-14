@@ -67,8 +67,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async addFriend(request, username, friend) {
+    async addFriend(request) {
       try {
+        const username = request.user.username
+        const friend = request.params.username
         const authHeader = request.headers['authorization'];
           const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
           if (!token) {
@@ -80,7 +82,8 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
             'x-internal-key': process.env.INTERNAL_KEY,
             'Authorization': `Bearer ${token}`,
           }})
-        console.log('Friend added successfully:', response) //! DELETE
+        console.log('Friend added successfully:', response.data) //! DELETE
+        return response
       } catch (err) {
         console.error('DB service error:', {
           message: err.message,
@@ -91,25 +94,56 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async respondFrienRequest(request, username, friend, action) {
+    async removeFriend(request) {
       try {
+        const username = request.user.username
+        const friend = request.params.username
         const authHeader = request.headers['authorization'];
           const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
           if (!token) {
             throw new Error('Missing token')
           }
-        if (['accept', 'decline'].includes(action)) { 
+        const response = await axios.delete(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
+          { friend },
+          {  headers: {
+              'x-internal-key': process.env.INTERNAL_KEY,
+              'Authorization': `Bearer ${token}`,
+            }})
+        console.log('Friend removed successfully:', response.data) //! DELETE
+        return response
+      } catch (err) {
+        console.error('DB service error:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });              
+        throw err
+      }
+    },
+
+    async respondFriendRequest(request) {
+      try {
+        const username = request.user.username
+        const friend = request.body.friend
+        const action = request.body.action
+        const authHeader = request.headers['authorization'];
+          const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+          if (!token) {
+            throw new Error('Missing token')
+          }
+        if (!['accept', 'decline'].includes(action)) { 
           fastify.log.error(`Invalid action: ${action}`)
           throw new Error('Invalid friend request action')
         }
 
-        const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
+        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friendrequests`, 
           { friend, action },
           { headers: {
             'x-internal-key': process.env.INTERNAL_KEY,
             'Authorization': `Bearer ${token}`,
           }})
         console.log('Friend request responded successfully:', response.data) //! DELETE
+        return response
       } catch (err) {
         console.error('DB service error:', {
           message: err.message,

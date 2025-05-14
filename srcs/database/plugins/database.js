@@ -127,7 +127,7 @@ async function databaseConnector(fastify) {
         requester_id INTEGER NOT NULL,
         recipient_id INTEGER NOT NULL,
         status TEXT NOT NULL
-          CHECK (status IN ('pending', 'accepted', 'declined')),
+          CHECK (status IN ('pending', 'accept', 'decline')),
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         responded DATETIME,
         FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
