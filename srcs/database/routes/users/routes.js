@@ -61,13 +61,10 @@ module.exports = fp(
       handler: async function getUserProfile(request, reply) {
         try {
           const userId = request.query.id
-          const userProfile = await fastify.dbUsers.getUserProfile(userId)
+          const userProfile = await fastify.dbUsers.getUserProfile(userId, request)
           if (!userProfile) {
             reply.code(404).send({ error: 'User profile not found' })
           } else {
-            const baseURL = request.protocol + "://localhost:" + process.env.USER_PORT
-            const url =  baseURL + userProfile.avatar.url
-            userProfile.avatar.url = url
             reply.send(userProfile)
           }
         } catch (err) {
@@ -210,6 +207,61 @@ module.exports = fp(
         } catch (err) {
           fastify.log.error(`Error adding friend: ${err.message}`)
           reply.code(500).send({ error: 'Failed to add friend' })
+        }
+      }
+    })
+
+    fastify.get('/users/:username/friends', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername'),
+        response: { 200: fastify.getSchema('schema:users:userFriends')},
+      },
+      handler: async function getFriendsHandler(request, reply) {
+        try {
+          const { username } = request.params
+          const friends = await fastify.dbUsers.getUserFriends(username, request)
+          return friends
+        } catch (err) {
+          fastify.log.error(`Error retrieving friends: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve friends' })
+        }
+      }
+    })
+
+    fastify.put('/users/:username/friends/respondFriendRequest', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername'),
+        body: fastify.getSchema('schema:users:respondFriendRequest')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function respondFriendRequestHandler(request, reply) {
+        try {
+          const { userId } = request.user.id
+          const { friendId, response } = request.body
+          await fastify.dbUsers.respondFriendRequest(userId, friendId, response)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error responding to friend request: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to respond to friend request' })
+        }
+      }
+    })
+
+    fastify.delete('/users/:username/friends', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername'),
+        body: fastify.getSchema('schema:users:removeFriend')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function removeFriendHandler(request, reply) {
+        try {
+          const { userId } = request.user.id
+          const { friendId } = request.body
+          await fastify.dbUsers.removeFriend(userId, friendId)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error removing friend: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to remove friend' })
         }
       }
     })

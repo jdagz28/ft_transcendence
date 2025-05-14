@@ -1,0 +1,13 @@
+{
+  "$id": "schema:users:respondFriendRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["friendId", "response"],
+  "properties": {
+    "friendId": { "type": "string"},
+    "response": {
+      "type": "string",
+      "enum": ["accepted", "declined"]
+    }
+  }
+}

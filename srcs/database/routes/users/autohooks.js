@@ -40,7 +40,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async getUserProfile( userId) {
+    async getUserProfile(userId, request) {
       try {
         const query = fastify.db.prepare(`
           SELECT users.id,
@@ -60,7 +60,8 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('User not found')
         }
 
-        const avatarUrl = `/users/${row.id}/avatar` 
+        const baseURL = request.protocol + "://localhost:" + process.env.USER_PORT
+        const avatarUrl = baseURL + `/users/${row.id}/avatar` 
 
         return {
           id: row.id,
@@ -198,7 +199,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async deleteFriend(userId, friendId) {
+    async removeFriend(userId, friendId) {
       try {
         const query = fastify.db.prepare(`
           DELETE FROM user_friends
@@ -211,12 +212,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         }
         return true
       } catch (err) {
-        fastify.log.error(`deleteFriend error: ${err.message}`)
+        fastify.log.error(`removeFriend error: ${err.message}`)
         throw new Error('Delete friend failed')
       }
     },
 
-    async getFriends(userId) {
+    async getUserFriends(userId, request) {
       try {
         const query = fastify.db.prepare(`
           SELECT users.id, users.username, users.nickname
@@ -237,10 +238,17 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           fastify.log.error(`No friends found for user ${userId}`)
           throw new Error('No friends found')
         }
+
+        const baseURL = request.protocol + "://localhost:" + process.env.USER_PORT
+        const avatarUrl = baseURL + `/users/${row.id}/avatar` 
+
         return rows.map(row => ({
           id: row.id,
           username: row.username,
-          nickname: row.nickname
+          nickname: row.nickname,
+          avatar: {
+            url: avatarUrl
+          }
         }))
       } catch (err) {
         fastify.log.error(`getFriends error: ${err.message}`)

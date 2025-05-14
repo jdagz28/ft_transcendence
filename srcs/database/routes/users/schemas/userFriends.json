@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "$id": "schema:users:userFriends",
+  "required": [
+    "id",
+    "username",
+    "nickname",
+    "avatar"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "username": { "type": "string" },
+    "nickname": { "type": "string" },
+    "avatar": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string", "format": "uri-reference" }
+        }
+      }
+  }
+}
