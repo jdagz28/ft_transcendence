@@ -1,8 +1,8 @@
 {
   "type": "object",
   "$id": "schema:users:addFriend",
-  "required": [ "friendId" ],
+  "required": [ "friend" ],
   "properties": { 
-    "friendId": { "type": "string" }
+    "friend": { "type": "string" }
   }
 }

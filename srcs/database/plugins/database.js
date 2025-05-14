@@ -112,7 +112,6 @@ async function databaseConnector(fastify) {
         FOREIGN KEY (user_id_b) REFERENCES users(id) ON DELETE CASCADE
       );
 
-      // prevent duplicate friendships
       CREATE UNIQUE INDEX IF NOT EXISTS idx_user_friends_pair
       ON user_friends (
         CASE WHEN user_id_a < user_id_b THEN user_id_a ELSE user_id_b END,

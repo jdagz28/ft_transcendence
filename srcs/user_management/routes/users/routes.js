@@ -235,7 +235,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate],
       handler: async function addFriendHandler (request, reply) {
         try {
-          const userId = request.user.id
+          const userId = request.user.username
           const friendUsername = request.params.username
           const response = await fastify.usersDataSource.addFriend(request, userId, friendUsername)
           if (response.status !== 200) {

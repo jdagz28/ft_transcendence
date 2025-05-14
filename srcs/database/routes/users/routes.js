@@ -200,9 +200,12 @@ module.exports = fp(
       onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function addFriendHandler(request, reply) {
         try {
-          const { userId } = request.user.id
-          const { friendId } = request.body
-          await fastify.dbUsers.sendFriendRequest(userId, friendId)
+          const userId = request.user.id
+          const { friend } = request.body
+          console.log(request.headers.authorization) //! DELETE
+          console.log('User ID:', userId) //! DELETE
+          console.log('Adding friend:', friend) //! DELETE  
+          await fastify.dbUsers.sendFriendRequest(userId, friend)
           return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error adding friend: ${err.message}`)
@@ -219,8 +222,8 @@ module.exports = fp(
       handler: async function getFriendsHandler(request, reply) {
         try {
           const { username } = request.params
-          const friends = await fastify.dbUsers.getUserFriends(username, request)
-          return friends
+          await fastify.dbUsers.getUserFriends(username, request)
+          return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error retrieving friends: ${err.message}`)
           reply.code(500).send({ error: 'Failed to retrieve friends' })
@@ -236,7 +239,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function respondFriendRequestHandler(request, reply) {
         try {
-          const { userId } = request.user.id
+          const userId = request.user.id
           const { friendId, response } = request.body
           await fastify.dbUsers.respondFriendRequest(userId, friendId, response)
           return reply.send({ success: true })

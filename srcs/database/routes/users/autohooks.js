@@ -133,11 +133,23 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       return true
     },
 
-    async sendFriendRequest(userId, friendId) {
+ 
+    async sendFriendRequest(userId, friend) {
       try {
+        const friendId = await fastify.getUserId(friend)
+        if (friendId === userId) {
+          fastify.log.error(`User ${userId} cannot send a friend request to themselves`)
+          throw new Error('Cannot send friend request to self')
+        }
+
+        if (!friendId) {
+          fastify.log.error(`Invalid friend ID: ${friendId}`)
+          throw new Error('Invalid friend ID')
+        }
+
         const check = fastify.db.prepare(`
           SELECT * FROM user_friends
-          WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)
+          WHERE (user_id_a = ? AND user_id_b = ?) OR (user_id_a = ? AND user_id_b = ?)
         `)
         const row = check.get(userId, friendId, friendId, userId)
         if (row) {
@@ -145,10 +157,14 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('Users are already friends')
         }
         const query = fastify.db.prepare(`
-          INSERT INTO friend_requests (requester_id, requested_id, status)
-          VALUES (userId, friendId, 'pending')
+          INSERT INTO friend_requests (requester_id, recipient_id, status, created)
+          VALUES (?, ?, 'pending', datetime('now'))
         `)
         const result = query.run(userId, friendId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to send friend request from ${userId} to ${friendId}`)
+          throw new Error('Friend request failed')
+        }
         return true
       } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
