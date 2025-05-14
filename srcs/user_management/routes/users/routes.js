@@ -256,6 +256,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate],
       handler: async function removeFriendHandler (request, reply) {
         try {
+          console.log('Removing friend:', request.body) //! DELETE
           const response = await fastify.usersDataSource.removeFriend(request)
           if (response.status !== 200) {
             return reply.status(500).send({ error: 'UserMgmt: Failed to remove friend' })

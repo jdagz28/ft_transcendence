@@ -222,6 +222,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function removeFriendHandler(request, reply) {
         try {
+          console.log(request.headers.authorization) //! DELETE
           const userId = request.user.id
           const { friend } = request.body
           console.log('User ID:', userId) //! DELETE

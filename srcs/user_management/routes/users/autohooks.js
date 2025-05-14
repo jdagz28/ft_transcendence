@@ -72,10 +72,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const username = request.user.username
         const friend = request.params.username
         const authHeader = request.headers['authorization'];
-          const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-          if (!token) {
-            throw new Error('Missing token')
-          }
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+        if (!token) {
+          throw new Error('Missing token')
+        }
         const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
           { friend },
           { headers: {
@@ -97,18 +97,18 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async removeFriend(request) {
       try {
         const username = request.user.username
-        const friend = request.params.username
+        const friend = request.body.friend
         const authHeader = request.headers['authorization'];
-          const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-          if (!token) {
-            throw new Error('Missing token')
-          }
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+        if (!token) {
+          throw new Error('Missing token')
+        }
         const response = await axios.delete(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
-          { friend },
-          {  headers: {
+          { data: { friend },
+          headers: {
               'x-internal-key': process.env.INTERNAL_KEY,
               'Authorization': `Bearer ${token}`,
-            }})
+          }})
         console.log('Friend removed successfully:', response.data) //! DELETE
         return response
       } catch (err) {
@@ -127,10 +127,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const friend = request.body.friend
         const action = request.body.action
         const authHeader = request.headers['authorization'];
-          const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-          if (!token) {
-            throw new Error('Missing token')
-          }
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+        if (!token) {
+          throw new Error('Missing token')
+        }
         if (!['accept', 'decline'].includes(action)) { 
           fastify.log.error(`Invalid action: ${action}`)
           throw new Error('Invalid friend request action')
