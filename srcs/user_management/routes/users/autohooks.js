@@ -154,9 +154,8 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async getFriends(request) {
+    async getFriends(request, username) {
       try {
-        const username = request.user.username
         const authHeader = request.headers['authorization'];
         const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
         if (!token) {
