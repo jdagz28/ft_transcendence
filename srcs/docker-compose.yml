@@ -1,10 +1,27 @@
 services:
+  nginx:
+    container_name: nginx
+    build: ./nginx
+    image: nginx:transcendence
+    ports:
+      - 443:443
+    depends_on:
+      - authentication
+      - usermanagement
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - frontend
+      - backend
+      - development
+  
   authentication:
     container_name: authentication
     build: ./authentication
     image: authentication:fastify
-    ports:
-      - "${AUTH_PORT}:${AUTH_PORT}"
     depends_on:
       - database
     environment:
@@ -31,8 +48,6 @@ services:
       - .env
     networks:
       - transcendence
-    ports:
-      - "${DB_PORT}:1919"
     restart: always
     profiles:
       - authentication
@@ -42,8 +57,6 @@ services:
     container_name: user_management
     build: ./user_management
     image: user_management:fastify
-    ports:
-      - "${USER_PORT}:${USER_PORT}"
     depends_on:
       - database
     environment:

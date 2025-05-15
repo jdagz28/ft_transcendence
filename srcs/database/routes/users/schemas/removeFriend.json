@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:users:removeFriend",
+  "required": [ "friend" ],
+  "properties": { 
+    "friend": { "type": "string" }
+  }
+}
