@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 set -euo pipefail
 
-API_URL=${API_URL:-http://localhost:4242/auth/register}
+API_URL=${API_URL:-https://localhost/auth/register}
 PASSWORD=password
 
 #################
@@ -17,7 +17,7 @@ declare -a USERS=(
 for pair in "${USERS[@]}"; do
   IFS=: read -r USERNAME EMAIL <<<"$pair"
 
-  STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+  STATUS=$(curl -k -s -o /dev/null -w '%{http_code}' \
     -H 'Content-Type: application/json' \
     -X POST "$API_URL" \
     -d "{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\",\"email\":\"$EMAIL\"}")
