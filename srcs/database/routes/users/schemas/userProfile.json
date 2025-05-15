@@ -15,7 +15,6 @@
     "created": { "type": "string", "format": "date-time" },
     "avatar": {
       "type": "object",
-      "$id": "#/properties/avatar",
       "properties": {
         "url": { "type": "string", "format": "uri" }
       },

@@ -7,13 +7,6 @@ module.exports.prefixOverride = ''
 module.exports = fp(
   async function userRoutes (fastify, opts) {
 
-    // General user profile
-    // username
-    // email
-    // avatar
-    // nickname
-    // created
-    // change avatar
     fastify.get('/users/me', {
       schema: {
         response: {
@@ -237,11 +230,109 @@ module.exports = fp(
       }
     })
 
-    /*
-    // User Friends
-    fastify.get('/:username/friends', {
+    fastify.put('/users/:username/addFriend', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
       onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
+      handler: async function addFriendHandler (request, reply) {
+        try {
+          console.log('current user:', request.user.username) //! DELETE
+          const response = await fastify.usersDataSource.addFriend(request)
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error adding friend: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.delete('/users/me/friends', {
+      schema: {
+        body: fastify.getSchema('schema:users:removeFriend')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function removeFriendHandler (request, reply) {
+        try {
+          console.log('Removing friend:', request.body) //! DELETE
+          const response = await fastify.usersDataSource.removeFriend(request)
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to remove friend' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error removing friend: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+
+      }
+    })
+
+    fastify.post('/users/me/friends', {
+      schema: {
+        body: fastify.getSchema('schema:users:respondFriendRequest')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function addFriendHandler (request, reply) {
+        try {
+          const response = await fastify.usersDataSource.respondFriendRequest(request)
+          if (response.status !== 200) {
+            return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error adding friend: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/users/me/friends', {
+      schema: {
+        response: {
+          200: fastify.getSchema('schema:users:userFriends')
+        }
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getMeFriendsHandler (request, reply) {
+        try {
+          const username = request.user.username
+          const friends = await fastify.usersDataSource.getFriends(request, username)
+          if (!friends) {
+            return reply.status(404).send({ error: 'UserMgmt: No friends found' })
+          }
+          return reply.send(friends)
+        } catch (err) {
+          fastify.log.error(`Error fetching friends: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
+      }
+    })
+
+
+    fastify.get('/users/:username/friends', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername'),
+        response: {
+          200: fastify.getSchema('schema:users:userFriends')
+        }
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getFriendsHandler (request, reply) {
+        try {
+          const username = request.params.username
+          const friends = await fastify.usersDataSource.getFriends(request, username)
+          if (!friends) {
+            return reply.status(404).send({ error: 'UserMgmt: No friends found' })
+          }
+          return reply.send(friends)
+        } catch (err) {
+          fastify.log.error(`Error fetching friends: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
 
       }
     })
@@ -272,22 +363,6 @@ module.exports = fp(
       }
     })
 
-
-    // User add friend
-    fastify.post('/me/addFriend', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User remove friend
-    fastify.delete('/me/removeFriend', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
 
     // User block user
     fastify.post('/me/blockUser', {
