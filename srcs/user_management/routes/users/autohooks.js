@@ -152,7 +152,33 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         });              
         throw err
       }
-    }
+    },
+
+    async getFriends(request) {
+      try {
+        const username = request.user.username
+        const authHeader = request.headers['authorization'];
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+        if (!token) {
+          throw new Error('Missing token')
+        }
+        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
+          { headers: {
+            'x-internal-key': process.env.INTERNAL_KEY,
+            'Authorization': `Bearer ${token}`,
+          }})
+        console.log('Friends retrieved successfully:', response.data) //! DELETE
+        return response.data
+      } catch (err) {
+        console.error('DB service error:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });              
+        throw err
+      }
+    },
+
   })
 }, {
   name: 'userAutoHooks'

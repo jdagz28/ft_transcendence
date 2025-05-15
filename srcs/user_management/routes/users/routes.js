@@ -237,6 +237,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate],
       handler: async function addFriendHandler (request, reply) {
         try {
+          console.log('current user:', request.user.username) //! DELETE
           const response = await fastify.usersDataSource.addFriend(request)
           if (response.status !== 200) {
             return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
@@ -289,15 +290,34 @@ module.exports = fp(
       }
     })
 
-
-    /*
-    // User Friends
-    fastify.get('/:username/friends', {
+    fastify.get('/users/me/friends', {
+      schema: {
+        response: {
+          200: fastify.getSchema('schema:users:userFriends')
+        }
+      },
       onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
+      handler: async function getFriendsHandler (request, reply) {
+        try {
+          const friends = await fastify.usersDataSource.getFriends(request)
+          if (!friends) {
+            return reply.status(404).send({ error: 'UserMgmt: No friends found' })
+          }
+          return reply.send(friends)
+        } catch (err) {
+          fastify.log.error(`Error fetching friends: ${err.message}`)
+          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        }
       }
     })
+
+
+    // fastify.get('/:username/friends', {
+    //   onRequest: [fastify.authenticate],
+    //   handler: async (request, reply) => {
+
+    //   }
+    // })
 
 
     /*

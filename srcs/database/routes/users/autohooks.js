@@ -47,10 +47,8 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
             users.username,
             users.nickname,
             users.email,
-            users.created,
-            user_avatars.avatar AS avatar_blob
+            users.created
           FROM users
-          LEFT JOIN user_avatars ON users.id = user_avatars.user_id
           WHERE users.id = ?
         `)
 
@@ -133,7 +131,18 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       return true
     },
 
- 
+    getExistingRequest (userIdA, userIdB) {
+      const query = fastify.db.prepare(`
+        SELECT id, requester_id, recipient_id, status
+        FROM friend_requests
+        WHERE (requester_id = ? AND recipient_id = ?)
+          OR (requester_id = ? AND recipient_id = ?)
+        LIMIT 1
+      `);
+      return query.get(userIdA, userIdB, userIdB, userIdA);
+    },
+
+    //! TODO: Re-send friend request if it was declined or friendship was removed
     async sendFriendRequest(userId, friend) {
       try {
         const friendId = await fastify.getUserId(friend)
@@ -148,13 +157,22 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         }
 
         const check = fastify.db.prepare(`
-          SELECT * FROM user_friends
+          SELECT 1 FROM user_friends
           WHERE (user_id_a = ? AND user_id_b = ?) OR (user_id_a = ? AND user_id_b = ?)
+          LIMIT 1
         `)
         const row = check.get(userId, friendId, friendId, userId)
         if (row) {
           fastify.log.error(`User ${userId} and ${friendId} are already friends`)
           throw new Error('Users are already friends')
+        }
+
+        const requestCheck = this.getExistingRequest(userId, friendId)
+        if (requestCheck) {
+          if (requestCheck.status === 'pending') {
+            fastify.log.error(`Friend request already sent from ${userId} to ${friendId}`)
+            throw new Error('Friend request already sent')
+          } 
         }
         const query = fastify.db.prepare(`
           INSERT INTO friend_requests (requester_id, recipient_id, status, created)
@@ -255,39 +273,47 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async getUserFriends(userId, request) {
+    async getUserFriends(username, request) {
       try {
+        const userId = await fastify.getUserId(username)
+        if (!userId) {
+          fastify.log.error(`User not found: ${username}`)
+          throw new Error('User not found')
+        }
         const query = fastify.db.prepare(`
-          SELECT users.id, users.username, users.nickname
-          FROM user_friends
-          JOIN users ON user_friends.user_id_a = users.id
-          WHERE user_friends.user_id = ?
+          SELECT 
+            users.id, 
+            users.username, 
+            users.nickname
+          FROM   user_friends 
+          JOIN   users ON users.id = user_friends.user_id_b
+          WHERE  user_friends.user_id_a = ?
+          
+          UNION ALL
+          SELECT 
+            users.id, 
+            users.username, 
+            users.nickname
+          FROM   user_friends 
+          JOIN   users ON users.id = user_friends.user_id_a
+          WHERE  user_friends.user_id_b = ?
         `)
-        let rows = query.all(userId)
-        const query2 = fastify.db.prepare(`
-          SELECT users.id, users.username, users.nickname
-          FROM user_friends
-          JOIN users ON user_friends.user_id_b = users.id
-          WHERE user_friends.user_id = ?
-        `)
-        const rows2 = query2.all(userId)
-        rows = [...rows, ...rows2]
+        const rows = query.all(userId, userId)
         if (rows.length === 0) {
           fastify.log.error(`No friends found for user ${userId}`)
           throw new Error('No friends found')
         }
 
         const baseURL = request.protocol + "://localhost:" + process.env.USER_PORT
-        const avatarUrl = baseURL + `/users/${row.id}/avatar` 
-
-        return rows.map(row => ({
+        const friends = rows.map(row => ({
           id: row.id,
           username: row.username,
           nickname: row.nickname,
           avatar: {
-            url: avatarUrl
+            url: `${baseURL}/users/${row.id}/avatar`
           }
         }))
+        return friends
       } catch (err) {
         fastify.log.error(`getFriends error: ${err.message}`)
         throw new Error('Get friends failed')

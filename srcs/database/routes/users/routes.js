@@ -244,8 +244,9 @@ module.exports = fp(
       handler: async function getFriendsHandler(request, reply) {
         try {
           const { username } = request.params
-          await fastify.dbUsers.getUserFriends(username, request)
-          return reply.send({ success: true })
+          const response = await fastify.dbUsers.getUserFriends(username, request)
+          fastify.log.info({ response }, 'Response payload'); //! DELETE
+          return reply.send(response)
         } catch (err) {
           fastify.log.error(`Error retrieving friends: ${err.message}`)
           reply.code(500).send({ error: 'Failed to retrieve friends' })

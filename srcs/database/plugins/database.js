@@ -131,8 +131,7 @@ async function databaseConnector(fastify) {
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         responded DATETIME,
         FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE (requester_id, recipient_id)
+        FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
