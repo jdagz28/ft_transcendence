@@ -4,7 +4,7 @@ services:
     build: ./nginx
     image: nginx:transcendence
     ports:
-      - 443:443
+      - 4242:443
     depends_on:
       - authentication
       - usermanagement
@@ -68,6 +68,24 @@ services:
     restart: always
     profiles:
       - authentication
+      - backend
+      - development
+
+  game:
+    container_name: game
+    build: ./game
+    image: user_management:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${GAME_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - game
       - backend
       - development
 
