@@ -75,8 +75,6 @@ services:
     container_name: chat
     build: ./chat
     image: chat:fastify
-    ports:
-      - "${CHAT_PORT}:${CHAT_PORT}"
     depends_on:
       - database
     environment:
