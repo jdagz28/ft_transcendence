@@ -4,7 +4,7 @@ services:
     build: ./nginx
     image: nginx:transcendence
     ports:
-      - 443:443
+      - 4242:443
     depends_on:
       - authentication
       - usermanagement
