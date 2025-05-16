@@ -1,0 +1,32 @@
+'use strict'
+
+const fp = require('fastify-plugin')
+const schemas = require('./schemas/loader')
+
+
+module.exports = fp(async function gameAutoHooks (fastify, opts) {
+  fastify.register(schemas)
+
+  fastify.decorate('dbGames', {
+    async createGame(userId, mode) {
+      try {
+        const query = fastify.db.prepare(
+          'INSERT INTO matches (created_by, mode, status) VALUES (?, ?, ?)'
+        )
+        const result = query.run(userId, mode, 'pending')
+        if (result.changes === 0) {
+          throw new Error('Failed to create game')
+        }
+        const gameId = result.lastInsertRowid
+        console.log('Game created with ID:', gameId)
+        return gameId
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to create game')
+      }
+    }
+
+  })
+}, {
+  name: 'gameAutoHooks'
+})

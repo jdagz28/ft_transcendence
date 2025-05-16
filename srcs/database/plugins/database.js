@@ -38,6 +38,7 @@ async function databaseConnector(fastify) {
       createTourPlayersTable();
       createMatchesTable();
       createMatchGamesTable();
+      createMatchGamesScoresTable();
       createConversationsTable();
       createConvoMembersTable();
       createMessagesTable();
@@ -179,32 +180,42 @@ async function databaseConnector(fastify) {
     `);
   }
 
+  //! Need upper table for tournament matches
+
   function createMatchesTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS tour_matches (
+      CREATE TABLE IF NOT EXISTS matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_by INTEGER NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         mode TEXT NOT NULL
           CHECK (mode IN ('training', 'single-player', 'local-multiplayer', 'online-multiplayer')),
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
-        player1_id INTEGER NOT NULL,
-        player2_id INTEGER NOT NULL,
-        player1_score INTEGER DEFAULT 0,
-        player2_score INTEGER DEFAULT 0,
         winner_id INTEGER DEFAULT 0,
-        total_games INTEGER DEFAULT 0,
-        total_duration INTEGER DEFAULT 0,
-        tournament_id INTEGER DEFAULT 0,
-        round INTEGER DEFAULT 0,
-        FOREIGN KEY (player1_id) REFERENCES users(id),
-        FOREIGN KEY (player2_id) REFERENCES users(id),
-        FOREIGN KEY (winner_id) REFERENCES users(id),
-        FOREIGN KEY (tournament_id) REFERENCES tournaments(id)
+        total_players INTEGER DEFAULT 1,
+        total_games INTEGER DEFAULT 1,
+        total_duration DATETIME,
+        FOREIGN KEY (created_by) REFERENCES users(id)
       );
     `);
   }
+
+  function createMatchGamesScoresTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS match_games_scores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_game_id INTEGER NOT NULL,
+        player_id INTEGER NOT NULL,
+        score INTEGER DEFAULT 0,
+        hits INTEGER DEFAULT 0,
+        FOREIGN KEY (match_game_id) REFERENCES match_games(id) ON DELETE CASCADE,
+        FOREIGN KEY (player_id) REFERENCES users(id)
+      );
+    `);
+  }
+
 
   function createMatchGamesTable() {
     db.exec(`
@@ -213,10 +224,6 @@ async function databaseConnector(fastify) {
         match_id INTEGER NOT NULL,
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
-        player1_hits INTEGER DEFAULT 0,
-        player2_hits INTEGER DEFAULT 0,
-        player1_score INTEGER DEFAULT 0,
-        player2_score INTEGER DEFAULT 0,
         winner_id INTEGER DEFAULT 0,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (match_id) REFERENCES tour_matches(id) ON DELETE CASCADE,

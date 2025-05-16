@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "$id": "schema:games:createGame",
+  "required": [ "mode" ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [ 
+        "training" ,
+        "single-player", 
+        "local-multiplayer",
+        "online-multiplayer" ]
+    }
+  }
+}

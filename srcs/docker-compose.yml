@@ -71,14 +71,16 @@ services:
       - backend
       - development
 
-  game:
-    container_name: game
-    build: ./game
-    image: user_management:fastify
+  games:
+    container_name: games
+    build: ./games
+    image: games:fastify
     depends_on:
       - database
     environment:
-      - PORT=${GAME_PORT}
+      - PORT=${GAMES_PORT}
+    ports:
+      - ${GAMES_PORT}:${GAMES_PORT}
     env_file:
       - .env
     networks:
