@@ -71,12 +71,30 @@ services:
       - backend
       - development
 
+  frontend:
+    container_name: frontend
+    build: ./frontend
+    image: frontend:typescript
+    command: ["npm", "run", "build"]
+    volumes:
+      - frontend_dist:/app/dist
+    networks:
+      - transcendence
+    profiles:
+      - build
+
 volumes:
   db-sqlite:
     driver: local
     driver_opts:
       type: none
       device: ../data/ft_transcendence/sqlite
+      o: bind
+  frontend_dist:
+    driver: local
+    driver_opts:
+      type: none
+      device: ../data/ft_transcendence/frontend
       o: bind
 
 networks:
