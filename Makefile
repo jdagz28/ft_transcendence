@@ -8,7 +8,7 @@ COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 dev-up:
 	mkdir -p $(DB_DIR)
 	mkdir -p $(FRONT_DIR)
-	docker compose -f $(COMPOSE_FILE) --profile build up frontend 
+	docker compose -f $(COMPOSE_FILE) --profile build up -d
 	docker compose -f $(COMPOSE_FILE) --profile development up -d
 
 dev-down:

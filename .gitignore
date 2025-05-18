@@ -1,4 +1,5 @@
 .env
-.vscode
-.sqlite
-.sqlite*
+.vscode/
+*.sqlite*
+data/frontend/     
+data/sqlite/

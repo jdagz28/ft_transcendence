@@ -82,6 +82,19 @@ services:
       - transcendence
     profiles:
       - build
+  
+  backend:
+    container_name: backend
+    build: ./backend
+    image: backend:typescript
+    volumes:
+      - frontend_dist:/app/dist
+    environment:
+      - PORT=${BACKEND_PORT}
+    networks:
+      - transcendence
+    profiles:
+      - build
 
 volumes:
   db-sqlite:
