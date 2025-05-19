@@ -24,6 +24,22 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to create game')
       }
+    },
+
+    async getGames() {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM matches'
+        )
+        const games = query.all()
+        if (!games) {
+          throw new Error('Failed to retrieve games')
+        }
+        return games
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve games')
+      }
     }
 
   })

@@ -25,6 +25,26 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.get('/games', {
+      onRequest: fastify.authenticate,
+      handler: async function getGamesHandler (request, reply) {
+        try {
+          const games = await fastify.dbGames.getGames()
+          if (!games) {
+            reply.status(400).send({ error: 'Failed to retrieve games' })
+            return
+          }
+          console.log('Games retrieved:', games) //! DELETE
+          reply.status(200).send(games)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+
   },
   {
     name: 'gameRoutes',
