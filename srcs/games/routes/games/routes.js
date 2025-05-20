@@ -43,11 +43,28 @@ module.exports = fp(
       }
     })
     
-    /*
-    * get a specific game
+    
+    // get a specific game
     fastify.get('/games/:gameId', {
+      onRequest: fastify.authenticate,
+      handler: async function getSpecificGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const game = await fastify.gameService.getGameById(request, gameId)
+          if (!game) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(game)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
     })
 
+
+    /*
     * join a game
     fastify.put('/games/:gameId/join', {
     })
