@@ -36,9 +36,9 @@ async function databaseConnector(fastify) {
       createUserBlocksTable();
       createTournamentTable();
       createTourPlayersTable();
-      createMatchesTable();
-      createMatchGamesTable();
-      createMatchGamesScoresTable();
+      createGamesTable();
+      createGameMatchesTable();
+      createGameMatchesScoresTable();
       createConversationsTable();
       createConvoMembersTable();
       createMessagesTable();
@@ -182,7 +182,7 @@ async function databaseConnector(fastify) {
 
   //! Need upper table for tournament matches
 
-  function createMatchesTable() {
+  function createGamesTable() {
     db.exec(`
       CREATE TABLE IF NOT EXISTS games (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,7 +203,7 @@ async function databaseConnector(fastify) {
     `);
   }
 
-  function createMatchGamesScoresTable() {
+  function createGameMatchesScoresTable() {
     db.exec(`
       CREATE TABLE IF NOT EXISTS games_match_scores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -211,14 +211,14 @@ async function databaseConnector(fastify) {
         player_id INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
         hits INTEGER DEFAULT 0,
-        FOREIGN KEY (match_game_id) REFERENCES match_games(id) ON DELETE CASCADE,
+        FOREIGN KEY (games_match_id) REFERENCES games_match(id) ON DELETE CASCADE,
         FOREIGN KEY (player_id) REFERENCES users(id)
       );
     `);
   }
 
 
-  function createMatchGamesTable() {
+  function createGameMatchesTable() {
     db.exec(`
       CREATE TABLE IF NOT EXISTS games_match (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,7 +227,7 @@ async function databaseConnector(fastify) {
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT 0,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (match_id) REFERENCES tour_matches(id) ON DELETE CASCADE,
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
         FOREIGN KEY (winner_id) REFERENCES users(id)
       );
     `);

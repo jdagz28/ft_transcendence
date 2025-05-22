@@ -22,7 +22,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         else {
           numPlayers = maxPlayers || 2
-        }s
+        }
         // games table
         const query = fastify.db.prepare(
           'INSERT INTO games (created_by, mode, status, max_players) VALUES (?, ?, ?, ?)'

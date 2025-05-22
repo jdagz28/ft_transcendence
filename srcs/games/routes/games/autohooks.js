@@ -13,7 +13,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (!token) {
           throw new Error('Missing token')
         } 
-        const userId = request.user.idsin_address
+        const userId = request.user.id
        
         console.log ('Creating game with userId:', userId, 'and mode:', mode)
         const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/games`, {
@@ -77,7 +77,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (!token) {
           throw new Error('Missing token')
         } 
-        const response = await axios.patch(`${request.protocol}://database:${process.env.DB_PORT}/games/${gameId}/join`, {
+        const response = await axios.patch(`${request.protocol}://database:${process.env.DB_PORT}/games/${gameId}`, {
           userId},
           { headers: {
             'x-internal-key': process.env.INTERNAL_KEY,

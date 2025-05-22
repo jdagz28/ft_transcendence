@@ -12,8 +12,8 @@ module.exports = fp(
       handler: async function createGameHandler (request, reply) {
         try {
           const user = request.user.id 
-          const { mode, maxPlayers } = request.body
-          const game = await fastify.dbGames.createGame(user, mode, maxPlayers)
+          const { mode } = request.body
+          const game = await fastify.dbGames.createGame(user, mode)
           if (!game) {
             reply.status(400).send({ error: 'Failed to create game' })
             return
