@@ -13,7 +13,7 @@ RUN npm ci --only-production
 FROM node:23-slim
 
 # dumb-init registers signal handlers for every signal that can be caught
-RUN apt-get update && apt-get install -y dumb-init sqlite3 && \
+RUN apt-get update && apt-get install -y dumb-init  && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy production dependencies from the builder app
