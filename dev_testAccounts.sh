@@ -9,7 +9,7 @@ declare -a USERS=(
   "test:test@test.com"
   "jdagoy:jdagoy@test.com"
   "cortiz:cortiz@test.com"
-  "doperyat:doperyat@test.com"
+  "dopeyrat:dopeyrat@test.com"
   "user:user@test.com"
 )
 

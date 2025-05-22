@@ -21,6 +21,9 @@ dev-stop:
 dev-build:
 	docker compose -f $(COMPOSE_FILE) --profile development build
 
+game:
+	docker compose -f $(COMPOSE_FILE) --profile game up -d
+
 testAccounts:
 	@chmod +x dev_testAccounts.sh
 	@./dev_testAccounts.sh
@@ -58,3 +61,4 @@ prune: clean
 	docker system prune --volumes
 
 .PHONY:
+

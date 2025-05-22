@@ -71,6 +71,26 @@ services:
       - backend
       - development
 
+  games:
+    container_name: games
+    build: ./games
+    image: games:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${GAMES_PORT}
+    ports:
+      - ${GAMES_PORT}:${GAMES_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - game
+      - backend
+      - development
+
 volumes:
   db-sqlite:
     driver: local
