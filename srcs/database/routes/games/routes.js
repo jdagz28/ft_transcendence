@@ -12,13 +12,13 @@ module.exports = fp(
       handler: async function createGameHandler (request, reply) {
         try {
           const user = request.user.id 
-          const { mode } = request.body
-          const game = await fastify.dbGames.createGame(user, mode)
+          const { mode, maxPlayers } = request.body
+          const game = await fastify.dbGames.createGame(user, mode, maxPlayers)
           if (!game) {
             reply.status(400).send({ error: 'Failed to create game' })
             return
           }
-          reply.status(201).send(game)
+          reply.status(201).send(game) 
         } catch (err) {
           fastify.log.error(err)
           reply.status(500).send({ error: 'Internal Server Error' })
@@ -53,15 +53,42 @@ module.exports = fp(
           if (!game) {
             reply.status(404).send({ error: 'Game not found' })
             return
-          }
+          }ss
           reply.status(200).send(game)
         } catch (err) {
           fastify.log.error(err)
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
-    }
-    )
+    })
+
+    fastify.patch('/games/:gameId', {
+      onRequest:fastify.authenticate,
+      handler: async function joinGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const user = request.user.id
+          const game = await fastify.dbGames.joinGame(gameId, user)
+          if (!game) {
+            reply.status(400).send({ error: 'Failed to join game' })
+            return
+          }
+          if (game.error == 'Game is not joinable') {
+            reply.status(409).send({ error: 'Game is not joinable' })
+            return
+          }
+          if (game.error == 'Game is full') {
+            reply.status(409).send({ error: 'Game is full' })
+            return
+          }
+
+          reply.status(200).send(game)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
 
   },
   {

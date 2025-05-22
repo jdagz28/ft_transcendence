@@ -46,6 +46,9 @@ module.exports = fp(
     
     // get a specific game
     fastify.get('/games/:gameId', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
       onRequest: fastify.authenticate,
       handler: async function getSpecificGameHandler(request, reply) {
         try {
@@ -63,12 +66,37 @@ module.exports = fp(
       }
     })
 
-
-    /*
-    * join a game
-    fastify.put('/games/:gameId/join', {
+    
+    // join a game
+    fastify.patch('/games/:gameId/join', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function joinGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const userId = request.user.id
+          const game = await fastify.gameService.joinGame(request, gameId, userId)
+          if (!game) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          if (game.status == 'full') {
+            reply.status(409).send({ error: 'Game is full' })
+            return
+          }
+          reply.status(200).send(game)
+        } catch (err) {
+          fastify.log(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
     })
 
+
+
+    /*
     * leave a game
     fastify.delete('/games/:gameId', {
     })

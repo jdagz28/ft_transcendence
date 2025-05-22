@@ -68,6 +68,27 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Internal Server Error')
       }
+    },
+
+    async joinGame(request, gameId, userId) {
+      try {
+        const authHeader = request.headers['authorization'];
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+        if (!token) {
+          throw new Error('Missing token')
+        } 
+        const response = await axios.patch(`${request.protocol}://database:${process.env.DB_PORT}/games/${gameId}/join`, {
+          userId},
+          { headers: {
+            'x-internal-key': process.env.INTERNAL_KEY,
+            'Authorization': `Bearer ${token}`,
+        }})
+        console.log('Game Data:', response.data) //! DELETE
+        return response.data
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Internal Server Error')
+      }
     }
 
     

@@ -184,7 +184,7 @@ async function databaseConnector(fastify) {
 
   function createMatchesTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS matches (
+      CREATE TABLE IF NOT EXISTS games (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created_by INTEGER NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -197,6 +197,7 @@ async function databaseConnector(fastify) {
         total_players INTEGER DEFAULT 1,
         total_games INTEGER DEFAULT 1,
         total_duration DATETIME,
+        max_players INTEGER DEFAULT 1,
         FOREIGN KEY (created_by) REFERENCES users(id)
       );
     `);
@@ -204,9 +205,9 @@ async function databaseConnector(fastify) {
 
   function createMatchGamesScoresTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS match_games_scores (
+      CREATE TABLE IF NOT EXISTS games_match_scores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        match_game_id INTEGER NOT NULL,
+        games_match_id INTEGER NOT NULL,
         player_id INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
         hits INTEGER DEFAULT 0,
@@ -219,9 +220,9 @@ async function databaseConnector(fastify) {
 
   function createMatchGamesTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS match_games (
+      CREATE TABLE IF NOT EXISTS games_match (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        match_id INTEGER NOT NULL,
+        game_id INTEGER NOT NULL,
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT 0,
