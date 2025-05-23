@@ -1,7 +1,7 @@
 {
   "type": "object",
   "$id": "schema:games:createGame",
-  "required": [ "mode" ],
+  "required": [ "mode", "maxPlayers" ],
   "properties": {
     "mode": {
       "type": "string",
@@ -10,6 +10,49 @@
         "single-player", 
         "local-multiplayer",
         "online-multiplayer" ]
+    },
+    "maxPlayers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "enum": ["local-multiplayer", "online-multiplayer"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "maxPlayers": {
+            "allOf": [
+              { "$ref": "#/properties/maxPlayers" },
+              { "type": "integer", "minimum": 2 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": { "enum": ["training", "single-player"] }
+        }
+      },
+      "then": {
+        "properties": {
+          "maxPlayers": {
+            "allOf": [
+              { "$ref": "#/properties/maxPlayers" },
+              { "type": "integer", "maximum": 1 }
+            ]
+          }
+        }
+      }
+    }
+  ]
 }

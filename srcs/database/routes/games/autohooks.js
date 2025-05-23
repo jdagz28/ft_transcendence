@@ -11,23 +11,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     //! set num players and set default
     async createGame(userId, mode, maxPlayers) {
       try {
-        let numPlayers 
-        if (mode == "training" || mode == "single-player") {
-          if (maxPlayers > 1) {
-            throw new Error('Invalid number of players for this mode')
-          }
-          if (!maxPlayers) {
-            numPlayers = 1
-          }
-        }
-        else {
-          numPlayers = maxPlayers || 2
-        }
         // games table
         const query = fastify.db.prepare(
           'INSERT INTO games (created_by, mode, status, max_players) VALUES (?, ?, ?, ?)'
         )
-        const result = query.run(userId, mode, 'pending', numPlayers)
+        const result = query.run(userId, mode, 'pending', maxPlayers)
         if (result.changes === 0) {
           throw new Error('Failed to create game')
         }
@@ -43,16 +31,17 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Failed to create game')
         } 
         const matchId = result2.lastInsertRowid
-        console.log('Game created with ID:', matchId) //! DELETE
+        console.log('Game Match created with ID:', matchId) //! DELETE
         
         // match players table - games_match_scores
         const query3 = fastify.db.prepare(
-          'INSERT INTO games_match_scores (match_id, player_id, status) VALUES (?, ?, ?)'
+          'INSERT INTO games_match_scores (games_match_id, player_id) VALUES (?, ?)'
         )
-        const result3 = query3.run(matchId, userId, 'pending')
+        const result3 = query3.run(matchId, userId)
         if (result3.changes === 0) {
           throw new Error('Failed to create game')
         }
+        console.log('Game Match Players created with ID:', result3.lastInsertRowid) //! DELETE
         return gameId
       } catch (err) {
         fastify.log.error(err)
@@ -101,23 +90,35 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (checkGame.status !== 'pending') {
           return { error: 'Game is not joinable' }
         }
-        if (checkGame.num_players >= checkGame.max_players) {
+        if (checkGame.total_players >= checkGame.max_players) {
           return { error: 'Game is full' }
         }
         const query = fastify.db.prepare(
-          'UPDATE games SET num_players = num_players + 1 WHERE id = ?'
+          'UPDATE games SET total_players = total_players + 1 WHERE id = ?'
         )
         const result = query.run(gameId)
         if (result.changes === 0) {
           throw new Error('Failed to join game')
         }
+
         const query2 = fastify.db.prepare(
-          'INSERT INTO games_match_scores (match_id, games_match_id) VALUES (?, ?)'
+          'SELECT * FROM games_match WHERE game_id = ?'
         )
-        const result2 = query2.run(gameId, userId)
-        if (result2.changes === 0) {
+        const result2 = query2.get(gameId)
+        if (!result2) {
+          throw new Error('Match not found')
+        }
+        const matchId = result2.id
+
+        const query3 = fastify.db.prepare(
+          'INSERT INTO games_match_scores (games_match_id, player_id) VALUES (?, ?)'
+        )
+        const result3 = query3.run(matchId, userId)
+        if (result3.changes === 0) {
           throw new Error('Failed to join game')
         }
+        
+        return { message: 'Joined game successfully' }
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to join game')

@@ -6,7 +6,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('gameService', {
-    async createGame(request, mode) {
+    async createGame(request, mode, maxPlayers) {
       try {
         const authHeader = request.headers['authorization'];
         const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
@@ -15,9 +15,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         } 
         const userId = request.user.id
        
-        console.log ('Creating game with userId:', userId, 'and mode:', mode)
+        console.log ('Creating game with userId:', userId, 'and mode:', mode, 'and max players:', maxPlayers) //! DELETE
         const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/games`, {
-          userId, mode},
+          userId, mode, maxPlayers}, 
           { headers: {
             'x-internal-key': process.env.INTERNAL_KEY,
             'Authorization': `Bearer ${token}`,
@@ -89,9 +89,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Internal Server Error')
       }
-    }
-
-    
+    }    
   })
 }, {
   name: 'gameAutoHooks'

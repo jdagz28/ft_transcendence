@@ -13,8 +13,8 @@ module.exports = fp(
       onRequest: fastify.authenticate,
       handler: async function createGameHandler (request, reply) {
         try {
-          const { mode } = request.body
-          const game = await fastify.gameService.createGame(request, mode)
+          const { mode, maxPlayers } = request.body
+          const game = await fastify.gameService.createGame(request, mode, maxPlayers)
           reply.status(201).send(game)
         } catch (err) {
           fastify.log.error(err)
@@ -88,7 +88,7 @@ module.exports = fp(
           }
           reply.status(200).send(game)
         } catch (err) {
-          fastify.log(err)
+          fastify.log.error(err)
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }

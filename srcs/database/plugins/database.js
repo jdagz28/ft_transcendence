@@ -211,8 +211,7 @@ async function databaseConnector(fastify) {
         player_id INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
         hits INTEGER DEFAULT 0,
-        FOREIGN KEY (games_match_id) REFERENCES games_match(id) ON DELETE CASCADE,
-        FOREIGN KEY (player_id) REFERENCES users(id)
+        FOREIGN KEY (games_match_id) REFERENCES games_match(id) ON DELETE CASCADE
       );
     `);
   }
@@ -227,8 +226,7 @@ async function databaseConnector(fastify) {
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT 0,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-        FOREIGN KEY (winner_id) REFERENCES users(id)
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
       );
     `);
   }

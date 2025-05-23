@@ -12,8 +12,9 @@ module.exports = fp(
       handler: async function createGameHandler (request, reply) {
         try {
           const user = request.user.id 
-          const { mode } = request.body
-          const game = await fastify.dbGames.createGame(user, mode)
+          const { mode, maxPlayers } = request.body
+          console.log('Creating game with mode:', mode, 'and max players:', maxPlayers) //! DELETE
+          const game = await fastify.dbGames.createGame(user, mode, maxPlayers)
           if (!game) {
             reply.status(400).send({ error: 'Failed to create game' })
             return
@@ -21,7 +22,7 @@ module.exports = fp(
           reply.status(201).send(game) 
         } catch (err) {
           fastify.log.error(err)
-          reply.status(500).send({ error: 'Internal Server Error' })
+          reply.status(500).send({ error: 'Intssernal Server Error' })
         }
       }
     })
