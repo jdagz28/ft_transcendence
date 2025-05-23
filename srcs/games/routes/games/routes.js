@@ -100,11 +100,27 @@ module.exports = fp(
     * leave a game
     fastify.delete('/games/:gameId', {
     })
+    */
 
     * create a tournament
     fastify.post('/games/tournaments', {
+      schema: {
+        body: fastify.getSchema('schema:games:createTournament')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentHandler (request, reply) {
+        try {
+          const { name, mode, maxPlayers } = request.body
+          const tournament = await fastify.gameService.createTournament(request, name, mode, maxPlayers)
+          reply.status(201).send(tournament)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
     })
 
+    /*
     * get a list of tournaments
     fastify.get('/games/tournaments', {
     })

@@ -89,7 +89,31 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Internal Server Error')
       }
-    }    
+    },
+
+    async createTournament(request, name, mode, maxPlayers) {
+      try {
+        const authHeader = request.headers['authorization'];
+        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
+        if (!token) {
+          throw new Error('Missing token')
+        } 
+        const userId = request.user.id
+       
+        console.log ('Creating tournament with userId:', userId, 'and mode:', mode, 'and max players:', maxPlayers) //! DELETE
+        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/tournaments`, {
+          userId, name, mode, maxPlayers}, 
+          { headers: {
+            'x-internal-key': process.env.INTERNAL_KEY,
+            'Authorization': `Bearer ${token}`,
+        }})
+        console.log('Tournament created:', response.data)
+        return response.data
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Internal Server Error')
+      }
+    }
   })
 }, {
   name: 'gameAutoHooks'

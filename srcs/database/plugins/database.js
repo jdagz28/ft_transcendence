@@ -157,12 +157,14 @@ async function databaseConnector(fastify) {
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
         mode TEXT NOT NULL
-          CHECK (mode IN ('training', 'single-player', 'local-multiplayer', 'online-multiplayer')),
-        playersNumber INTEGER NOT NULL,
+          CHECK (mode IN ('solo', 'duo', 'online')),
+        max_players INTEGER NOT NULL,
         winner_id INTEGER,
+        created_by INTEGER NOT NULL,
+        name TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (winner_id) REFERENCES users(id)
+        FOREIGN KEY (created_by) REFERENCES users(id)
       );
     `);
   }
