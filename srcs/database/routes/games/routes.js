@@ -4,7 +4,7 @@ const fp = require('fastify-plugin')
 
 module.exports = fp(
   async function gameRoutes (fastify, opts) {
-    fastify.post('/games', {
+    fastify.post('/games/createGame', {
       schema: {
         body: fastify.getSchema('schema:games:createGame')
       },
@@ -27,7 +27,7 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/games', {
+    fastify.get('/games/all', {
       onRequest: fastify.authenticate,
       handler: async function getGamesHandler (request, reply) {
         try {
@@ -89,6 +89,30 @@ module.exports = fp(
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
+    })
+
+    fastify.post('/games/tournaments/createTournament', {
+      schema: {
+        body: fastify.getSchema('schema:games:createTournament')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          const { name, mode, maxPlayers } = request.body
+          console.log('Creating tournament with userId:', userId, 'and mode:', mode, 'and max players:', maxPlayers) //! DELETE
+          const tournament = await fastify.dbGames.createTournament(userId, name, mode, maxPlayers)
+          if (!tournament) {
+            reply.status(400).send({ error: 'Failed to create tournament' })
+            return
+          }
+          reply.status(201).send(tournament)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+
     })
 
   },

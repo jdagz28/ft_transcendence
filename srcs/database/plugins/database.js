@@ -192,7 +192,7 @@ async function databaseConnector(fastify) {
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         mode TEXT NOT NULL
-          CHECK (mode IN ('training', 'single-player', 'local-multiplayer', 'online-multiplayer')),
+          CHECK (mode IN ('training', 'single-player', 'local-multiplayer', 'online-multiplayer', 'tournament')),
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT 0,

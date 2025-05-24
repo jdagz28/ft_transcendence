@@ -16,7 +16,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const userId = request.user.id
        
         console.log ('Creating game with userId:', userId, 'and mode:', mode, 'and max players:', maxPlayers) //! DELETE
-        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/games`, {
+        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/games/createGame`, {
           userId, mode, maxPlayers}, 
           { headers: {
             'x-internal-key': process.env.INTERNAL_KEY,
@@ -37,7 +37,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (!token) {
           throw new Error('Missing token')
         } 
-        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/games`, {
+        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/games/all`, {
           headers: {
             'x-internal-key': process.env.INTERNAL_KEY,
             'Authorization': `Bearer ${token}`,
@@ -101,7 +101,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const userId = request.user.id
        
         console.log ('Creating tournament with userId:', userId, 'and mode:', mode, 'and max players:', maxPlayers) //! DELETE
-        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/tournaments`, {
+        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/games/tournaments/createTournament`, {
           userId, name, mode, maxPlayers}, 
           { headers: {
             'x-internal-key': process.env.INTERNAL_KEY,

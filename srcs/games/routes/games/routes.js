@@ -6,7 +6,7 @@ const fp = require('fastify-plugin')
 module.exports = fp(
   async function gameRoutes (fastify, opts) {
     //  create a new game
-    fastify.post('/games', {
+    fastify.post('/games/createGame', {
       schema: {
         body: fastify.getSchema('schema:games:createGame')
       },
@@ -25,7 +25,7 @@ module.exports = fp(
 
     
     // get a list of games
-    fastify.get('/games', {
+    fastify.get('/games/all', {
       onRequest: fastify.authenticate,
       handler: async function getGamesHandler (request, reply) {
         try {
@@ -102,8 +102,8 @@ module.exports = fp(
     })
     */
 
-    * create a tournament
-    fastify.post('/games/tournaments', {
+    // create a tournament
+    fastify.post('/games/tournaments/createTournament', {
       schema: {
         body: fastify.getSchema('schema:games:createTournament')
       },

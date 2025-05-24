@@ -79,8 +79,6 @@ services:
       - database
     environment:
       - PORT=${GAMES_PORT}
-    ports:
-      - ${GAMES_PORT}:${GAMES_PORT}
     env_file:
       - .env
     networks:
