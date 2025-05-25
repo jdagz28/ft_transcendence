@@ -1,5 +1,5 @@
 # Docker multistage build
-FROM node:23-slim as builder
+FROM node:23-slim AS builder
 
 WORKDIR /builder
 COPY package.json package-lock.json ./

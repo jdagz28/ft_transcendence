@@ -15,28 +15,23 @@ http {
 
         location ^~ /auth/ {
             proxy_pass         http://authentication:${AUTH_PORT};
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            include /etc/nginx/proxy_params;
         }
 
         location ^~ /users/ {
             proxy_pass         http://usermanagement:${USER_PORT};
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            include /etc/nginx/proxy_params;
+
         }
 
         location ^~ /games/ {
             proxy_pass         http://games:${GAMES_PORT};
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            include /etc/nginx/proxy_params;
         }
 
-        location / { return 404; }
+        location / {
+            proxy_pass          http://backend:${BACKEND_PORT};
+            include /etc/nginx/proxy_params;
+         }
     }
 }
