@@ -113,6 +113,22 @@ services:
       - transcendence
     profiles:
       - build
+  
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:4.1-management
+    ports:
+      - 5672:5672 
+      - 15672:15672
+    networks:
+      - transcendence
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    restart: always
+    profiles:
+      - backend
+      - development
 
 volumes:
   db-sqlite:
