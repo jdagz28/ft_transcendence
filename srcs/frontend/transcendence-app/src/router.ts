@@ -1,6 +1,8 @@
 import { renderGameNewPage } from "./pages/game-new"; 
+import { renderGamePage } from "./pages/game";
 
 export const ROUTE_GAMES_NEW = "#games-new";
+export const ROUTE_GAMES_PAGE = "#games";
 
 export type RouteParams = Record<string, string | undefined>;
 type RouteHandler = (params: RouteParams) => void;
@@ -8,6 +10,7 @@ type RouteHandler = (params: RouteParams) => void;
 
 const routes: Record<string, RouteHandler> = {
   [ROUTE_GAMES_NEW]: (params) => renderGameNewPage(params),
+  [ROUTE_GAMES_PAGE]: (params) => renderGamePage(params),
 };
 
 /**

@@ -122,8 +122,6 @@ services:
       - database
     environment:
       - PORT=${GAMESTATE_PORT}
-    ports:
-      - ${GAMESTATE_PORT}:${GAMESTATE_PORT}
     env_file:
       - .env
     networks:
