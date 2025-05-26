@@ -27,9 +27,7 @@ export function renderGamePage(params: RouteParams): void {
     canvas.height = canvasHeight;
   });
 
-  // ✅ Dynamic WebSocket based on gameId
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const socket = new WebSocket(`${protocol}://${window.location.host}/sessions/${gameId}`);  
+  const socket = new WebSocket(`wss://${window.location.hostname}:${window.location.port}/sessions/${gameId}`);  
 
   socket.onopen = () => {
     console.log(`✅ Connected to game session: ${gameId}`);

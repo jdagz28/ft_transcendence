@@ -1,38 +1,42 @@
-'use strict'
+'use strict';
 
-const websocketPlugin = require('@fastify/websocket')
-
+// const websocketPlugin = require('@fastify/websocket');
 
 module.exports = async function (fastify, opts) {
-  fastify.register(websocketPlugin)
+  // fastify.register(websocketPlugin); 
 
-  fastify.route({
-    method: 'GET',
-    url: '/sessions/:gameId',
-    handler: (request, reply) => {
-      console.log('Request Headers:', request.headers) //! DELETE
-      console.log('Request Params:', request.params) //! DELETE
-      reply.status(426).send({ error: 'Expected WebSocket Upgrade' });
-    },
-    wsHandler: (connection, request) => {
-      const { gameId } = request.params
-      console.log(`WebSocket connection established for gameId: ${gameId}`) //! DELETE
+  fastify.get('/sessions/:gameId', 
+    { websocket: true,
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            gameId: { type: 'string' }
+          },
+          required: ['gameId']
+        },
+      }
+     }, 
+    (connection, request, params) => {
+    // console.log('Request received for WebSocket connection', request);
+    console.log('Params:', params);
 
-      const session = fastify.getSession(gameId)
-      session.sockets.add(connection.socket)
-      console.log(`Current sockets in session: ${session.sockets.size}`) //! DELETE
+    const { gameId } = params;  
+    console.log(`✅ WebSocket connection for gameId: ${gameId}`); //! DELETE
 
-      connection.socket.on('message', message => {
-        for (const socket of session.sockets) {
-          if (socket !== connection.socket) {
-            socket.send(message.toString())
-          }
+    const session =  fastify.getSession(gameId);
+    session.sockets.add(connection.socket);
+
+    connection.socket.on('message', (msg) => {
+      for (const sock of session.sockets) {
+        if (sock !== connection.socket) {
+          sock.send(msg.toString());
         }
-      })
+      }docker 
+    });
 
-      connection.socket.on('close', () => {
-        fastify.removeSocket(gameId, connection.socket)
-      })
-    }
-  })
-}
+    connection.socket.on('close', () => {
+      fastify.removeSocket(gameId, connection.socket);
+    });
+  });
+};

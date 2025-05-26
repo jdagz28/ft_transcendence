@@ -2,12 +2,16 @@
 
 const path = require('node:path')
 const AutoLoad = require('@fastify/autoload')
+const websocket = require('@fastify/websocket')
 
 // Pass --options via CLI arguments in command to enable these options.
-const options = {}
+const options = {
+
+}
 
 module.exports = async function (fastify, opts) {
   // Place here your custom code!
+  await fastify.register(websocket);
 
   // Do not touch the following lines
 
@@ -25,6 +29,7 @@ module.exports = async function (fastify, opts) {
     dir: path.join(__dirname, 'routes'),
     options: Object.assign({}, opts)
   })
+
 }
 
 module.exports.options = options
