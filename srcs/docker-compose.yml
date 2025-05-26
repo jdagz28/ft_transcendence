@@ -114,6 +114,26 @@ services:
     profiles:
       - build
 
+  gamestate:
+    container_name: gamestate
+    build: ./gamestate
+    image: gamestate:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${GAMESTATE_PORT}
+    ports:
+      - ${GAMESTATE_PORT}:${GAMESTATE_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - game
+      - backend
+      - development
+
 volumes:
   db-sqlite:
     driver: local
