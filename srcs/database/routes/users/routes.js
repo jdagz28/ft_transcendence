@@ -79,35 +79,29 @@ module.exports = fp(
         params: fastify.getSchema('schema:users:avatar'),
       },
       handler: async function getAvatar (request, reply) {
-        try {
-          const { userId } = request.params
-          console.log('Fetching avatar for user ID:', userId) //! DELETE
-          const query = fastify.db.prepare(`
-            SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
-          `)
-          const row = query.get(userId)
-          console.log('Row:', row) //! DELETE
-          let avatarBuffer = row?.avatar
-          let mimeType = row?.mime_type
-          
-          if (!avatarBuffer && fastify.defaultAssets.defaultAvatar) {
-            avatarBuffer = fastify.defaultAssets.defaultAvatar
-            mimeType     = fastify.defaultAssets.defaultAvatarMime
-          }
-      
-          if (!avatarBuffer && !mimeType) {
-            reply.code(404).send('Avatar not found')
-            return
-          }
-      
-          reply
-            .header('Content-Type', mimeType)
-            .header('Cache-Control', 'public, max-age=3600')
-            .send(avatarBuffer)
-        } catch (err) { 
-          fastify.log.error(`Error serving avatar for user ${request.params.userId}: ${err.message}`)
-          reply.code(500).send('Internal servera error')
+        const userId = Number(request.params.userId)
+        console.log('Fetching avatar for user ID:', userId) //! DELETE
+        const query = fastify.db.prepare(`
+          SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        console.log('Row:', row) //! DELETE
+        let avatarBuffer = row?.avatar
+        let mimeType = row?.mime_type
+        
+        if (!avatarBuffer && fastify.defaultAvatar) {
+          avatarBuffer = fastify.defaultAvatar;
+          mimeType = fastify.defaultAvatarMime;
         }
+    
+        if (!avatarBuffer && !mimeType) {
+          return reply.code(404).send('Avatar not found')
+        }
+    
+        reply
+          .type(mimeType)
+          .header('Cache-Control', 'public, max-age=3600')
+          .send(avatarBuffer);
       }
     })
 
@@ -275,6 +269,6 @@ module.exports = fp(
 
   }, {
     name: 'user',
-    dependencies: [ 'userAutoHooks', 'database']
+    dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']
 })
 

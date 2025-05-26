@@ -6,7 +6,30 @@ const axios = require('axios')
 module.exports.prefixOverride = ''
 module.exports = fp(
   async function userRoutes (fastify, opts) {
+    const dbApi = axios.create({
+      baseURL: `http://database:${process.env.DB_PORT}`,
+      timeout: 2_000
+    });
 
+    const authApi = axios.create({
+      baseURL: `http://authentication:${process.env.AUTH_PORT}`,
+      timeout: 2_000
+    });
+  
+    const bearer = request => {
+      const authHeader = request.headers['authorization'];
+      const token = authHeader && authHeader.replace(/^Bearer\s+/i, '');
+      if (!token) {
+        throw fastify.httpErrors.unauthorized('Missing JWT')
+      }
+      return token;
+    }
+  
+    const internalHeaders = request => ({
+      'x-internal-key': process.env.INTERNAL_KEY,
+      Authorization: `Bearer ${bearer(request)}`
+    })
+    
     fastify.get('/users/me', {
       schema: {
         response: {
@@ -15,16 +38,11 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function userProfileHandler (request, reply) {
-        try {
-          const user = await fastify.usersDataSource.getMeById(request, request.user.id)
-          if (!user) {
-            return reply.status(404).send({ error: 'User not found' })
-          }
-          return reply.send(user)
-        } catch (err) {
-          fastify.log.error(`Error fetching user: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        const user = await fastify.usersDataSource.getMeById(request, request.user.id)
+        if (!user) {
+          return reply.code(404).send({ error: 'User not found' })
         }
+        return reply.send(user)
       }
     })
   
@@ -34,53 +52,49 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function avatarHandler (request, reply) {
-        fastify.log.info({ body: request.body }, 'multipart body debug')
-
-        try {
-          const userId = Number(request.user.id)
-          if (!userId) {
-            return reply.status(400).send({ error: 'UserMgmt: Invalid user ID' })
-          }
-          const avatarFile = request.body.avatar
-          if (!avatarFile) {
-            return reply.status(400).send({ error: 'UserMgmt: No avatar file provided' })
-          }
-          const avatarBuf = await avatarFile.toBuffer()
-
-          const FormData = require('form-data')
-          const form = new FormData()
-          form.append('userId', userId)
-          form.append('avatar', avatarBuf, {
-            filename: avatarFile.filename,
-            contentType: avatarFile.mimetype
-          })
-          console.log('Form data:', form)
-
-          await fastify.usersDataSource.createAvatar(request, form)
-          reply.send({ success: true })
-        } catch (err) {
-          reply.status(500).send({ error: 'UserMgmt: Failed to update avatar' })
+        const userId = Number(request.user.id)
+        if (!userId) {
+          return reply.code(400).send({ error: 'UserMgmt: Invalid user ID' })
         }
+        const avatarFile = request.body.avatar
+        if (!avatarFile) {
+          return reply.code(400).send({ error: 'UserMgmt: No avatar file provided' })
+        }
+        const avatarBuf = await avatarFile.toBuffer()
+
+        const FormData = require('form-data')
+        const form = new FormData()
+        form.append('userId', userId)
+        form.append('avatar', avatarBuf, {
+          filename: avatarFile.filename,
+          contentType: avatarFile.mimetype
+        })
+        console.log('Form data:', form)
+
+        await fastify.usersDataSource.createAvatar(request, form)
+        return reply.send({ success: true })
       }
     })
 
     fastify.get('/users/:userId/avatar', {
       onRequest: [fastify.authenticate],
       handler: async function avatarHandler (request, reply) {
+        const userId = request.params.userId
         try {
-          const userId = request.params.userId
-          fastify.log.info(`Fetching avatar for user ID: ${userId}`)
-          const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/avatar`, {
-            responseType: 'arraybuffer'
+          const { data, headers } = await dbApi.get(`/users/${encodeURIComponent(userId)}/avatar`, 
+          {
+            responseType: 'arraybuffer',
+            headers: internalHeaders(request),
           })
-          if (response.status !== 200) {
-            return reply.status(404).send({ error: 'UserMgmt: Avatar not found' })
-          }
-          reply.type(response.headers['content-type'])
-          return reply.send(response.data)
+          return reply
+          .type(headers['content-type'])
+          .header('Content-Length', data.length)
+          .send(data); 
         } catch (err) {
-          fastify.log.error(`Error fetching avatar: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+          if (err.response?.status === 404) {
+            return reply.code(404).send({ error: 'UserMgmt: Avatar not found' })
+          }
+          throw err
         }
       }
     })
@@ -91,27 +105,14 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function changePassword (request, reply) {
-        try {
-          const userId = request.user.id
-          const { newPassword } = request.body
-          const rawAuth = request.headers.authorization
+        const userId = request.user.id
+        const { newPassword } = request.body
 
-          const response = await axios.put(`${request.protocol}://authentication:${process.env.AUTH_PORT}/auth/${userId}/changePassword`, 
-            { newPassword },
-            {
-              headers: {
-                Authorization: rawAuth,                
-                'x-internal-key': process.env.INTERNAL_KEY
-              }
-          })
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to change password' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error changing password: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
+        await authApi.put(`/auth/${encodeURIComponent(userId)}/changePassword`, 
+          { newPassword },
+          { headers: internalHeaders(request) },
+        )
+        return reply.send({ success: true })
       }
     })
 
@@ -122,27 +123,14 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function changeEmail(request, reply) {
-        try {
-          const userId = request.user.id
-          const { newEmail } = request.body
-          const rawAuth = request.headers.authorization
+        const userId = request.user.id
+        const { newEmail } = request.body
 
-          const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
-            { field: 'email', value: newEmail },
-            {
-              headers: {
-                Authorization: rawAuth,
-                'x-internal-key': process.env.INTERNAL_KEY
-              }
-            })
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to change email' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error changing email: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
+        await dbApi.put(`/users/${encodeURIComponent(userId)}/updateDetails`,
+          { field: 'email', value: newEmail },
+          { headers: internalHeaders(request) },
+        )
+        return reply.send({ success: true })
       }
     })
 
@@ -152,28 +140,14 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function changeUsername(request, reply) {
-        try {
-          const userId = request.user.id
-          const { newUsername } = request.body
-          const rawAuth = request.headers.authorization
+        const userId = request.user.id
+        const { newUsername } = request.body
 
-          const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
-            { field: 'username', value: newUsername },
-            {
-              headers: {
-                Authorization: rawAuth,
-                'x-internal-key': process.env.INTERNAL_KEY
-              }
-            })
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to change username' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error changing username: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
-
+        await dbApi.put(`/users/${encodeURIComponent(userId)}/updateDetails`,
+          { field: 'username', value: newUsername },
+          { headers: internalHeaders(request) },
+        )
+        return reply.send({ success: true })
       }
     })
 
@@ -183,28 +157,14 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function changeNickname(request, reply) {
-        try {
-          const userId = request.user.id
-          const { newNickname } = request.body
-          const rawAuth = request.headers.authorization
+        const userId = request.user.id
+        const { newNickname } = request.body
 
-          const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${userId}/updateDetails`,
-            { field: 'nickname', value: newNickname },
-            {
-              headers: {
-                Authorization: rawAuth,
-                'x-internal-key': process.env.INTERNAL_KEY
-              }
-            })
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to change nickname' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error changing nickname: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
-
+        await dbApi.put(`/users/${encodeURIComponent(userId)}/updateDetails`,
+          { field: 'nickname', value: newNickname },
+          { headers: internalHeaders(request) },
+        )
+        return reply.send({ success: true })
       }
     })
 
@@ -217,16 +177,11 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function userProfileHandler (request, reply) {
-        try {
-          const user = await fastify.usersDataSource.getUserByUsername(request, request.params.username)
-          if (!user) {
-            return reply.status(404).send({ error: 'User not found' })
-          }
-          return reply.send(user)
-        } catch (err) {
-          fastify.log.error(`Error fetching user: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        const user = await fastify.usersDataSource.getUserByUsername(request, request.params.username)
+        if (!user) {
+          return reply.code(404).send({ error: 'User not found' })
         }
+        return reply.send(user)
       }
     })
 
@@ -236,17 +191,8 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function addFriendHandler (request, reply) {
-        try {
-          console.log('current user:', request.user.username) //! DELETE
-          const response = await fastify.usersDataSource.addFriend(request)
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error adding friend: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
+        await fastify.usersDataSource.addFriend(request)
+        return reply.send({ success: true })
       }
     })
 
@@ -256,18 +202,8 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function removeFriendHandler (request, reply) {
-        try {
-          console.log('Removing friend:', request.body) //! DELETE
-          const response = await fastify.usersDataSource.removeFriend(request)
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to remove friend' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error removing friend: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
-
+        await fastify.usersDataSource.removeFriend(request)
+        return reply.send({ success: true })
       }
     })
 
@@ -277,16 +213,8 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function addFriendHandler (request, reply) {
-        try {
-          const response = await fastify.usersDataSource.respondFriendRequest(request)
-          if (response.status !== 200) {
-            return reply.status(500).send({ error: 'UserMgmt: Failed to add friend' })
-          }
-          return reply.send({ success: true })
-        } catch (err) {
-          fastify.log.error(`Error adding friend: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
-        }
+        await fastify.usersDataSource.respondFriendRequest(request)
+        return reply.send({ success: true })
       }
     })
 
@@ -298,20 +226,14 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function getMeFriendsHandler (request, reply) {
-        try {
-          const username = request.user.username
-          const friends = await fastify.usersDataSource.getFriends(request, username)
-          if (!friends) {
-            return reply.status(404).send({ error: 'UserMgmt: No friends found' })
-          }
-          return reply.send(friends)
-        } catch (err) {
-          fastify.log.error(`Error fetching friends: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        const username = request.user.username
+        const friends = await fastify.usersDataSource.getFriends(request, username)
+        if (!friends) {
+          return reply.code(404).send({ error: 'UserMgmt: No friends found' })
         }
+        return reply.send(friends)
       }
     })
-
 
     fastify.get('/users/:username/friends', {
       schema: {
@@ -322,18 +244,12 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function getFriendsHandler (request, reply) {
-        try {
-          const username = request.params.username
-          const friends = await fastify.usersDataSource.getFriends(request, username)
-          if (!friends) {
-            return reply.status(404).send({ error: 'UserMgmt: No friends found' })
-          }
-          return reply.send(friends)
-        } catch (err) {
-          fastify.log.error(`Error fetching friends: ${err.message}`)
-          return reply.status(500).send({ error: 'UserMgmt: Internal Server Error' })
+        const username = request.params.username
+        const friends = await fastify.usersDataSource.getFriends(request, username)
+        if (!friends) {
+          return reply.code(404).send({ error: 'UserMgmt: No friends found' })
         }
-
+        return reply.send(friends)
       }
     })
 

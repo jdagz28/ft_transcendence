@@ -10,6 +10,7 @@ http {
         ssl_certificate     /etc/nginx/ssl/transcendence.crt;
         ssl_certificate_key /etc/nginx/ssl/transcendence.key;
         ssl_protocols       TLSv1.2 TLSv1.3;
+        client_max_body_size 5m;
 
         server_name ${SERVER_NAME};
 

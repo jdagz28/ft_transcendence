@@ -12,14 +12,9 @@ module.exports = fp(
       },
       onRequest: fastify.authenticate,
       handler: async function createGameHandler (request, reply) {
-        try {
-          const { mode, maxPlayers } = request.body
-          const game = await fastify.gameService.createGame(request, mode, maxPlayers)
-          reply.status(201).send(game)
-        } catch (err) {
-          fastify.log.error(err)
-          reply.status(500).send({ error: 'Internal Server Error' })
-        }
+        const { mode, maxPlayers } = request.body
+        const game = await fastify.gameService.createGame(request, mode, maxPlayers)
+        return reply.code(201).send(game)
       }
     })
 
@@ -28,18 +23,12 @@ module.exports = fp(
     fastify.get('/games/all', {
       onRequest: fastify.authenticate,
       handler: async function getGamesHandler (request, reply) {
-        try {
-          const games = await fastify.gameService.getGames(request)
-          console.log('Games retrieved:', games) //! DELETE
-          if (!games) {
-            reply.status(400).send({ error: 'Failed to retrieve games' })
-            return
-          }
-          reply.status(200).send(games)
-        } catch (err) {
-          fastify.log.error(err)
-          reply.status(500).send({ error: 'Internal Server Error' })
+        const games = await fastify.gameService.getGames(request)
+        console.log('Games retrieved:', games) //! DELETE
+        if (!games) {
+          return reply.code(400).send({ error: 'Failed to retrieve games' })
         }
+        return reply.send(games)
       }
     })
     
@@ -51,19 +40,13 @@ module.exports = fp(
       },
       onRequest: fastify.authenticate,
       handler: async function getSpecificGameHandler(request, reply) {
-        try {
-          const { gameId } = request.params
-          console.log ('Retrieving game with ID:', gameId) //! DELETE
-          const game = await fastify.gameService.getGameById(request, gameId)
-          if (!game) {
-            reply.status(404).send({ error: 'Game not found' })
-            return
-          }
-          reply.status(200).send(game)
-        } catch (err) {
-          fastify.log.error(err)
-          reply.status(500).send({ error: 'Internal Server Error' })
+        const { gameId } = request.params
+        console.log ('Retrieving game with ID:', gameId) //! DELETE
+        const game = await fastify.gameService.getGameById(request, gameId)
+        if (!game) {
+          return reply.code(404).send({ error: 'Game not found' })
         }
+        return reply.code(200).send(game)
       }
     })
 
@@ -75,23 +58,16 @@ module.exports = fp(
       },
       onRequest: fastify.authenticate,
       handler: async function joinGameHandler(request, reply) {
-        try {
-          const { gameId } = request.params
-          const userId = request.user.id
-          const game = await fastify.gameService.joinGame(request, gameId, userId)
-          if (!game) {
-            reply.status(404).send({ error: 'Game not found' })
-            return
-          }
-          if (game.status == 'full') {
-            reply.status(409).send({ error: 'Game is full' })
-            return
-          }
-          reply.status(200).send(game)
-        } catch (err) {
-          fastify.log.error(err)
-          reply.status(500).send({ error: 'Internal Server Error' })
+        const { gameId } = request.params
+        const userId = request.user.id
+        const result = await fastify.gameService.joinGame(request, gameId, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
         }
+        if (result.status == 'full') {
+          return reply.code(409).send({ error: 'Game is full' })
+        }
+        return reply.send(result)
       }
     })
 
@@ -110,14 +86,9 @@ module.exports = fp(
       },
       onRequest: fastify.authenticate,
       handler: async function createTournamentHandler (request, reply) {
-        try {
-          const { name, mode, maxPlayers } = request.body
-          const tournament = await fastify.gameService.createTournament(request, name, mode, maxPlayers)
-          reply.status(201).send(tournament)
-        } catch (err) {
-          fastify.log.error(err)
-          reply.status(500).send({ error: 'Internal Server Error' })
-        }
+        const { name, mode, maxPlayers } = request.body
+        const tournament = await fastify.gameService.createTournament(request, name, mode, maxPlayers)
+        return reply.code(201).send(tournament)
       }
     })
 

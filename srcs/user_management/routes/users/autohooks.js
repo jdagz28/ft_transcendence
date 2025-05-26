@@ -5,177 +5,111 @@ const schemas = require('./schemas/loader')
 const axios = require('axios')
 
 module.exports = fp(async function userAutoHooks (fastify, opts) {
+  const dbApi = axios.create({
+    baseURL: `http://database:${process.env.DB_PORT}`,
+    timeout: 2_000
+  });
+
+  function bearer (request) {
+    const authHeader = request.headers['authorization'];
+    const token = authHeader && authHeader.replace(/^Bearer\s+/i, '');
+    if (!token) {
+      throw fastify.httpErrors.unauthorized('Missing JWT')
+    }
+    return token;
+  }
+
+  function internalHeaders (request) {
+    return {
+      'x-internal-key': process.env.INTERNAL_KEY,
+      Authorization: `Bearer ${bearer(request)}`
+    }
+  }
+
   fastify.register(schemas)
 
   fastify.decorate('usersDataSource', {
     async getMeById(request, id) {
-      try {
-        console.log('Getting all data for: ', id) //! DELETE
-        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/users/me`, { params: { id } })
-        return response.data
-      } catch (err) {
-        if (err.response && err.response.status === 404) {
-          fastify.log.error(`User with ID ${id} not found`)
-          return null
+      console.log('Getting all data for: ', id) //! DELETE
+      const { data } = await dbApi.get('/users/me', 
+        { 
+          params: { id } ,
+          headers: internalHeaders(request),
         }
-        throw err 
-      }
+      )
+      return data
     },
 
     async getUserByUsername(request, username) {
-      try {
-        console.log('Getting all data for: ', username) //! DELETE
-        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}` +
-                `/users/${encodeURIComponent(username)}`)
-        return response.data
-      } catch (err) {
-        if (err.response && err.response.status === 404) {
-          fastify.log.error(`User with username ${username} not found`)
-          return null
-        }
-        throw err 
-      }
+      console.log('Getting all data for: ', username) //! DELETE
+      const { data } = await dbApi.get(`/users/${encodeURIComponent(username)}`,
+        { headers: internalHeaders(request) },
+      )
+      return data
     },
 
     async createAvatar(request, form) {
-      try {
-        const authHeader = request.headers['authorization'];
-        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-        if (!token) {
-          throw new Error('Missing token')
+      const { data } = await dbApi.put('/users/me/avatar', form,
+        { headers: {
+            ...internalHeaders(request),
+            ...(form.getHeaders?.() || {}),
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
         }
-
-        const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/me/avatar`, 
-          form,
-          { headers: {
-            ...form.getHeaders(),
-            'x-internal-key': process.env.INTERNAL_KEY,
-            'Authorization': `Bearer ${token}`,
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-           })
-        console.log('Avatar uploaded successfully:', response.data) //! DELETE
-        return response.data
-      } catch (err) {
-        console.error('DB service error:', { //! change to fastify.log.error
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });              
-        throw err
-      }
+      )
+      console.log('Avatar uploaded successfully:', data) //! DELETE
+      return data
     },
 
     async addFriend(request) {
-      try {
-        const username = request.user.username
-        const friend = request.params.username
-        const authHeader = request.headers['authorization'];
-        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-        if (!token) {
-          throw new Error('Missing token')
+      const username = request.user.username
+      const friend = request.params.username
+      const { data } = await dbApi.put(`/users/${username}/friends`, 
+        {
+          data: { friend }, 
+          headers: internalHeaders(request)
         }
-        const response = await axios.put(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
-          { friend },
-          { headers: {
-            'x-internal-key': process.env.INTERNAL_KEY,
-            'Authorization': `Bearer ${token}`,
-          }})
-        console.log('Friend added successfully:', response.data) //! DELETE
-        return response
-      } catch (err) {
-        console.error('DB service error:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });              
-        throw err
-      }
+      )
+      console.log('Friend added successfully:', data) //! DELETE
+      return data
     },
 
     async removeFriend(request) {
-      try {
-        const username = request.user.username
-        const friend = request.body.friend
-        const authHeader = request.headers['authorization'];
-        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-        if (!token) {
-          throw new Error('Missing token')
+      const username = request.user.username
+      const friend = request.body.friend
+      const { data } = await dbApi.delete(`/users/${username}/friends`, 
+        { 
+          data: { friend },
+          headers: internalHeaders(request) 
         }
-        const response = await axios.delete(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
-          { data: { friend },
-          headers: {
-              'x-internal-key': process.env.INTERNAL_KEY,
-              'Authorization': `Bearer ${token}`,
-          }})
-        console.log('Friend removed successfully:', response.data) //! DELETE
-        return response
-      } catch (err) {
-        console.error('DB service error:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });              
-        throw err
-      }
+      )
+      console.log('Friend removed successfully:', data) //! DELETE
+      return data
     },
 
     async respondFriendRequest(request) {
-      try {
         const username = request.user.username
-        const friend = request.body.friend
-        const action = request.body.action
-        const authHeader = request.headers['authorization'];
-        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-        if (!token) {
-          throw new Error('Missing token')
-        }
+        const { friend, action } = request.body
+
         if (!['accept', 'decline'].includes(action)) { 
-          fastify.log.error(`Invalid action: ${action}`)
-          throw new Error('Invalid friend request action')
+          throw fastify.httpErrors.badRequest('Invalid friend request action')
         }
 
-        const response = await axios.post(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friendrequests`, 
+        const { data } = await dbApi.post(`/users/${encodeURIComponent(username)}/friendrequests`, 
           { friend, action },
-          { headers: {
-            'x-internal-key': process.env.INTERNAL_KEY,
-            'Authorization': `Bearer ${token}`,
-          }})
-        console.log('Friend request responded successfully:', response.data) //! DELETE
-        return response
-      } catch (err) {
-        console.error('DB service error:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });              
-        throw err
-      }
+          { headers: internalHeaders(request) },
+        )
+        console.log('Friend request responded successfully:', data) //! DELETE
+        return data
     },
 
     async getFriends(request, username) {
-      try {
-        const authHeader = request.headers['authorization'];
-        const token = authHeader && authHeader.replace(/^Bearer\s+/i, '')
-        if (!token) {
-          throw new Error('Missing token')
-        }
-        const response = await axios.get(`${request.protocol}://database:${process.env.DB_PORT}/users/${username}/friends`, 
-          { headers: {
-            'x-internal-key': process.env.INTERNAL_KEY,
-            'Authorization': `Bearer ${token}`,
-          }})
-        console.log('Friends retrieved successfully:', response.data) //! DELETE
-        return response.data
-      } catch (err) {
-        console.error('DB service error:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });              
-        throw err
-      }
+      const data = await dbApi.get(`/users/${encodeURIComponent(username)}/friends`,
+        { headers: internalHeaders(request) },
+      )
+      console.log('Friends retrieved successfully:', data) //! DELETE
+      return data
     },
 
   })
