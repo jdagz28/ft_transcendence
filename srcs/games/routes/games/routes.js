@@ -53,6 +53,7 @@ module.exports = fp(
       handler: async function getSpecificGameHandler(request, reply) {
         try {
           const { gameId } = request.params
+          console.log ('Retrieving game with ID:', gameId) //! DELETE
           const game = await fastify.gameService.getGameById(request, gameId)
           if (!game) {
             reply.status(404).send({ error: 'Game not found' })

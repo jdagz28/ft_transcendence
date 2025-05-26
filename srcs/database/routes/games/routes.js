@@ -54,7 +54,7 @@ module.exports = fp(
           if (!game) {
             reply.status(404).send({ error: 'Game not found' })
             return
-          }ss
+          }
           reply.status(200).send(game)
         } catch (err) {
           fastify.log.error(err)
