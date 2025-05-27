@@ -9,6 +9,8 @@ export function renderGamePage(params: RouteParams): void {
     return;
   }
 
+  let gameState: any = null;
+
   const canvas = document.createElement('canvas');
   document.body.appendChild(canvas);
   const ctx = canvas.getContext('2d')!;
@@ -27,7 +29,8 @@ export function renderGamePage(params: RouteParams): void {
     canvas.height = canvasHeight;
   });
 
-  const socket = new WebSocket(`wss://${window.location.hostname}:${window.location.port}/sessions/${gameId}`);  
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const socket = new WebSocket(`${protocol}://${window.location.host}/sessions/${gameId}`);  
 
   socket.onopen = () => {
     console.log(`✅ Connected to game session: ${gameId}`);
@@ -35,9 +38,17 @@ export function renderGamePage(params: RouteParams): void {
 
   socket.onmessage = (event) => {
     try {
-      const state = JSON.parse(event.data);
-      if (state.type === 'STATE') {
-        render(state);
+      const message = JSON.parse(event.data);
+      if (message.type === 'GAME_INITIALIZED') {
+        gameState = message.state;
+        console.log('Game initialized with state:', gameState);
+        render(gameState);
+        setupInputHandlers();
+      }
+
+      if (message.type === 'STATE') {
+        gameState = message.s; 
+        render(gameState);
       }
     } catch (err) {
       console.error("❌ Failed to parse state:", err);
@@ -56,6 +67,10 @@ export function renderGamePage(params: RouteParams): void {
     if (state.ball) drawBall(state.ball);
     if (state.players) drawPaddles(state.players);
     if (state.score) drawScore(state.score);
+    
+    if (!state.gameStarted) {
+      drawStartMessage();
+    }
   }
 
   function drawBall(ball: any) {
@@ -89,9 +104,86 @@ export function renderGamePage(params: RouteParams): void {
 
     ctx.beginPath();
     ctx.moveTo(canvasWidth / 2, 0);
-    ctx.lineTo(canvasHeight / 2, canvasHeight);
+    ctx.lineTo(canvasWidth / 2, canvasHeight);
     ctx.stroke();
 
     ctx.setLineDash([]);
+  } 
+
+  function sendPlayerInput(input: any) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'PLAYER_INPUT',
+        input
+      }));
+    }
   }
+
+  function sendDimensions() {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(
+        JSON.stringify({
+          type: 'DIMENSIONS',
+          width:  canvasWidth,
+          height: canvasHeight,
+          dpr:    window.devicePixelRatio
+        })
+      );
+    }
+  }
+
+  function setupInputHandlers() {
+    const keys = {
+      w: false,
+      s: false,
+      ArrowUp: false,
+      ArrowDown: false
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key in keys) {
+        keys[e.key as keyof typeof keys] = true;
+        sendPlayerInput({ keys });
+      }
+      
+      if (e.key === 'Enter' && gameState && !gameState.gameStarted) {
+        sendPlayerInput({ action: 'START_GAME' });
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key in keys) {
+        keys[e.key as keyof typeof keys] = false;
+        sendPlayerInput({ keys });
+      }
+    });
+
+    canvas.onclick = () => {
+      if (gameState && !gameState.gameStarted) {
+        sendPlayerInput({ action: 'START_GAME' });
+      }
+    };
+  }
+
+  function drawStartMessage() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    ctx.fillStyle = 'white';
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press ENTER or Click to Start', canvasWidth / 2, canvasHeight / 2);
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', canvasWidth / 2, canvasHeight / 2 + 50);
+  }
+
+  socket.addEventListener('open', sendDimensions);
+  window.addEventListener('resize', () => {
+    canvasWidth = window.innerWidth;
+    canvasHeight = window.innerHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    sendDimensions();
+  })
 }
+

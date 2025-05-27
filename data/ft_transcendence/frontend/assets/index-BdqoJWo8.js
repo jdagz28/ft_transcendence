@@ -1,0 +1,32 @@
+(function(){const l=document.createElement("link").relList;if(l&&l.supports&&l.supports("modulepreload"))return;for(const e of document.querySelectorAll('link[rel="modulepreload"]'))i(e);new MutationObserver(e=>{for(const t of e)if(t.type==="childList")for(const o of t.addedNodes)o.tagName==="LINK"&&o.rel==="modulepreload"&&i(o)}).observe(document,{childList:!0,subtree:!0});function r(e){const t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin==="use-credentials"?t.credentials="include":e.crossOrigin==="anonymous"?t.credentials="omit":t.credentials="same-origin",t}function i(e){if(e.ep)return;e.ep=!0;const t=r(e);fetch(e.href,t)}})();function S(a){const l=document.getElementById("app");if(!l)return;const r=a.mode??"training",i=a.maxPlayers??"1";l.innerHTML=`
+    <div class="mx-auto max-w-5xl p-6">
+      <div class="rounded-lg border border-gray-300 bg-white p-8 shadow-sm overflow-x-auto">
+        <form id="create-form" class="flex flex-col items-center gap-6 md:flex-row md:justify-center">
+          <!-- MODE -->
+          <div class="w-full md:w-64">
+            <label class="mb-2 block text-sm font-medium text-gray-700" for="mode">Mode</label>
+            <select id="mode" name="mode"
+                    class="block w-full rounded-md border-gray-300 shadow-sm"
+                    required>
+              ${["training","single-player","local-multiplayer","online-multiplayer"].map(c=>`<option value="${c}" ${c===r?"selected":""}>${c.replace("-"," ")}</option>`).join("")}
+            </select>
+          </div>
+
+          <!-- MAX PLAYERS -->
+          <div class="w-full md:w-64">
+            <label class="mb-2 block text-sm font-medium text-gray-700" for="maxPlayers">Max players</label>
+            <input id="maxPlayers" name="maxPlayers" type="number"
+                   min="1" max="10"
+                   value="${i}"
+                   class="block w-full rounded-md border-gray-300 shadow-sm" required />
+          </div>
+
+          <!-- SUBMIT -->
+          <button id="submit-btn" type="submit"
+                  class="h-10 w-full md:w-40 rounded-md bg-blue-600 text-white transition hover:bg-blue-700">
+            Create
+          </button>
+        </form>
+      </div>
+    </div>
+  `;const e=document.getElementById("create-form"),t=document.getElementById("mode"),o=document.getElementById("maxPlayers"),u=document.getElementById("submit-btn"),d='<svg class="mr-2 h-5 w-5 animate-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" stroke-dasharray="60" stroke-linecap="round"/></svg>',y=()=>{const c=t.value,m=c==="training"||c==="single-player";o.disabled=m,o.min=m?"1":"2",o.max="10",o.value=m?"1":Math.max(2,Number(o.value)).toString()};y(),t.addEventListener("change",y),e.onsubmit=async c=>{c.preventDefault();const m={mode:t.value,maxPlayers:Number(o.value)};u.disabled=!0,u.innerHTML=`${d}Creating…`;try{const f=await fetch("/games/createGame",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2VybmFtZSI6InRlc3QiLCJqdGkiOiIxNzQ4MjQ3NzU2NTYwIiwiaWF0IjoxNzQ4MjQ3NzU2LCJleHAiOjE3NDgyNTEzNTZ9.rNEd3qCb_pPzqCulEbrC-KA4YtPeZO6VlWg_39Vf_kY"},credentials:"include",body:JSON.stringify(m)});if(!f.ok)throw new Error(await f.text());const g=await f.json();window.location.hash=`#dashboard?gameId=${encodeURIComponent(g.gameId)}`}catch(f){alert(f.message)}finally{u.disabled=!1,u.textContent="Create"}}}function v(a){const l=a.gameId;if(console.log("Params:",a),!l){document.body.innerHTML='<h1 style="color:white;font-family:sans-serif">Missing gameId in URL!</h1>';return}let r=null;const i=document.createElement("canvas");document.body.appendChild(i);const e=i.getContext("2d");let t=window.innerWidth,o=window.innerHeight;i.width=t,i.height=o,i.style.backgroundColor="black",window.addEventListener("resize",()=>{t=window.innerWidth,o=window.innerHeight,i.width=t,i.height=o});const u=window.location.protocol==="https:"?"wss":"ws",d=new WebSocket(`${u}://${window.location.host}/sessions/${l}`);d.onopen=()=>{console.log(`✅ Connected to game session: ${l}`)},d.onmessage=n=>{try{const s=JSON.parse(n.data);s.type==="GAME_INITIALIZED"&&(r=s.state,console.log("Game initialized with state:",r),y(r),b()),s.type==="STATE"&&(r=s.s,y(r))}catch(s){console.error("❌ Failed to parse state:",s)}},d.onerror=n=>{console.error("❌ WebSocket error:",n)};function y(n){e.clearRect(0,0,t,o),g(),n.ball&&c(n.ball),n.players&&m(n.players),n.score&&f(n.score),n.gameStarted||x()}function c(n){e.beginPath(),e.arc(n.x,n.y,n.width||15,0,Math.PI*2),e.fillStyle="white",e.fill(),e.closePath()}function m(n){for(const s of Object.values(n))e.fillStyle="white",e.fillRect(s.x,s.y,s.width,s.height)}function f(n){e.font="100px sans-serif",e.fillStyle="white",e.textAlign="right",e.fillText(String(n.p1),t/2-50,100),e.textAlign="left",e.fillText(String(n.p2),t/2+50,100)}function g(){e.strokeStyle="white",e.lineWidth=3,e.setLineDash([10,10]),e.beginPath(),e.moveTo(t/2,0),e.lineTo(t/2,o),e.stroke(),e.setLineDash([])}function w(n){d.readyState===WebSocket.OPEN&&d.send(JSON.stringify({type:"PLAYER_INPUT",input:n}))}function h(){d.readyState===WebSocket.OPEN&&d.send(JSON.stringify({type:"DIMENSIONS",width:t,height:o,dpr:window.devicePixelRatio}))}function b(){const n={w:!1,s:!1,ArrowUp:!1,ArrowDown:!1};document.addEventListener("keydown",s=>{s.key in n&&(n[s.key]=!0,w({keys:n})),s.key==="Enter"&&r&&!r.gameStarted&&w({action:"START_GAME"})}),document.addEventListener("keyup",s=>{s.key in n&&(n[s.key]=!1,w({keys:n}))}),i.onclick=()=>{r&&!r.gameStarted&&w({action:"START_GAME"})}}function x(){e.fillStyle="rgba(0, 0, 0, 0.7)",e.fillRect(0,0,t,o),e.fillStyle="white",e.font="32px sans-serif",e.textAlign="center",e.fillText("Press ENTER or Click to Start",t/2,o/2),e.font="16px sans-serif",e.fillText("Player 1: W/S keys | Player 2: Arrow keys",t/2,o/2+50)}d.addEventListener("open",h),window.addEventListener("resize",()=>{t=window.innerWidth,o=window.innerHeight,i.width=t,i.height=o,h()})}const E="#games-new",I="#games",p={[E]:a=>S(a),[I]:a=>v(a)};function P(a){const[l,r]=a.split("?"),i={};if(r)for(const[e,t]of new URLSearchParams(r).entries())i[e]=t;return[l,i]}function k(){const a=()=>{const[l,r]=P(window.location.hash);(p[l]??p[""])(r)};window.addEventListener("hashchange",a),a()}document.addEventListener("DOMContentLoaded",()=>{k()});

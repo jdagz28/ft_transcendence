@@ -8,7 +8,13 @@ module.exports = fp(async function (fastify, opts) {
 
   fastify.decorate('getSession', function (gameId) {
     if (!fastify.sessions.has(gameId)) {
-      fastify.sessions.set(gameId, { sockets: new Set(), players: new Map() });
+      fastify.sessions.set(
+        gameId, 
+        { 
+          sockets: new Set(), 
+          players: new Map() 
+        }
+      );
     }
     console.log(`🔍 Getting session for gameId: ${gameId}`) //!DELETE
     return fastify.sessions.get(gameId);
