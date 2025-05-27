@@ -1,5 +1,6 @@
 .env
 .vscode/
 *.sqlite*
-*sqlite
+*.sqlite
 data/
+data/ft_transcendence/

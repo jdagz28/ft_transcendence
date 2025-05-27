@@ -17,26 +17,49 @@ module.exports = async function (fastify, opts) {
         },
       }
      }, 
-    (connection, request, params) => {
-    // console.log('Request received for WebSocket connection', request);
-    console.log('Params:', params);
+    (socket, request,) => {
+    console.log('Params:', request.params); //! DELETE
 
-    const { gameId } = params;  
+    const { gameId } = request.params;  
     console.log(`✅ WebSocket connection for gameId: ${gameId}`); //! DELETE
 
     const session =  fastify.getSession(gameId);
-    session.sockets.add(connection.socket);
+    console.log('Session:', session); //! DELETE
+    session.sockets.add(socket);
 
-    connection.socket.on('message', (msg) => {
-      for (const sock of session.sockets) {
-        if (sock !== connection.socket) {
-          sock.send(msg.toString());
-        }
-      }docker 
+    socket.on('message', (msg) => {
+      let message;
+      try {
+        message = JSON.parse(msg);
+      } catch (error) {
+        console.error('Error parsing message:', error);
+        return;
+      }
+
+      if (message.type === 'DIMENSIONS') {
+        console.log('Received dimensions:', {
+          width: message.width,
+          height: message.height,
+          dpr: message.dpr
+        });
+      }
+
+      if (!session.state) {
+        session.state = fastify.createInitialGameState(message.width, message.height);
+      }
+      
+      socket.send(JSON.stringify({
+        type: 'GAME_INITIALIZED',
+        state: session.state
+      }));
+
+      if (message.type === 'PLAYER_INPUT') {
+        fastify.handlePlayerInput(session, message, socket);
+      }
     });
 
-    connection.socket.on('close', () => {
-      fastify.removeSocket(gameId, connection.socket);
+    socket.on('close', () => {
+      fastify.removeSocket(gameId, socket);
     });
   });
 };
