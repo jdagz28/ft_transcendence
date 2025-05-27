@@ -44,8 +44,10 @@ module.exports = async function (fastify, opts) {
         });
       }
 
-      session.state = fastify.createInitialGameState(message.width, message.height);
-
+      if (!session.state) {
+        session.state = fastify.createInitialGameState(message.width, message.height);
+      }
+      
       socket.send(JSON.stringify({
         type: 'GAME_INITIALIZED',
         state: session.state

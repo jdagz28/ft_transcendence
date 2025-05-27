@@ -38,27 +38,32 @@ module.exports = fp(async function (fastify, opts) {
   });
 
   fastify.decorate('handlePlayerInput', function (session, message, socket) {
-    const playerId = session.sockets.size <= 1 ? 'p1' : 'p2'; // First player = p1, second = p2
+    const playerId = session.sockets.size <= 1 ? 'p1' : 'p2'; 
     const { input } = message;
     const state = session.state;
     if (!state.gameStarted && input.action === 'START_GAME') {
       state.gameStarted = true;
       if (!session.tickHandle) {
-        startGameLoop(session);
+        fastify.startGameLoop(session);
       }
     }
     if (input.keys) {
-      updatePaddlePosition(state, playerId, input.keys);
+      fastify.updatePaddlePosition(state, playerId, input.keys);
     }
   });
 
   fastify.decorate('startGameLoop', function (session) {
-    if (session.tickHandle) return; // already running
+    if (session.tickHandle) return;
     session.startedAt = Date.now();
 
     session.tickHandle = setInterval(() => {
       if (session.state.gameStarted) {
-        stepPhysics(session.state);
+        fastify.stepPhysics(session.state);
+
+        const now = Date.now();
+        if (now - session.lastBroadcast >= 50) {
+          session.lastBroadcast = now;
+        }
         
         const msg = JSON.stringify({
           type: 'STATE',
@@ -80,69 +85,63 @@ module.exports = fp(async function (fastify, opts) {
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    // Ball collision with top and bottom walls
     if (ball.y <= 0 || ball.y >= state.canvasHeight) {
-      ball.vy *= -1; // Reverse vertical direction
+      ball.vy *= -1; 
     }
 
-    // Ball collision with paddles
     const p1 = state.players.p1;
     const p2 = state.players.p2;
 
     if (ball.x <= p1.x + p1.width && 
         ball.y >= p1.y && 
         ball.y <= p1.y + p1.height) {
-      ball.vx *= -1; // Reverse horizontal direction
-      ball.x = p1.x + p1.width; // Prevent sticking
+      ball.vx *= -1; 
+      ball.x = p1.x + p1.width;
     } else if (ball.x >= p2.x && 
                ball.y >= p2.y && 
                ball.y <= p2.y + p2.height) {
-      ball.vx *= -1; // Reverse horizontal direction
-      ball.x = p2.x - ball.width; // Prevent sticking
+      ball.vx *= -1; 
+      ball.x = p2.x - ball.width;
     }
 
-    // Scoring logic
     if (ball.x < 0) {
       state.score.p2++;
-      resetBall(ball, state);
+      fastify.resetBall(ball, state);
     } else if (ball.x > state.canvasWidth) {
       state.score.p1++;
-      resetBall(ball, state);
+      fastify.resetBall(ball, state);
     }
   });
 
   fastify.decorate('resetBall', function (ball, state) {
     ball.x = state.canvasWidth / 2;
     ball.y = state.canvasHeight / 2;
-    ball.vx = Math.random() < 0.5 ? 4 : -4; // Randomize initial direction
-    ball.vy = Math.random() < 0.5 ? 3 : -3; // Randomize initial direction
+    ball.vx = Math.random() < 0.5 ? 4 : -4; 
+    ball.vy = Math.random() < 0.5 ? 3 : -3; 
   });
 
   fastify.decorate('updatePaddlePosition', function (state, playerId, keys) {
-    const paddleSpeed = 10;
+    const paddleSpeed = 5;
     const paddleHeight = state.players.p1.height;
     
-    let player = null;
-    if (playerId.includes('p1') || keys.w || keys.s) {
-      player = state.players.p1;
-    } else if (playerId.includes('p2') || keys.ArrowUp || keys.ArrowDown) {
-      player = state.players.p2;
+    if (playerId === 'p1') {
+      const player = state.players.p1;
+      if (keys.w && player.y > 0) {
+        player.y -= paddleSpeed;
+      }
+      if (keys.s && player.y < state.canvasHeight - paddleHeight) {
+        player.y += paddleSpeed;
+      }
     }
     
-    if (!player) return;
-    
-    if (keys.w && player.y > 0) {
-      player.y -= paddleSpeed;
-    }
-    if (keys.s && player.y < state.canvasHeight - paddleHeight) {
-      player.y += paddleSpeed;
-    }
-    
-    if (keys.ArrowUp && player.y > 0) {
-      player.y -= paddleSpeed;
-    }
-    if (keys.ArrowDown && player.y < state.canvasHeight - paddleHeight) {
-      player.y += paddleSpeed;
+    if (playerId === 'p2') {
+      const player = state.players.p2;
+      if (keys.ArrowUp && player.y > 0) {
+        player.y -= paddleSpeed;
+      }
+      if (keys.ArrowDown && player.y < state.canvasHeight - paddleHeight) {
+        player.y += paddleSpeed;
+      }
     }
   });
 

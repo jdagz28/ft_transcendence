@@ -140,10 +140,21 @@ export function renderGamePage(params: RouteParams): void {
       ArrowDown: false
     };
 
+    let lastInputSent = 0;
+    const INPUT_THROTTLE = 16;
+
+    function sendThrottledInput(input: any) {
+      const now = Date.now();
+      if (now - lastInputSent >= INPUT_THROTTLE) {
+        lastInputSent = now;
+        sendPlayerInput(input);
+      }
+    }
+
     document.addEventListener('keydown', (e) => {
-      if (e.key in keys) {
+      if (e.key in keys && !keys[e.key as keyof typeof keys]) {
         keys[e.key as keyof typeof keys] = true;
-        sendPlayerInput({ keys });
+        sendThrottledInput({ keys });
       }
       
       if (e.key === 'Enter' && gameState && !gameState.gameStarted) {
@@ -152,9 +163,9 @@ export function renderGamePage(params: RouteParams): void {
     });
 
     document.addEventListener('keyup', (e) => {
-      if (e.key in keys) {
+      if (e.key in keys && keys[e.key as keyof typeof keys]) {
         keys[e.key as keyof typeof keys] = false;
-        sendPlayerInput({ keys });
+        sendThrottledInput({ keys });
       }
     });
 
