@@ -2,6 +2,9 @@ import type { RouteParams } from "../router";
 
 export function renderGamePage(params: RouteParams): void {
   const gameId = params.gameId;
+  const mode = params.mode || 'local-multiplayer'; //! DELETE for testing
+  // const mode = params.mode || 'online'; 
+  
   console.log("Params:", params);
 
   if (!gameId) {
@@ -10,6 +13,15 @@ export function renderGamePage(params: RouteParams): void {
   }
 
   let gameState: any = null;
+  let localGameState: any = null;
+  let gameLoop: number | null = null;
+  
+  const currentKeys = {
+    w: false,
+    s: false,
+    ArrowUp: false,
+    ArrowDown: false
+  };
 
   const canvas = document.createElement('canvas');
   document.body.appendChild(canvas);
@@ -27,50 +39,298 @@ export function renderGamePage(params: RouteParams): void {
     canvasHeight = window.innerHeight;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
+    
+    if (isLocalMode(mode) && localGameState) {
+      localGameState.canvasWidth = canvasWidth;
+      localGameState.canvasHeight = canvasHeight;
+    }
   });
 
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const socket = new WebSocket(`${protocol}://${window.location.host}/sessions/${gameId}`);  
+  function isLocalMode(mode: string): boolean {
+    return mode === 'local-multiplayer' || mode === 'single-player';
+  }
 
-  socket.onopen = () => {
-    console.log(`✅ Connected to game session: ${gameId}`);
-  };
+  function createLocalGameState(): any {
+    const paddleHeight = 200;
+    const paddleWidth = 25;
+    
+    return {
+      ball: { 
+        x: canvasWidth / 2, 
+        y: canvasHeight / 2, 
+        vx: 5, 
+        vy: 4, 
+        width: 15 
+      },
+      players: { 
+        p1: { 
+          x: 50, 
+          y: canvasHeight / 2 - paddleHeight / 2, 
+          width: paddleWidth, 
+          height: paddleHeight 
+        },
+        p2: { 
+          x: canvasWidth - 50 - paddleWidth, 
+          y: canvasHeight / 2 - paddleHeight / 2, 
+          width: paddleWidth, 
+          height: paddleHeight 
+        } 
+      },
+      score: { p1: 0, p2: 0 },
+      canvasWidth,
+      canvasHeight,
+      gameStarted: false,
+      mode: mode
+    };
+  }
 
-  socket.onmessage = (event) => {
-    try {
-      const message = JSON.parse(event.data);
-      if (message.type === 'GAME_INITIALIZED') {
-        gameState = message.state;
-        console.log('Game initialized with state:', gameState);
-        render(gameState);
-        setupInputHandlers();
-      }
+  function stepLocalPhysics(state: any) {
+    const ball = state.ball;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
 
-      if (message.type === 'STATE') {
-        gameState = message.s; 
-        render(gameState);
-      }
-    } catch (err) {
-      console.error("❌ Failed to parse state:", err);
+    if (ball.y <= ball.width || ball.y >= state.canvasHeight - ball.width) {
+      ball.vy *= -1;
+      ball.y = Math.max(ball.width, Math.min(state.canvasHeight - ball.width, ball.y));
     }
-  };
 
-  socket.onerror = (err) => {
-    console.error("❌ WebSocket error:", err);
-  };
+    const p1 = state.players.p1;
+    const p2 = state.players.p2;
+
+    if (ball.x - ball.width <= p1.x + p1.width && 
+        ball.y >= p1.y && 
+        ball.y <= p1.y + p1.height &&
+        ball.vx < 0) {
+      ball.vx *= -1;
+      ball.x = p1.x + p1.width + ball.width;
+    }
+
+    if (ball.x + ball.width >= p2.x && 
+        ball.y >= p2.y && 
+        ball.y <= p2.y + p2.height &&
+        ball.vx > 0) {
+      ball.vx *= -1;
+      ball.x = p2.x - ball.width;
+    }
+
+    if (ball.x < 0) {
+      state.score.p2++;
+      resetLocalBall(ball, state);
+    } else if (ball.x > state.canvasWidth) {
+      state.score.p1++;
+      resetLocalBall(ball, state);
+    }
+  }
+
+  function resetLocalBall(ball: any, state: any) {
+    ball.x = state.canvasWidth / 2;
+    ball.y = state.canvasHeight / 2;
+    ball.vx = Math.random() < 0.5 ? 5 : -5;
+    ball.vy = Math.random() < 0.5 ? 4 : -4;
+  }
+
+  function updateLocalPaddles(state: any, keys: any) {
+    const paddleSpeed = 8;
+    const p1 = state.players.p1;
+    const p2 = state.players.p2;
+
+    if (keys.w && p1.y > 0) {
+      p1.y = Math.max(0, p1.y - paddleSpeed);
+    }
+    if (keys.s && p1.y < state.canvasHeight - p1.height) {
+      p1.y = Math.min(state.canvasHeight - p1.height, p1.y + paddleSpeed);
+    }
+
+    if (keys.ArrowUp && p2.y > 0) {
+      p2.y = Math.max(0, p2.y - paddleSpeed);
+    }
+    if (keys.ArrowDown && p2.y < state.canvasHeight - p2.height) {
+      p2.y = Math.min(state.canvasHeight - p2.height, p2.y + paddleSpeed);
+    }
+  }
+
+  function startLocalGameLoop() {
+    if (gameLoop) return;
+    
+    function loop() {
+      if (localGameState && localGameState.gameStarted) {
+        stepLocalPhysics(localGameState);
+        updateLocalPaddles(localGameState, currentKeys);
+      }
+      
+      if (localGameState) {
+        render(localGameState);
+      }
+      
+      gameLoop = requestAnimationFrame(loop);
+    }
+    
+    gameLoop = requestAnimationFrame(loop);
+  }
+
+  function setupLocalInputHandlers() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key in currentKeys) {
+        currentKeys[e.key as keyof typeof currentKeys] = true;
+      }
+      
+      if (e.key === 'Enter' && localGameState && !localGameState.gameStarted) {
+        localGameState.gameStarted = true;
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key in currentKeys) {
+        currentKeys[e.key as keyof typeof currentKeys] = false;
+      }
+    });
+
+    canvas.onclick = () => {
+      if (localGameState && !localGameState.gameStarted) {
+        localGameState.gameStarted = true;
+      }
+    };
+  }
+
+  function setupOnlineGame() {
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(`${protocol}://${window.location.host}/sessions/${gameId}`);
+    
+    socket.onopen = () => {
+      console.log(`✅ Connected to game session: ${gameId}`);
+      sendDimensions();
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'GAME_INITIALIZED') {
+          gameState = message.state;
+          console.log('Game initialized with state:', gameState);
+          render(gameState);
+          setupInputHandlers();
+        }
+
+        if (message.type === 'STATE') {
+          gameState = message.s; 
+          render(gameState);
+        }
+      } catch (err) {
+        console.error("❌ Failed to parse state:", err);
+      }
+    };
+
+    socket.onerror = (err) => {
+      console.error("❌ WebSocket error:", err);
+    };
+
+    function sendPlayerInput(input: any) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'PLAYER_INPUT',
+          input
+        }));
+      }
+    }
+
+    function sendDimensions() {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(
+          JSON.stringify({
+            type: 'DIMENSIONS',
+            width:  canvasWidth,
+            height: canvasHeight,
+            dpr:    window.devicePixelRatio
+          })
+        );
+      }
+    }
+
+    function setupInputHandlers() {
+      const keys = {
+        w: false,
+        s: false,
+        ArrowUp: false,
+        ArrowDown: false
+      };
+
+      let lastInputSent = 0;
+      const INPUT_THROTTLE = 1000; 
+      
+      function sendThrottledInput(input: any) {
+        const now = Date.now();
+        if (now - lastInputSent >= INPUT_THROTTLE) {
+          lastInputSent = now;
+          sendPlayerInput(input);
+        }
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key in keys && !keys[e.key as keyof typeof keys]) {
+          keys[e.key as keyof typeof keys] = true;
+          sendThrottledInput({ keys });
+        }
+        
+        if (e.key === 'Enter' && gameState && !gameState.gameStarted) {
+          sendPlayerInput({ action: 'START_GAME' });
+        }
+      });
+
+      document.addEventListener('keyup', (e) => {
+        if (e.key in keys && keys[e.key as keyof typeof keys]) {
+          keys[e.key as keyof typeof keys] = false;
+          sendThrottledInput({ keys });
+        }
+      });
+
+      canvas.onclick = () => {
+        if (gameState && !gameState.gameStarted) {
+          sendPlayerInput({ action: 'START_GAME' });
+        }
+      };
+    }
+
+    window.addEventListener('resize', () => {
+      canvasWidth = window.innerWidth;
+      canvasHeight = window.innerHeight;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      sendDimensions();
+    });
+  }
+
+  // Game initialization
+  if (isLocalMode(mode)) {
+    localGameState = createLocalGameState();
+    render(localGameState);
+    setupLocalInputHandlers();
+    startLocalGameLoop();
+  } else {
+    setupOnlineGame();
+  }
 
   function render(state: any) {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
     drawCenterLine();
-
     if (state.ball) drawBall(state.ball);
     if (state.players) drawPaddles(state.players);
     if (state.score) drawScore(state.score);
-    
     if (!state.gameStarted) {
       drawStartMessage();
     }
+  }
+
+  function drawStartMessage() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    ctx.fillStyle = 'white';
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press ENTER or Click to Start', canvasWidth / 2, canvasHeight / 2);
+    ctx.font = '16px sans-serif';
+    
+    ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', canvasWidth / 2, canvasHeight / 2 + 50);
   }
 
   function drawBall(ball: any) {
@@ -101,100 +361,10 @@ export function renderGamePage(params: RouteParams): void {
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 10]);
-
     ctx.beginPath();
     ctx.moveTo(canvasWidth / 2, 0);
     ctx.lineTo(canvasWidth / 2, canvasHeight);
     ctx.stroke();
-
     ctx.setLineDash([]);
-  } 
-
-  function sendPlayerInput(input: any) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
-        type: 'PLAYER_INPUT',
-        input
-      }));
-    }
   }
-
-  function sendDimensions() {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(
-        JSON.stringify({
-          type: 'DIMENSIONS',
-          width:  canvasWidth,
-          height: canvasHeight,
-          dpr:    window.devicePixelRatio
-        })
-      );
-    }
-  }
-
-  function setupInputHandlers() {
-    const keys = {
-      w: false,
-      s: false,
-      ArrowUp: false,
-      ArrowDown: false
-    };
-
-    let lastInputSent = 0;
-    const INPUT_THROTTLE = 16;
-
-    function sendThrottledInput(input: any) {
-      const now = Date.now();
-      if (now - lastInputSent >= INPUT_THROTTLE) {
-        lastInputSent = now;
-        sendPlayerInput(input);
-      }
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key in keys && !keys[e.key as keyof typeof keys]) {
-        keys[e.key as keyof typeof keys] = true;
-        sendThrottledInput({ keys });
-      }
-      
-      if (e.key === 'Enter' && gameState && !gameState.gameStarted) {
-        sendPlayerInput({ action: 'START_GAME' });
-      }
-    });
-
-    document.addEventListener('keyup', (e) => {
-      if (e.key in keys && keys[e.key as keyof typeof keys]) {
-        keys[e.key as keyof typeof keys] = false;
-        sendThrottledInput({ keys });
-      }
-    });
-
-    canvas.onclick = () => {
-      if (gameState && !gameState.gameStarted) {
-        sendPlayerInput({ action: 'START_GAME' });
-      }
-    };
-  }
-
-  function drawStartMessage() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    
-    ctx.fillStyle = 'white';
-    ctx.font = '32px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Press ENTER or Click to Start', canvasWidth / 2, canvasHeight / 2);
-    ctx.font = '16px sans-serif';
-    ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', canvasWidth / 2, canvasHeight / 2 + 50);
-  }
-
-  socket.addEventListener('open', sendDimensions);
-  window.addEventListener('resize', () => {
-    canvasWidth = window.innerWidth;
-    canvasHeight = window.innerHeight;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    sendDimensions();
-  })
 }
-

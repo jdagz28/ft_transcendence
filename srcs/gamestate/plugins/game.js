@@ -12,8 +12,8 @@ module.exports = fp(async function (fastify, opts) {
       ball: { 
         x: canvasWidth / 2, 
         y: canvasHeight / 2, 
-        vx: 4, 
-        vy: 3, 
+        vx: 5, 
+        vy: 4, 
         width: 15 
       },
       players: { 
