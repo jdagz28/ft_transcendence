@@ -54,10 +54,4 @@ http {
             proxy_read_timeout  3600s;
         }
     }
-
-    server {
-        listen 80;
-        server_name ${SERVER_NAME};
-        return 301 https://$server_name:4242$request_uri;
-    }
 }

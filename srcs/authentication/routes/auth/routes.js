@@ -278,7 +278,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate], 
       handler: async function changePasswordHandler(request, reply) {
         const { newPassword } = request.body
-        const userId = request.params.userIds
+        const userId = request.params.userId
         const rawAuth = request.headers.authorization
 
         try {
