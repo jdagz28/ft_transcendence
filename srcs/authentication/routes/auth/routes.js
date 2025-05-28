@@ -173,13 +173,10 @@ module.exports = fp(
 
     fastify.get('/auth/google', {
       handler: async function handlerGoogle (request, reply) {
-        const protocol = request.headers['x-forwarded-proto'] || 'https'
-        const host = request.headers['x-forwarded-host'] || request.headers.host
-        const redirectUri = `${protocol}://${host}/auth/google/callback`
         const authorizeURL = 'https://accounts.google.com/o/oauth2/v2/auth'
         const params = new URLSearchParams({
           client_id: process.env.CLIENT_ID_GOOGLE,
-          redirect_uri: redirectUri,
+          redirect_uri: process.env.CLIENT_REDIRECT_URI_GOOGLE,
           response_type: 'code',
           scope: 'email profile',
           access_type: 'offline',

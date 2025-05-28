@@ -20,8 +20,8 @@ export function renderRegisterPage(): void {
               id="username" 
               name="username" 
               placeholder="Username" 
-              minlength="3" 
-              maxlength="10" 
+              pattern="^[a-zA-Z0-9_!$#-]{3,15}$"
+              title="Username must be 3-15 characters, alphanumeric or special characters (!, $, #, -, _) allowed, no spaces."
               class="w-full px-4 py-2 bg-[#081a37] border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder-gray-400"
               required
             />
@@ -92,7 +92,13 @@ export function renderRegisterPage(): void {
       const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement).value;
       const email = (document.getElementById('email') as HTMLInputElement).value;
 
-      if (!username || username.length < 3 || username.length > 10) {
+      const usernamePattern = /^[a-zA-Z0-9_!$#-]{3,15}$/;
+      if (!usernamePattern.test(username)) {
+        alert('Username must be 3-15 characters, no spaces.');
+        return;
+      }
+
+      if (!username || username.length < 3 || username.length > 15) {
         alert('Username must be between 3 and 10 characters.');
         return;
       }
