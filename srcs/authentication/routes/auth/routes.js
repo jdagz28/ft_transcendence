@@ -37,7 +37,7 @@ module.exports = fp(
           })
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
-          console.error('Failed to create user:', err)
+          console.error('Failed to create user:', err) //! DELETE
           const status = err.statusCode || 500;
           reply.status(status).send({ error: err.message });
         }
@@ -141,21 +141,22 @@ module.exports = fp(
           }
 
           const { login: username, email } = userResponse
-          const existingUser = await fastify.usersDataSource.readUser(username)
-          const existingEmail = await fastify.usersDataSource.readUser(email)
+          const existingUser = await fastify.usersDataSource.OAuthReadUser(username)
+          const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
-            console.log(`User ${username} or email ${email} already exists`)
+            console.log(`User ${username} or email ${email} already exists`) //! DELETE
             request.user = username
             return refreshHandler(request, reply)
           }
           
           //! TEMPORARY PASSWORD
-          const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD)
-          const newUserId = await fastify.usersDataSource.createUser({
+          const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD) 
+          const newUserId = await fastify.usersDataSource.OAuthCreateUser({
             username,
             password: hash,
             salt,
-            email
+            email,
+            provider: '42'
           })
           if (!newUserId) {
             const err = new Error('Failed to create user')
@@ -164,7 +165,7 @@ module.exports = fp(
           }
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
-        console.error('Error during 42 authentication:', err)
+        console.error('Error during 42 authentication:', err) //! DELETE
         reply.status(err.statusCode || 500).send({ error: err.message })
         }
       }
@@ -192,7 +193,7 @@ module.exports = fp(
         }
       },
       handler: async function handlerGoogleCallback (request, reply) {
-        console.log('Google callback received')
+        console.log('Google callback received') //! DELETE
         const code = request.query.code
         if (!code) {
           const err = new Error('No code provided')
@@ -218,31 +219,32 @@ module.exports = fp(
 
           const { email } = userResponse
           const username = email.split('@')[0]
-          const existingUser = await fastify.usersDataSource.readUser(username)
-          const existingEmail = await fastify.usersDataSource.readUser(email)
+          const existingUser = await fastify.usersDataSource.OAuthReadUser(username)
+          const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
-            console.log(`User ${username} or email ${email} already exists`)
+            console.log(`User ${username} or email ${email} already exists`) //! DELETE
             request.user = username
             return refreshHandler(request, reply)
           }
           
           //! TEMPORARY PASSWORD
           const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD)
-          const newUserId = await fastify.usersDataSource.createUser({
+          const newUserId = await fastify.usersDataSource.OAuthCreateUser({
             username,
             password: hash,
             salt,
-            email
+            email,
+            provider: 'Google'
           })
           if (!newUserId) {
             const err = new Error('Failed to create user')
             err.statusCode = 500
             throw err
           }
-          console.log('Remote user created with ID:', newUserId)
+          console.log('Remote user created with ID:', newUserId)  //! DELETE
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
-        console.error('Error during Google authentication:', err)
+        console.error('Error during Google authentication:', err) //! DELETE
         reply.status(err.statusCode || 500).send({ error: err.message })
         }
       }
@@ -256,9 +258,9 @@ module.exports = fp(
       handler: async function tokenVerificationHandler(request) {
         try {
           const cleanToken =  request.query.token.replace(/^"|"$/g, '')
-          console.log('Verifying token:', cleanToken)
+          console.log('Verifying token:', cleanToken)   //! DELETE
           const user = await fastify.jwt.verify(cleanToken)
-          console.log('Token verified, user:', user)
+          console.log('Token verified, user:', user) //! DELETE
           return { valid: true, user }
         } catch (err) {
           return { valid: false, user: null }
@@ -278,7 +280,7 @@ module.exports = fp(
 
         try {
           const { salt, hash } = await fastify.generateHash(newPassword)
-          console.log ('Generated hash and salt:', { hash, salt })
+          console.log ('Generated hash and salt:', { hash, salt }) //! DELETE
           const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/password`, { 
             password: hash,
             salt: salt

@@ -51,6 +51,49 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/users/oauth', {
+      schema: {
+        body: fastify.getSchema('schema:users:createOAuthUser'),
+      },
+      handler: async function createOAuthUser (request, reply) {
+        try {
+          const newUserId = await fastify.dbUsers.OAuthCreateUser(request.body)
+          console.log('OAuth User created with ID:', newUserId) //! DELETE
+          reply.status(201).send({ userId: newUserId })
+        } catch (err) {
+          fastify.log.error(`Error creating OAuth user: ${err.message}`)
+          reply.code(500).send({ error: 'OAuth user creation failed' })
+        }
+      }
+    })
+
+    fastify.get('/users/oauth/search/:username', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUser')
+      },
+      response: { 200: fastify.getSchema('schema:users:OAuthGetUser')},
+      handler: async function getOAuthUser (request, reply) {
+        try {
+          const { username } = request.params;
+          console.log('Looking for OAuth user:', username) //! DELETE
+          const user = await fastify.dbUsers.OAuthReadUser(username)
+          if (!user) {
+            fastify.log.error('OAuth User not found')
+            reply.code(404);
+            return { error: 'User not found' }
+          }
+          return user
+        } catch (err) {
+          fastify.log.error(`Error retrieving OAuth user: ${err.message}`)
+          reply.code(500)
+          return { error: 'Internal Server Error' }
+        }
+      }
+    })
+
+
+
+
     fastify.get('/users/me', {
       schema: { 
         querystring: fastify.getSchema('schema:users:getProfile')
