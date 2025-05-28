@@ -31,7 +31,33 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         fastify.log.error(`createUser error: ${err.message}`)
         throw new Error('User creation failed')
       }
-    }
+    },
+
+    async OAuthCreateUser(user) {
+      try {
+        const { username, password, salt, email, provider } = user
+        const response = await axios.post('http://database:1919/users/oauth', user)
+        return response.data.userId
+      } catch (err) {
+        fastify.log.error(`OAuthCreateUser error: ${err.message}`)
+        throw new Error('OAuth user creation failed')
+      }
+    },
+
+    async OAuthReadUser(usernameORemail) {
+      try {
+        console.log('Looking for:', usernameORemail)
+        const response = await axios.get(`http://database:1919/users/oauth/search/${usernameORemail}`)
+        return response.data
+      } catch (err) {
+        if (err.response && err.response.status === 404) {
+          console.log('User not found')
+          return null
+        }
+        throw err
+      }
+    },
+
   }),
 
 

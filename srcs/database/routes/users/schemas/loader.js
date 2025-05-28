@@ -17,4 +17,6 @@ module.exports = fp(async function schemaLoaderPlugin (fastify, opts) {
   fastify.addSchema(require('./respondFriendRequest.json'))
   fastify.addSchema(require('./userFriends.json'))
   fastify.addSchema(require('./removeFriend.json'))
+  fastify.addSchema(require('./createOAuthUser.json'))
+  fastify.addSchema(require('./OAuthGetUser.json'))
 })
