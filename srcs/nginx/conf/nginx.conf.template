@@ -5,6 +5,9 @@ http {
     sendfile on;
     keepalive_timeout 65;
 
+    proxy_headers_hash_max_size 1024;
+    proxy_headers_hash_bucket_size 128;
+
     server {
         listen 443 ssl;
         ssl_certificate     /etc/nginx/ssl/transcendence.crt;
