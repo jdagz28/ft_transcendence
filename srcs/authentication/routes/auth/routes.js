@@ -145,7 +145,10 @@ module.exports = fp(
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
             console.log(`User ${username} or email ${email} already exists`) //! DELETE
-            request.user = username
+            request.user = {
+              id: existingEmail.id,
+              username: existingEmail.username,
+            }
             return refreshHandler(request, reply)
           }
           
@@ -223,7 +226,10 @@ module.exports = fp(
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
             console.log(`User ${username} or email ${email} already exists`) //! DELETE
-            request.user = username
+            request.user = {
+              id: existingEmail.id,
+              username: existingEmail.username,
+            }
             return refreshHandler(request, reply)
           }
           
