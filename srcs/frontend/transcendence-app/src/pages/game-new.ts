@@ -96,8 +96,7 @@ export function renderGameNewPage(params: RouteParams): void {
       const res = await fetch("/games/createGame", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "Authorization": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2VybmFtZSI6InRlc3QiLCJqdGkiOiIxNzQ4MjQ3NzU2NTYwIiwiaWF0IjoxNzQ4MjQ3NzU2LCJleHAiOjE3NDgyNTEzNTZ9.rNEd3qCb_pPzqCulEbrC-KA4YtPeZO6VlWg_39Vf_kY" //! DELETE
+          "Content-Type": "application/json"
         },
         credentials: "include",
         body: JSON.stringify(payload),
