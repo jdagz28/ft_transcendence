@@ -59,8 +59,8 @@ remove-networks:
 clean: stop-containers remove-containers remove-images remove-networks
 
 prune: clean
-	rm -rf $(DB_DIR)
-	rm -rf $(FRONT_DIR)
+	sudo rm -rf $(DB_DIR)
+	sudo rm -rf $(FRONT_DIR)
 	docker system prune --volumes
 
 .PHONY:

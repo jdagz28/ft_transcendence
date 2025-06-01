@@ -2,8 +2,8 @@ import type { RouteParams } from "../router";
 
 export function renderGamePage(params: RouteParams): void {
   const gameId = params.gameId;
-  const mode = params.mode || 'local-multiplayer'; //! DELETE for testing
-  // const mode = params.mode || 'online'; 
+  // const mode = params.mode || 'local-multiplayer'; //! DELETE for testing
+  const mode = params.mode || 'online'; 
   
   console.log("Params:", params);
 
@@ -193,30 +193,64 @@ export function renderGamePage(params: RouteParams): void {
   }
 
   function setupOnlineGame() {
+    let predictedState: any = null;
+    let inputSequence = 0;
+    let pendingInputs: Array<{seq: number, input: any, timestamp: number}> = [];
+    let lastServerUpdate = 0;
+    let isConnected = false;
+    
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${protocol}://${window.location.host}/sessions/${gameId}`);
     
     socket.onopen = () => {
       console.log(`✅ Connected to game session: ${gameId}`);
+      isConnected = true; 
       sendDimensions();
+
+      setInterval(() => {
+        if (lastServerUpdate > 0 && Date.now() - lastServerUpdate > 5000) {
+          console.warn('⚠️ No server updates for 5 seconds - connection may be unstable');
+        }
+      }, 2000);
     };
 
     socket.onmessage = (event) => {
       try {
+        if (!event.data || typeof event.data !== 'string') {
+          console.warn("⚠️ Received invalid WebSocket data");
+          return;
+        }
+
         const message = JSON.parse(event.data);
         if (message.type === 'GAME_INITIALIZED') {
           gameState = message.state;
+          predictedState = JSON.parse(JSON.stringify(gameState));
           console.log('Game initialized with state:', gameState);
-          render(gameState);
-          setupInputHandlers();
+          render(predictedState);
+          setupPredictiveInputHandlers();
         }
 
-        if (message.type === 'STATE') {
-          gameState = message.s; 
-          render(gameState);
+        if (message.type === 'GAME_STARTED') {
+        if (predictedState) {
+          predictedState.gameStarted = true;
+        }
+        if (gameState) {
+          gameState.gameStarted = true;
+        }
+        render(predictedState || gameState);
+      }
+
+        if (message.type === 'GAME_STATE') {
+          lastServerUpdate = Date.now();
+          if (message.s !== null && message.s !== undefined) {
+            reconcileWithServer(message.s, message.t || Date.now());
+          } else {
+            console.warn("⚠️ Received GAME_STATE without state data");
+          }
         }
       } catch (err) {
         console.error("❌ Failed to parse state:", err);
+        console.error("❌ Raw message data:", event.data);
       }
     };
 
@@ -224,29 +258,149 @@ export function renderGamePage(params: RouteParams): void {
       console.error("❌ WebSocket error:", err);
     };
 
+    function reconcileWithServer(serverState: any, serverTimestamp: number) {
+      if (!serverState) {
+        console.warn("⚠️ Received null serverState - skipping reconciliation");
+        return;
+      }
+      if (!predictedState && gameState) {
+        predictedState = JSON.parse(JSON.stringify(gameState));
+      }
+      
+      if (!predictedState) {
+        console.warn("No predicted state available for reconcilation");
+        return;
+      }
+      
+      if (serverState.gameStarted !== undefined) {
+        predictedState.gameStarted = serverState.gameStarted;
+        gameState.gameStarted = serverState.gameStarted;
+        console.log('🎮 Updated gameStarted to:', serverState.gameStarted);
+      }
+
+      const networkDelay = Date.now() - serverTimestamp;
+      if (networkDelay > 100) {
+        console.log(`🐌 High latency detected: ${networkDelay}ms`);
+      }
+
+      if (serverState.ball) {
+        predictedState.ball = { ...predictedState.ball, ...serverState.ball };
+      }
+      if (serverState.score) {
+        predictedState.score = serverState.score;
+      }
+      
+      if (serverState.players) {
+        Object.keys(serverState.players).forEach(playerId => {
+          if (predictedState.players[playerId]) {
+            // For player 1, only update if there's a significant difference (client prediction)
+            if (playerId === 'p1') {
+              const serverPlayerPos = serverState.players[playerId].y;
+              const predictedPlayerPos = predictedState.players[playerId].y;
+              
+              if (serverPlayerPos !== undefined && predictedPlayerPos !== undefined && 
+                  Math.abs(serverPlayerPos - predictedPlayerPos) > 5) {
+                console.log('🔄 Reconciling position difference:', Math.abs(serverPlayerPos - predictedPlayerPos));
+                smoothCorrectPosition(serverPlayerPos, predictedPlayerPos);
+              }
+            } else {
+              // For other players, always update with server data
+              predictedState.players[playerId] = { 
+                ...predictedState.players[playerId], 
+                ...serverState.players[playerId] 
+              };
+            }
+          }
+        });
+      }
+
+      if (serverState.lastSeq) {
+        pendingInputs = pendingInputs.filter(input => input.seq > serverState.lastSeq);
+      }
+      
+      render(predictedState);
+    }
+
+    function smoothCorrectPosition(serverY: number, predictedY: number) {
+      if (!predictedState) return;
+      
+      const player = predictedState.players.p1;
+      const diff = serverY - predictedY;
+      
+      player.y = predictedY + (diff * 0.5);
+      
+      const remainingDiff = diff * 0.5;
+      const correctionSteps = 5;
+      const stepSize = remainingDiff / correctionSteps;
+      
+      let step = 0;
+      const correctInterval = setInterval(() => {
+        if (step >= correctionSteps || !predictedState) {
+          clearInterval(correctInterval);
+          return;
+        }
+        
+        predictedState.players.p1.y += stepSize;
+        step++;
+        render(predictedState);
+      }, 16);
+    }
+
+
     function sendPlayerInput(input: any) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'PLAYER_INPUT',
-          input
-        }));
+      if (!isConnected || socket.readyState !== WebSocket.OPEN) {
+        console.warn("⚠️ Cannot send input - WebSocket not ready");
+        return;
       }
+      
+      socket.send(JSON.stringify({
+        type: 'PLAYER_INPUT',
+        input
+      }));
     }
 
+    let dimensionTimeout: number | null = null;
     function sendDimensions() {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: 'DIMENSIONS',
-            width:  canvasWidth,
-            height: canvasHeight,
-            dpr:    window.devicePixelRatio
-          })
-        );
+      if (dimensionTimeout !== null) {
+        clearTimeout(dimensionTimeout);
       }
+      dimensionTimeout = setTimeout(() => {
+        if (isConnected && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'DIMENSIONS',
+            width: canvas.width,
+            height: canvas.height,
+            dpr: window.devicePixelRatio
+          }));
+        }
+      }, 200); 
     }
 
-    function setupInputHandlers() {
+    function applyInputLocally(input: any, sequence: number) {
+      if (!predictedState) return;
+      
+      pendingInputs.push({
+        seq: sequence,
+        input: input,
+        timestamp: Date.now()
+      });
+      
+      if (input.keys && predictedState.gameStarted) {
+        const paddleSpeed = 8;
+        const player = predictedState.players.p1;
+        
+        if (input.keys.w && player.y > 0) {
+          player.y = Math.max(0, player.y - paddleSpeed);
+        }
+        if (input.keys.s && player.y < predictedState.canvasHeight - player.height) {
+          player.y = Math.min(predictedState.canvasHeight - player.height, player.y + paddleSpeed);
+        }
+      }
+      
+      render(predictedState);
+    }
+
+    function setupPredictiveInputHandlers() {
       const keys = {
         w: false,
         s: false,
@@ -254,24 +408,46 @@ export function renderGamePage(params: RouteParams): void {
         ArrowDown: false
       };
 
-      let lastInputSent = 0;
-      const INPUT_THROTTLE = 1000; 
-      
-      function sendThrottledInput(input: any) {
-        const now = Date.now();
-        if (now - lastInputSent >= INPUT_THROTTLE) {
-          lastInputSent = now;
+      let inputInterval: number | null = null;
+
+      function sendContinuousInput() {
+        if (!isConnected || socket.readyState !== WebSocket.OPEN) return;
+        
+        const hasActiveInput = keys.w || keys.s || keys.ArrowUp || keys.ArrowDown;
+        
+        if (hasActiveInput) {
+          inputSequence++;
+          const input = {
+            keys: {...keys},
+            seq: inputSequence,
+            timestamp: Date.now()
+          };
+          
+          applyInputLocally(input, inputSequence);
           sendPlayerInput(input);
+        }
+      }
+
+      function startInputLoop() {
+        if (!inputInterval) {
+          inputInterval = setInterval(sendContinuousInput, 16); // 60fps
+        }
+      }
+
+      function stopInputLoop() {
+        if (inputInterval) {
+          clearInterval(inputInterval);
+          inputInterval = null;
         }
       }
 
       document.addEventListener('keydown', (e) => {
         if (e.key in keys && !keys[e.key as keyof typeof keys]) {
           keys[e.key as keyof typeof keys] = true;
-          sendThrottledInput({ keys });
+          startInputLoop();
         }
         
-        if (e.key === 'Enter' && gameState && !gameState.gameStarted) {
+        if (e.key === 'Enter' && predictedState && !predictedState.gameStarted) {
           sendPlayerInput({ action: 'START_GAME' });
         }
       });
@@ -279,12 +455,19 @@ export function renderGamePage(params: RouteParams): void {
       document.addEventListener('keyup', (e) => {
         if (e.key in keys && keys[e.key as keyof typeof keys]) {
           keys[e.key as keyof typeof keys] = false;
-          sendThrottledInput({ keys });
+          
+          const hasActiveInput = Object.values(keys).some(pressed => pressed);
+          if (!hasActiveInput) {
+            stopInputLoop();
+            sendContinuousInput();
+          }
         }
       });
 
       canvas.onclick = () => {
+        console.log('🖱️ Canvas clicked, gameState:', gameState?.gameStarted);
         if (gameState && !gameState.gameStarted) {
+          console.log('📤 Sending START_GAME action');
           sendPlayerInput({ action: 'START_GAME' });
         }
       };
@@ -299,7 +482,6 @@ export function renderGamePage(params: RouteParams): void {
     });
   }
 
-  // Game initialization
   if (isLocalMode(mode)) {
     localGameState = createLocalGameState();
     render(localGameState);
@@ -310,13 +492,25 @@ export function renderGamePage(params: RouteParams): void {
   }
 
   function render(state: any) {
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    drawCenterLine();
-    if (state.ball) drawBall(state.ball);
-    if (state.players) drawPaddles(state.players);
-    if (state.score) drawScore(state.score);
-    if (!state.gameStarted) {
-      drawStartMessage();
+    try {
+
+      if (!state) {
+        console.warn("⚠️ Cannot render - no state provided");
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawCenterLine();
+      
+      if (state.ball) drawBall(state.ball);
+      if (state.players) drawPaddles(state.players);
+      if (state.score) drawScore(state.score);
+      if (!state.gameStarted) {
+        drawStartMessage();
+      }
+    } catch (err) {
+      console.error("❌ Render error:", err);
+      console.error("❌ Invalid state:", state);
     }
   }
 
