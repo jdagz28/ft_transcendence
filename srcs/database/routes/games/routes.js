@@ -38,6 +38,7 @@ module.exports = fp(
           const { gameId } = request.params
           const { userId, num_games, num_matches, ball_speed, death_timed, time_limit } = request.body
           console.log('Updating game options for gameId:', gameId, 'by userId:', userId) //! DELETE
+          console.log('Options:', { num_games, num_matches, ball_speed, death_timed, time_limit }) //! DELETE
           const updatedGame = await fastify.dbGames.updateGameOptions(gameId, userId, num_games, num_matches, ball_speed, death_timed, time_limit)
           if (!updatedGame) {
             reply.status(404).send({ error: 'Game not found' })

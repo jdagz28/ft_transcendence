@@ -51,18 +51,19 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
 
     async updateGameOptions(gameId, userId, num_games, num_matches, ball_speed, death_timed, time_limit) {
       try {
-        const query = fastify.db.prepare(
+        const selectQuery = fastify.db.prepare(
           'SELECT * FROM games WHERE id = ? AND created_by = ?'
         )
-        const result = query.run(gameId, userId)
-        if (!result || result.length === 0) {
+        const row = selectQuery.get(gameId, userId)
+        if (!row) {
           throw new Error('Game not found or user not authorized')
         }
 
+        const deathTimedInt = death_timed ? 1 : 0 
         const updateQuery = fastify.db.prepare(
-          'UPDATE games SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit = ? WHERE id = ?'
+          `UPDATE games SET num_games = ?, num_matches = ?, ball_speed  = ?, death_timed = ?, time_limit  = ? WHERE id = ?`,
         )
-        const updateResult = updateQuery.run(num_games, num_matches, ball_speed, death_timed, time_limit, gameId)
+        const updateResult = updateQuery.run(num_games, num_matches, ball_speed, deathTimedInt, time_limit, gameId)
         if (updateResult.changes === 0) {
           throw new Error('Failed to update game options')
         }
