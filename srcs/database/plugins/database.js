@@ -156,8 +156,10 @@ async function databaseConnector(fastify) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
-        mode TEXT NOT NULL
-          CHECK (mode IN ('solo', 'duo', 'online')),
+        game_type TEXT NOT NULL
+          CHECK (game_type IN ('singles', 'doubles')),
+        game_mode TEXT NOT NULL
+          CHECK (game_mode IN ('public', 'private')),
         max_players INTEGER NOT NULL,
         winner_id INTEGER,
         created_by INTEGER NOT NULL,

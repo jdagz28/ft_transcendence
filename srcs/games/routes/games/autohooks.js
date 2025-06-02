@@ -98,11 +98,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     },
 
-    async createTournament(request, name, mode, maxPlayers) {
+    async createTournament(request) {
       const userId = request.user.id
-      
+      const { name, maxPlayers, gameMode, gameType } = request.body
       const { data } = await dbApi.post('/games/tournaments/createTournament', 
-        { userId, name, mode, maxPlayers },
+        { userId, name, maxPlayers, gameMode, gameType },
         { headers: internalHeaders(request) },
       )
       console.log('Tournament created:', data)

@@ -146,9 +146,8 @@ module.exports = fp(
       handler: async function createTournamentHandler(request, reply) {
         try {
           const userId = request.user.id
-          const { name, mode, maxPlayers } = request.body
-          console.log('Creating tournament with userId:', userId, 'and mode:', mode, 'and max players:', maxPlayers) //! DELETE
-          const tournament = await fastify.dbGames.createTournament(userId, name, mode, maxPlayers)
+          const { name, maxPlayers, gameMode, gameType } = request.body
+          const tournament = await fastify.dbGames.createTournament(userId, name, maxPlayers, gameMode, gameType)
           if (!tournament) {
             reply.status(400).send({ error: 'Failed to create tournament' })
             return

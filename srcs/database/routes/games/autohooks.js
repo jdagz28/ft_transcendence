@@ -191,12 +191,12 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     },
 
 
-    async createTournament(userId, name, mode, maxPlayers) {
+    async createTournament(userId, name, maxPlayers, gameMode, gameType) {
       try {
         const query = fastify.db.prepare(
-          'INSERT INTO tournaments (created_by, name, mode, max_players, status) VALUES (?, ?, ?, ?, ?)'
+          'INSERT INTO tournaments (created_by, name, max_players, game_mode, game_type, status) VALUES (?, ?, ?, ?, ?, ?)'
         )
-        const result = query.run(userId, name, mode, maxPlayers, "pending")
+        const result = query.run(userId, name, maxPlayers, gameMode, gameType, "pending")
         if (result.changes === 0) {
           throw new Error('Failed to create tournament')
         }
@@ -213,7 +213,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         console.log('Tournament Players created with ID:', tourPlayersResult.lastInsertRowid) //! DELETE
 
         // Create game
-        const gameId = await fastify.dbGames.createGame(userId, "tournament", maxPlayers)
+        const gameId = await fastify.dbGames.createGame(userId, "tournament", maxPlayers, "remote", gameMode)
         if (!gameId) {
           throw new Error('Failed to create game for tournament')
         }
