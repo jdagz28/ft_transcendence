@@ -116,6 +116,28 @@ module.exports = fp(
       }
     })
 
+    fastify.delete('/games/:gameId/leave', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function leaveGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.leaveGame(gameId, userId)
+          if (!result) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
     fastify.post('/games/tournaments/createTournament', {
       schema: {
         body: fastify.getSchema('schema:games:createTournament')

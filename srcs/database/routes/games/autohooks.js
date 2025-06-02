@@ -152,6 +152,45 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     },
 
+    async leaveGame(gameId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM games WHERE id = ?'
+        )
+        const checkGame = check.get(gameId)
+        if (!checkGame) {
+          throw new Error('Game not found')
+        }
+        console.log('created by:', checkGame.created_by) //! DELETE
+        console.log('userId:', userId) //! DELETE
+        if (checkGame.created_by === Number(userId)) {
+          throw new Error('Creator cannot leave the game')
+        }
+
+        const query = fastify.db.prepare(
+          'DELETE FROM games_match_scores WHERE games_match_id IN (SELECT id FROM games_match WHERE game_id = ?) AND player_id = ?'
+        )
+        const result = query.run(gameId, userId)
+        if (result.changes === 0) {
+          throw new Error('Failed to remove player from game match scores')
+        }
+
+        const query2 = fastify.db.prepare(
+          'UPDATE games SET total_players = total_players - 1 WHERE id = ?'
+        )
+        const result2 = query2.run(gameId)
+        if (result2.changes === 0) {
+          throw new Error('Failed to leave game')
+        }
+
+        return { message: 'Left game successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to leave game')
+      }
+    },
+
+
     async createTournament(userId, name, mode, maxPlayers) {
       try {
         const query = fastify.db.prepare(

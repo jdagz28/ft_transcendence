@@ -83,6 +83,21 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }  
     },
 
+    async leaveGame(request, gameId, userId) {
+      try {
+        const { data } = await dbApi.delete(`/games/${gameId}/leave`, 
+          { data: { userId }, headers: internalHeaders(request) },
+        )
+        console.log('Left game:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'Game not found')
+        }
+        throw error
+      }
+    },
+
     async createTournament(request, name, mode, maxPlayers) {
       const userId = request.user.id
       

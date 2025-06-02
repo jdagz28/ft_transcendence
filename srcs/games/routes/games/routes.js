@@ -85,13 +85,23 @@ module.exports = fp(
       }
     })
 
-
-
-    /*
-    * leave a game
-    fastify.delete('/games/:gameId', {
+    // leave a game
+    fastify.delete('/games/:gameId/leave', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function leaveGameHandler(request, reply) {
+        const { gameId } = request.params
+        const userId = request.user.id
+        const result = await fastify.gameService.leaveGame(request, gameId, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.send(result)
+      }
     })
-    */
+    
 
     // create a tournament
     fastify.post('/games/tournaments/createTournament', {
