@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "$id": "schema:games:gameID",
+  "properties": {
+    "gameID": {
+      "type": "string",
+      "maxLength": 15
+    }
+  }
+}

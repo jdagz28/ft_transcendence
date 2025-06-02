@@ -12,9 +12,9 @@ module.exports = fp(
       handler: async function createGameHandler (request, reply) {
         try {
           const user = request.user.id 
-          const { mode, maxPlayers } = request.body
+          const { mode, maxPlayers, gameType, gameMode } = request.body
           console.log('Creating game with mode:', mode, 'and max players:', maxPlayers) //! DELETE
-          const game = await fastify.dbGames.createGame(user, mode, maxPlayers)
+          const game = await fastify.dbGames.createGame(user, mode, maxPlayers, gameType, gameMode)
           if (!game) {
             reply.status(400).send({ error: 'Failed to create game' })
             return
@@ -22,7 +22,31 @@ module.exports = fp(
           reply.status(201).send(game) 
         } catch (err) {
           fastify.log.error(err)
-          reply.status(500).send({ error: 'Intssernal Server Error' })
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.patch('/games/:gameId/options', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:updateGameOptions')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateGameOptionsHandler (request, reply) {
+        try {
+          const { gameId } = request.params
+          const { userId, num_games, num_matches, ball_speed, death_timed, time_limit } = request.body
+          console.log('Updating game options for gameId:', gameId, 'by userId:', userId) //! DELETE
+          const updatedGame = await fastify.dbGames.updateGameOptions(gameId, userId, num_games, num_matches, ball_speed, death_timed, time_limit)
+          if (!updatedGame) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(updatedGame)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
     })

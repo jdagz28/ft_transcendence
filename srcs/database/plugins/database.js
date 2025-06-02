@@ -192,15 +192,24 @@ async function databaseConnector(fastify) {
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         mode TEXT NOT NULL
-          CHECK (mode IN ('training', 'single-player', 'local-multiplayer', 'online-multiplayer', 'tournament')),
+          CHECK (mode IN ('training', 'single-player', 'multiplayer', 'tournament')),
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
+        game_type TEXT NOT NULL
+          CHECK (game_type IN ('local', 'remote')),
+        game_mode TEXT NOT NULL
+          CHECK (game_mode IN ('private', 'public')),
         winner_id INTEGER DEFAULT 0,
         total_players INTEGER DEFAULT 1,
         total_games INTEGER DEFAULT 1,
         total_duration DATETIME,
         max_players INTEGER DEFAULT 1,
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        num_games INTEGER DEFAULT 1,
+        num_matches INTEGER DEFAULT 1,
+        ball_speed INTEGER DEFAULT 1,
+        death_timed BOOLEAN DEFAULT FALSE,
+        time_limit INTEGER DEFAULT 0,
+        FOREIGN KEY (created_by) REFERENCES users(id) 
       );
     `);
   }

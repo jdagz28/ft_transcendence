@@ -27,13 +27,27 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('gameService', {
-    async createGame(request, mode, maxPlayers) {
+    async createGame(request) {
       const userId = request.user.id
+      const { mode, maxPlayers, gameType, gameMode } = request.body
       const { data } = await dbApi.post('/games/createGame', 
-        { userId, mode, maxPlayers}, 
+        { userId, mode, maxPlayers, gameType, gameMode}, 
         { headers: internalHeaders(request) },
       )
       console.log('Game created:', data) //! DELETE
+      return data
+    },
+
+    async updateGameOptions(request) {
+      const { gameId } = request.params
+      const { num_games, num_matches, ball_speed, death_timed, time_limit } = request.body
+      const userId = request.user.id
+      
+      const { data } = await dbApi.patch(`/games/${gameId}/options`, 
+        { userId, num_games, num_matches, ball_speed, death_timed, time_limit }, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Game options updated:', data) //! DELETE
       return data
     },
 

@@ -9,13 +9,13 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
 
   fastify.decorate('dbGames', {
     //! set num players and set default
-    async createGame(userId, mode, maxPlayers) {
+    async createGame(userId, mode, maxPlayers, gameType, gameMode) {
       try {
         // games table
         const query = fastify.db.prepare(
-          'INSERT INTO games (created_by, mode, status, max_players) VALUES (?, ?, ?, ?)'
+          'INSERT INTO games (created_by, mode, status, max_players, game_type, game_mode) VALUES (?, ?, ?, ?, ?, ?)' // gameType and gameMode added
         )
-        const result = query.run(userId, mode, 'pending', maxPlayers)
+        const result = query.run(userId, mode, 'pending', maxPlayers, gameType, gameMode)
         if (result.changes === 0) {
           throw new Error('Failed to create game')
         }
@@ -29,7 +29,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const result2 = query2.run(gameId, 'pending')
         if (result2.changes === 0) {
           throw new Error('Failed to create game')
-        } 
+        }   
         const matchId = result2.lastInsertRowid
         console.log('Game Match created with ID:', matchId) //! DELETE
         
@@ -48,6 +48,32 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         throw new Error('Failed to create game')
       }
     },
+
+    async updateGameOptions(gameId, userId, num_games, num_matches, ball_speed, death_timed, time_limit) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM games WHERE id = ? AND created_by = ?'
+        )
+        const result = query.run(gameId, userId)
+        if (!result || result.length === 0) {
+          throw new Error('Game not found or user not authorized')
+        }
+
+        const updateQuery = fastify.db.prepare(
+          'UPDATE games SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit = ? WHERE id = ?'
+        )
+        const updateResult = updateQuery.run(num_games, num_matches, ball_speed, death_timed, time_limit, gameId)
+        if (updateResult.changes === 0) {
+          throw new Error('Failed to update game options')
+        }
+        return { message: 'Game options updated successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to update game options')
+      }
+    
+    },
+
 
     async getGames() {
       try {

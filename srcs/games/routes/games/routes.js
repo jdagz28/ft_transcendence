@@ -12,13 +12,27 @@ module.exports = fp(
       },
       onRequest: fastify.authenticate,
       handler: async function createGameHandler (request, reply) {
-        const { mode, maxPlayers } = request.body
-        const game = await fastify.gameService.createGame(request, mode, maxPlayers)
+        const game = await fastify.gameService.createGame(request)
         return reply.code(201).send(game)
       }
     })
 
-    
+    // update game options
+    fastify.patch('/games/:gameId/options', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:updateGameOptions')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateGameOptionsHandler (request, reply) {
+        const updatedGame = await fastify.gameService.updateGameOptions(request)
+        if (!updatedGame) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(updatedGame)
+      }
+    })
+
     // get a list of games
     fastify.get('/games/all', {
       onRequest: fastify.authenticate,
