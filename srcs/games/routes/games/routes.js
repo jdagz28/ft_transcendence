@@ -180,16 +180,68 @@ module.exports = fp(
       }
     })
 
-    //! Get a specific tournament players
+    // * Get a specific tournament players
+    fastify.get('/games/tournaments/:tournamentId/players', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentPlayersHandler(request, reply) {
+        const { tournamentId } = request.params
+        const players = await fastify.gameService.getTournamentPlayers(request, tournamentId)
+        if (!players) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(players)
+      }
+    })
 
-    //! Delete a tournament by creator
+    // * Delete a tournament by creator
+    fastify.delete('/games/tournaments/:tournamentId', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function deleteTournamentHandler(request, reply) {
+        const { tournamentId } = request.params
+        const userId = request.user.id
+        const result = await fastify.gameService.deleteTournament(request, tournamentId, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(result)
+      }
+    })
 
+    // *  Delete a game by creator
+    fastify.delete('/games/:gameId', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function deleteGameHandler(request, reply) {
+        const { gameId } = request.params
+        const userId = request.user.id
+        const result = await fastify.gameService.deleteGame(request, gameId, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(result)
+      }
+    })
+
+    //! ============ MATCHMAKING ============
+    //! Draw randomlly to bracket players --- generate the games table
     //! Start a tournament - update tournament status
 
-    
-    //! Get a soecufuc game's players
+    //! Get all tournaments games
 
-    //! Delete a game by creator
+    //! Get a specific tournament's games
+
+    
+    //! Get a specifc game's players
+
+    
 
     //! Start a game - update game status 
 

@@ -154,7 +154,33 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Tournament retrieved:', data) //! DELETE
       return data
+    },
+
+    async getTournamentPlayers(request, tournamentId) {
+      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}/players`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament players retrieved:', data) //! DELETE
+      return data
+    },
+
+
+    async deleteTournament(request, tournamentId) {
+      const { data } = await dbApi.delete(`/games/tournaments/${tournamentId}`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament deleted:', data) //! DELETE
+      return data
+    },
+    
+    async deleteGame(request, gameId) {
+      const { data } = await dbApi.delete(`/games/${gameId}`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Game deleted:', data) //! DELETE
+      return data
     }
+
 
   })
 }, {

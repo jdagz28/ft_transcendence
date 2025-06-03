@@ -242,6 +242,71 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/tournaments/:tournamentId/players', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentPlayersHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const players = await fastify.dbGames.getTournamentPlayers(tournamentId)
+          if (!players) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(players)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.delete('/games/tournaments/:tournamentId', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function deleteTournamentHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.deleteTournament(tournamentId, userId)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.delete('/games/:gameId', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function deleteGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.deleteGame(gameId, userId)
+          if (!result) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',

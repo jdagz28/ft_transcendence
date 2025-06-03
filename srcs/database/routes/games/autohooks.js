@@ -331,6 +331,70 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament')
       }
+    },
+
+    async getTournamentPlayers(tournamentId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM tour_players WHERE tournament_id = ?'
+        )
+        const players = query.all(tournamentId)
+        if (!players) {
+          throw new Error('Failed to retrieve tournament players')
+        }
+        return players
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament players')
+      }
+    },
+
+    async deleteTournament(tournamentId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
+        )
+        const checkTournament = check.get(tournamentId, userId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found or user not authorized')
+        }
+
+        const query = fastify.db.prepare(
+          'DELETE FROM tournaments WHERE id = ?'
+        )
+        const result = query.run(tournamentId)
+        if (result.changes === 0) {
+          throw new Error('Failed to delete tournament')
+        }
+        return { message: 'Tournament deleted successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to delete tournament')
+      }
+    },
+
+    async deleteGame(gameId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM games WHERE id = ? AND created_by = ?'
+        )
+        const checkGame = check.get(gameId, userId)
+        if (!checkGame) {
+          throw new Error('Game not found or user not authorized')
+        }
+
+        const query = fastify.db.prepare(
+          'DELETE FROM games WHERE id = ?'
+        )
+        const result = query.run(gameId)
+        if (result.changes === 0) {
+          throw new Error('Failed to delete game')
+        }
+        return { message: 'Game deleted successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to delete game')
+      }
     }
 
   })
