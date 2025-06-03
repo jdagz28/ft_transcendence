@@ -224,6 +224,45 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to create tournament')
       }
+    },
+
+    async joinTournament(tournamentId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+        if (checkTournament.status !== 'pending') {
+          return { error: 'Tournament is not joinable' }
+        }
+        if (checkTournament.total_players >= checkTournament.max_players) {
+          return { error: 'Tournament is full' }
+        }
+
+        const query = fastify.db.prepare(
+          'UPDATE tournaments SET total_players = total_players + 1 WHERE id = ?'
+        )
+        const result = query.run(tournamentId)
+        if (result.changes === 0) {
+          throw new Error('Failed to join tournament')
+        }
+
+        const tourPlayersQuery = fastify.db.prepare(
+          'INSERT INTO tour_players (tournament_id, user_id) VALUES (?, ?)'
+        )
+        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId)
+        if (tourPlayersResult.changes === 0) {
+          throw new Error('Failed to add user to tournament players')
+        }
+
+        return { message: 'Joined tournament successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to join tournament')
+      }
     }
 
   })

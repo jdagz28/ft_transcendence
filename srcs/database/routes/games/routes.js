@@ -158,7 +158,28 @@ module.exports = fp(
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
+    })
 
+    fastify.patch('/games/tournaments/:tournamentId/join', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function joinTournamentHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.joinTournament(tournamentId, userId)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
     })
 
   },

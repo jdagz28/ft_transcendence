@@ -107,7 +107,24 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Tournament created:', data)
       return data
+    },
+
+    async joinTournament(request, tournamentId, userId) {
+      try {
+        const { data } = await dbApi.patch(`/games/tournaments/${tournamentId}/join`, 
+          { userId },
+          { headers: internalHeaders(request) },
+        )
+        console.log('Joined tournament:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 409) {
+          throw fastify.httpErrors.conflict(error.response.data?.error || 'Tournament conflict')
+        }
+        throw error
+      }
     }
+
   })
 }, {
   name: 'gameAutoHooks'

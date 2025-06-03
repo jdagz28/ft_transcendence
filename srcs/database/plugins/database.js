@@ -161,9 +161,15 @@ async function databaseConnector(fastify) {
         game_mode TEXT NOT NULL
           CHECK (game_mode IN ('public', 'private')),
         max_players INTEGER NOT NULL,
+        total_players INTEGER DEFAULT 1,
         winner_id INTEGER,
         created_by INTEGER NOT NULL,
         name TEXT NOT NULL,
+        num_games INTEGER DEFAULT 1,
+        num_matches INTEGER DEFAULT 1,
+        ball_speed INTEGER DEFAULT 1,
+        death_timed BOOLEAN DEFAULT FALSE,
+        time_limit INTEGER DEFAULT 0,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (created_by) REFERENCES users(id)

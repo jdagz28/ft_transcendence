@@ -115,6 +115,26 @@ module.exports = fp(
       }
     })
 
+    // join a tournament
+    fastify.patch('/games/tournaments/:tournamentId/join', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function joinTournamentHandler (request, reply) {
+        const { tournamentId } = request.params
+        const userId = request.user.id
+        const result = await fastify.gameService.joinTournament(request, tournamentId, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        if (result.status == 'full') {
+          return reply.code(409).send({ error: 'Tournament is full' })
+        }
+        return reply.send(result)
+      }
+    })
+
     /*
     * get a list of tournaments
     fastify.get('/games/tournaments', {
@@ -124,9 +144,7 @@ module.exports = fp(
     fastify.get('/games/tournaments/:tournamentId', {
     })
 
-    * join a tournament
-    fastify.put('/games/tournaments/:tournamentId/join', {
-    })
+   
 
     * leave a tournament
     
