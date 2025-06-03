@@ -123,6 +123,21 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         throw error
       }
+    },
+
+    async leaveTournament(request, tournamentId, userId) {
+      try {
+        const { data } = await dbApi.delete(`/games/tournaments/${tournamentId}/leave`, 
+          { data: { userId }, headers: internalHeaders(request) },
+        )
+        console.log('Left tournament:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'Tournament not found')
+        }
+        throw error
+      }
     }
 
   })

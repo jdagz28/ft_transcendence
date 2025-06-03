@@ -263,6 +263,42 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to join tournament')
       }
+    },
+
+    async leaveTournament(tournamentId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+        if (checkTournament.created_by === Number(userId)) {
+          throw new Error('Creator cannot leave the tournament')
+        }
+
+        const query = fastify.db.prepare(
+          'DELETE FROM tour_players WHERE tournament_id = ? AND user_id = ?'
+        )
+        const result = query.run(tournamentId, userId)
+        if (result.changes === 0) {
+          throw new Error('Failed to remove player from tournament players')
+        }
+
+        const query2 = fastify.db.prepare(
+          'UPDATE tournaments SET total_players = total_players - 1 WHERE id = ?'
+        )
+        const result2 = query2.run(tournamentId)
+        if (result2.changes === 0) {
+          throw new Error('Failed to leave tournament')
+        }
+
+        return { message: 'Left tournament successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to leave tournament')
+      }
     }
 
   })
