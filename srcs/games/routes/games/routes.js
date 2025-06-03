@@ -151,22 +151,48 @@ module.exports = fp(
         return reply.send(result)
       }
     })
-
-
-    /*
-    * get a list of tournaments
+   
+    //  get a list of tournaments
     fastify.get('/games/tournaments', {
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentHandler (request, reply) {
+        const tournaments = await fastify.gameService.getTournaments(request)
+        if (!tournaments) {
+          return reply.code(400).send({ error: 'Failed to retrieve tournaments' })
+        }
+        return reply.send(tournaments)
+      }
     })
 
-    * get a specific tournament
+    // * get a specific tournament
     fastify.get('/games/tournaments/:tournamentId', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getSpecificTournamentHandler(request, reply) {
+        const { tournamentId } = request.params
+        const tournament = await fastify.gameService.getTournamentById(request, tournamentId)
+        if (!tournament) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(tournament)
+      }
     })
 
-   
+    //! Get a specific tournament players
 
-   
+    //! Delete a tournament by creator
+
+    //! Start a tournament - update tournament status
+
     
-    */
+    //! Get a soecufuc game's players
+
+    //! Delete a game by creator
+
+    //! Start a game - update game status 
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']

@@ -299,6 +299,38 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to leave tournament')
       }
+    },
+
+    async getTournaments() {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM tournaments'
+        )
+        const tournaments = query.all()
+        if (!tournaments) {
+          throw new Error('Failed to retrieve tournaments')
+        }
+        return tournaments
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournaments')
+      }
+    },
+
+    async getTournamentById(tournamentId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const tournament = query.get(tournamentId)
+        if (!tournament) {
+          throw new Error('Tournament not found')
+        }
+        return tournament
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament')
+      }
     }
 
   })

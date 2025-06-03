@@ -204,6 +204,44 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/tournaments/all', {
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentsHandler(request, reply) {
+        try {
+          const tournaments = await fastify.dbGames.getTournaments()
+          if (!tournaments) {
+            reply.status(400).send({ error: 'Failed to retrieve tournaments' })
+            return
+          }
+          reply.status(200).send(tournaments)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getSpecificTournamentHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const tournament = await fastify.dbGames.getTournamentById(tournamentId)
+          if (!tournament) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(tournament)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',
