@@ -230,6 +230,24 @@ module.exports = fp(
       }
     })
 
+    // * Get a specifc game's players
+    fastify.get('/games/:gameId/players', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getGamePlayersHandler(request, reply) {
+        const { gameId } = request.params
+        const players = await fastify.gameService.getGamePlayers(request, gameId)
+        if (!players) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(players)
+      }
+    })
+
+
+
     //! ============ MATCHMAKING ============
     //! Draw randomlly to bracket players --- generate the games table
     //! Start a tournament - update tournament status
@@ -239,7 +257,7 @@ module.exports = fp(
     //! Get a specific tournament's games
 
     
-    //! Get a specifc game's players
+    
 
     
 

@@ -50,6 +50,17 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (result3.changes === 0) {
           throw new Error('Failed to create game')
         }
+
+        // game players table
+        const query4 = fastify.db.prepare(
+          'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
+        )
+        const result4 = query4.run(gameId, userId)
+        if (result4.changes === 0) {
+          throw new Error('Failed to add user to game players')
+        }
+        console.log('Game Players created with ID:', result4.lastInsertRowid) //! DELETE
+
         console.log('Game Match Players created with ID:', result3.lastInsertRowid) //! DELETE
 
         return gameId
@@ -411,6 +422,22 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to delete game')
+      }
+    },
+
+    async getGamePlayers(gameId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM game_players WHERE game_id = ?'
+        )
+        const players = query.all(gameId)
+        if (!players) {
+          throw new Error('Failed to retrieve game players')
+        }
+        return players
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve game players')
       }
     }
 

@@ -307,6 +307,27 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/:gameId/players', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getGamePlayersHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const players = await fastify.dbGames.getGamePlayers(gameId)
+          if (!players) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(players)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',
