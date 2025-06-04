@@ -42,9 +42,9 @@ async function databaseConnector(fastify) {
       createGameMatchesTable();
       createGameMatchesScoresTable();
       createGamePlayers();
+      createMessagesTable();
       createConversationsTable();
       createConvoMembersTable();
-      createMessagesTable();
       fastify.log.info("Created 'users' table successfully.");
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
@@ -290,13 +290,28 @@ async function databaseConnector(fastify) {
         player_id INTEGER NOT NULL,
         is_remote BOOLEAN NOT NULL DEFAULT FALSE,
         joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        paddle_loc  TEXT NOT DEFAULT 'none',
+        paddle_loc TEXT NOT NULL DEFAULT 'none'
           CHECK(paddle_loc IN ('left','right', 'none')),
         paddle_side TEXT 
           CHECK(paddle_side IN ('top', 'bottom')),
         UNIQUE(game_id, player_id),
         FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
         FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
+  function createMessagesTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER NOT NULL,
+        conversation_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sender_id) REFERENCES users(id),
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id)
       );
     `);
   }
@@ -334,21 +349,6 @@ async function databaseConnector(fastify) {
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE (conversation_id, user_id)
-      );
-    `);
-  }
-
-  function createMessagesTable() {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_id INTEGER NOT NULL,
-        conversation_id INTEGER NOT NULL,
-        content TEXT NOT NULL,
-        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (sender_id) REFERENCES users(id),
-        FOREIGN KEY (conversation_id) REFERENCES conversations(id)
       );
     `);
   }

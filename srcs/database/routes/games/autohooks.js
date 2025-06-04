@@ -8,14 +8,13 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('dbGames', {
-    //! set num players and set default
     async createGame(userId, mode, maxPlayers, gameType, gameMode) {
       try {
         // games table
         const query = fastify.db.prepare(
-          'INSERT INTO games (created_by, tatus, max_players) VALUES (?, ?)'
+          'INSERT INTO games (created_by, status) VALUES (?, ?)'
         )
-        const result = query.run(userId, mode, 'pending')
+        const result = query.run(userId,'pending')
         if (result.changes === 0) {
           throw new Error('Failed to create game')
         }
@@ -24,7 +23,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
 
         // games settings table
         const query1 = fastify.db.prepare(
-          'INSERT INTO game_settings (game_id, mode, game_type, game_mode, max_players) VALUES (?, ?, ?, ?)'
+          'INSERT INTO game_settings (game_id, mode, game_type, game_mode, max_players) VALUES (?, ?, ?, ?, ?)'
         )
         const result1 = query1.run(gameId, mode, gameType, gameMode, maxPlayers)
         if (result1.changes === 0) {
@@ -45,7 +44,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         
         // match players table - match_scores
         const query3 = fastify.db.prepare(
-          'INSERT INTO match_scores (game_matches_id, player_id) VALUES (?, ?)'
+          'INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)'
         )
         const result3 = query3.run(matchId, userId)
         if (result3.changes === 0) {
@@ -72,7 +71,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
 
         const deathTimedInt = death_timed ? 1 : 0 
         const updateQuery = fastify.db.prepare(
-          `UPDATE game_settings SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit_s = ? WHERE id = ?`,
+          `UPDATE game_settings SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit_s = ? WHERE game_id = ?`,
         )
         const updateResult = updateQuery.run(num_games, num_matches, ball_speed, deathTimedInt, time_limit, gameId)
         if (updateResult.changes === 0) {
@@ -144,6 +143,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           return { error: 'Game is full' }
         }
 
+        const checkPlayer = fastify.db.prepare(
+          'SELECT * FROM game_players WHERE game_id = ? AND player_id = ?'
+        )
+        const existingPlayer = checkPlayer.get(gameId, userId)
+        if (existingPlayer) {
+          return { error: 'User already joined the game' }
+        }
+
         const query = fastify.db.prepare(
           'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
         )
@@ -175,18 +182,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         const query = fastify.db.prepare(
-          'DELETE FROM match_scores WHERE match_id IN (SELECT id FROM game_matches WHERE game_id = ?) AND player_id = ?'
+          'DELETE FROM game_players WHERE game_id = ? AND player_id = ?'
         )
         const result = query.run(gameId, userId)
         if (result.changes === 0) {
-          throw new Error('Failed to remove player from game match scores')
-        }
-
-        const query2 = fastify.db.prepare(
-          'DELETE FROM game_players WHERE game_id = ? AND player_id = ?'
-        )
-        const result2 = query2.run(gameId, userId)
-        if (result2.changes === 0) {
           throw new Error('Failed to remove player from game players')
         }
 
@@ -197,19 +196,27 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     },
 
-
     async createTournament(userId, name, maxPlayers, gameMode, gameType) {
       try {
         const query = fastify.db.prepare(
-          'INSERT INTO tournaments (created_by, name, max_players, game_mode, game_type, status) VALUES (?, ?, ?, ?, ?, ?)'
+          'INSERT INTO tournaments (created_by, name, status) VALUES (?, ?, ?)'
         )
-        const result = query.run(userId, name, maxPlayers, gameMode, gameType, "pending")
+        const result = query.run(userId, name, "pending")
         if (result.changes === 0) {
           throw new Error('Failed to create tournament')
         }
         const tournamentId = result.lastInsertRowid
         console.log('Tournament created with ID:', tournamentId) //! DELETE
-        
+
+        const tourSettings = fastify.db.prepare(
+          'INSERT INTO tournament_settings (tournament_id, game_mode, game_type, max_players) VALUES (?, ?, ?, ?)'
+        )
+        const tourSettingsResult = tourSettings.run(tournamentId, gameMode, gameType, maxPlayers)
+        if (tourSettingsResult.changes === 0) {
+          throw new Error('Failed to create tournament settings')
+        }
+        console.log('Tournament Settings created with ID:', tourSettingsResult.lastInsertRowid) //! DELETE
+
         const tourPlayersQuery = fastify.db.prepare(
           'INSERT INTO tour_players (tournament_id, user_id) VALUES (?, ?)'
         )
@@ -224,7 +231,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (!gameId) {
           throw new Error('Failed to create game for tournament')
         }
-        console.log('Game created for tournament with ID:', gameId) //! DELETEs
+        console.log('Game created for tournament with ID:', gameId) //! DELETE
 
         return tournamentId
       } catch (err) {
@@ -245,16 +252,27 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (checkTournament.status !== 'pending') {
           return { error: 'Tournament is not joinable' }
         }
-        if (checkTournament.total_players >= checkTournament.max_players) {
+
+        const checkSettings = fastify.db.prepare(
+          'SELECT * FROM tournament_settings WHERE tournament_id = ?'
+        )
+        const checkTourSettings = checkSettings.get(tournamentId)
+        if (!checkTourSettings) {
+          throw new Error('Tournament settings not found')
+        }
+        const totalPlayers = fastify.db.prepare(
+          'SELECT COUNT (*) FROM tour_players WHERE tournament_id = ?'
+        )
+        const totalPlayersCount = totalPlayers.get(tournamentId)['COUNT (*)']
+        if (totalPlayersCount >= checkTourSettings.max_players) {
           return { error: 'Tournament is full' }
         }
-
-        const query = fastify.db.prepare(
-          'UPDATE tournaments SET total_players = total_players + 1 WHERE id = ?'
+        const checkPlayer = fastify.db.prepare(
+          'SELECT * FROM tour_players WHERE tournament_id = ? AND user_id = ?'
         )
-        const result = query.run(tournamentId)
-        if (result.changes === 0) {
-          throw new Error('Failed to join tournament')
+        const existingPlayer = checkPlayer.get(tournamentId, userId)
+        if (existingPlayer) {
+          return { error: 'User already joined the tournament' }
         }
 
         const tourPlayersQuery = fastify.db.prepare(
@@ -291,14 +309,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const result = query.run(tournamentId, userId)
         if (result.changes === 0) {
           throw new Error('Failed to remove player from tournament players')
-        }
-
-        const query2 = fastify.db.prepare(
-          'UPDATE tournaments SET total_players = total_players - 1 WHERE id = ?'
-        )
-        const result2 = query2.run(tournamentId)
-        if (result2.changes === 0) {
-          throw new Error('Failed to leave tournament')
         }
 
         return { message: 'Left tournament successfully' }
