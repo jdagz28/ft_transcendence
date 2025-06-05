@@ -318,51 +318,6 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`getFriends error: ${err.message}`)
         throw new Error('Get friends failed')
       }
-    },
-
-    async createDirectMessage(userIdA, userIdB) {
-      try {
-        if (userIdA === userIdB) {
-          fastify.log.error(`User ${userIdA} cannot create a conversation with themselves`)
-          throw new Error('Cannot create conversation with self')
-        }
-
-        const existingConversationQuery = fastify.db.prepare(`
-          SELECT c.id
-          FROM conversations c
-          JOIN conv_members cm1 ON c.id = cm1.conversation_id
-          JOIN conv_members cm2 ON c.id = cm2.conversation_id
-          WHERE cm1.user_id = ? AND cm2.user_id = ?
-          LIMIT 1
-        `)
-        const existingConversation = existingConversationQuery.get(userIdA, userIdB)
-
-        if (existingConversation) {
-          fastify.log.debug(`Conversation already exists between ${userIdA} and ${userIdB}`)
-          return existingConversation.id
-        }
-
-        const createConversationQuery = fastify.db.prepare(`
-          INSERT INTO conversations (created)
-          VALUES (datetime('now'))
-        `)
-
-        const result = createConversationQuery.run()
-        const conversationId = result.lastInsertRowid;
-
-        const addMembersQuery = fastify.db.prepare(`
-          INSERT INTO conv_members (conversation_id, user_id)
-          VALUES (?, ?)
-        `)
-        addMembersQuery.run(conversationId, userIdA)
-        addMembersQuery.run(conversationId, userIdB)
-
-        fastify.log.debug(`Conversation create with ID ${conversationId} between User ${userIdA} and User ${userIdB}`);
-        return conversationId;
-      } catch (err) {
-        fastify.log.error(`createConversation error: ${err.message}`)
-        throw new Error('Failed to create conversation')
-      }
     }
 
   })

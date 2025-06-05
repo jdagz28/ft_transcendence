@@ -41,6 +41,7 @@ async function databaseConnector(fastify) {
       createConversationsTable();
       createConvoMembersTable();
       createMessagesTable();
+      createGroupInvitationsTable();
       fastify.log.info("Created 'users' table successfully.");
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
@@ -291,6 +292,24 @@ async function databaseConnector(fastify) {
       );
     `);
   }
+
+  function createGroupInvitationsTable() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS group_invitations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL,
+      invited_user_id INTEGER NOT NULL,
+      invited_by_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'declined')),
+      created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      responded DATETIME DEFAULT NULL,
+      FOREIGN KEY (group_id) REFERENCES conversations(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+}
 
   fastify.decorate('db', db);
   fastify.log.info("Fastify instance has 'db': " + fastify.hasDecorator('db'));
