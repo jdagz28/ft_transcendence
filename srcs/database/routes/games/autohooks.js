@@ -10,6 +10,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
   fastify.decorate('dbGames', {
     async createGame(userId, mode, maxPlayers, gameType, gameMode) {
       try {
+        fastify.db.exec('BEGIN')
+
         // games table
         const query = fastify.db.prepare(
           'INSERT INTO games (created_by, status) VALUES (?, ?)'
@@ -30,26 +32,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Failed to create game settings')
         }
         console.log('Game Settings created with ID:', result1.lastInsertRowid) //! DELETE
-s
-        // game matches table
-        // const query2 = fastify.db.prepare(
-        //   'INSERT INTO game_matches (game_id, status) VALUES (?, ?)'
-        // )
-        // const result2 = query2.run(gameId, 'pending')
-        // if (result2.changes === 0) {
-        //   throw new Error('Failed to create game')
-        // }   
-        // const matchId = result2.lastInsertRowid
-        // console.log('Game Match created with ID:', matchId) //! DELETE
-        
-        // // match players table - match_scores
-        // const query3 = fastify.db.prepare(
-        //   'INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)'
-        // )
-        // const result3 = query3.run(matchId, userId)
-        // if (result3.changes === 0) {
-        //   throw new Error('Failed to create game')
-        // }
 
         // game players table
         const query4 = fastify.db.prepare(
@@ -61,11 +43,11 @@ s
         }
         console.log('Game Players created with ID:', result4.lastInsertRowid) //! DELETE
 
-        // console.log('Game Match Players created with ID:', result3.lastInsertRowid) //! DELETE
-
+        fastify.db.exec('COMMIT')
         return gameId
       } catch (err) {
         fastify.log.error(err)
+        fastify.db.exec('ROLLBACK')
         throw new Error('Failed to create game')
       }
     },
@@ -209,6 +191,8 @@ s
 
     async createTournament(userId, name, maxPlayers, gameMode, gameType) {
       try {
+        fastify.db.exec('BEGIN')
+
         const query = fastify.db.prepare(
           'INSERT INTO tournaments (created_by, name, status) VALUES (?, ?, ?)'
         )
@@ -236,6 +220,7 @@ s
           throw new Error('Failed to add user to tournament players')
         }
         console.log('Tournament Players created with ID:', tourPlayersResult.lastInsertRowid) //! DELETE
+        fastify.db.exec('COMMIT')        
 
         // Create game
         const gameId = await fastify.dbGames.createGame(userId, "tournament", maxPlayers, "remote", gameMode)
@@ -247,6 +232,7 @@ s
         return tournamentId
       } catch (err) {
         fastify.log.error(err)
+        fastify.db.exec('ROLLBACK')
         throw new Error('Failed to create tournament')
       }
     },
@@ -443,12 +429,22 @@ s
 
     async startGame(gameId, userId, players) {
       try {
+        fastify.db.exec('BEGIN')
+
         const check = fastify.db.prepare(
           'SELECT * FROM games WHERE id = ? AND created_by = ?'
         )
         const checkGame = check.get(gameId, userId)
         if (!checkGame) {
           throw new Error('Game not found or user not authorized')
+        }
+
+        const checkStatus = fastify.db.prepare(
+          'SELECT status FROM games WHERE id = ?'
+        )
+        const gameStatus = checkStatus.get(gameId)
+        if (gameStatus.status !== 'pending') {
+          throw new Error('Game is not in pending status')
         }
 
         const startQuery = fastify.db.prepare(
@@ -493,9 +489,12 @@ s
             throw new Error(`Failed to add player ${playerId} to match_scores`);
           }
         }
+        fastify.db.exec('COMMIT')
+
         return { message: 'Game started successfully' }
       } catch (err) {
         fastify.log.error(err)
+        fastify.db.exec('ROLLBACK')
         throw new Error('Failed to start game')
       }
     }

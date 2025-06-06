@@ -46,7 +46,7 @@
           "maxPlayers": {
             "allOf": [
               { "$ref": "#/properties/maxPlayers" },
-              { "type": "integer", "minimum": 2 }
+              { "type": "integer", "minimum": 2, "maximum": 4 }
             ]
           }
         }
@@ -63,7 +63,7 @@
           "maxPlayers": {
             "allOf": [
               { "$ref": "#/properties/maxPlayers" },
-              { "type": "integer", "maximum": 1 }
+              { "type": "integer", "maximum": 1, "minimum": 1 }
             ]
           }
         }
