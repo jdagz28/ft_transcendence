@@ -2,8 +2,7 @@ import type { RouteParams } from "../router";
 
 export function renderGamePage(params: RouteParams): void {
   const gameId = params.gameId;
-  const mode = params.mode || 'local-multiplayer'; //! DELETE for testing
-  // const mode = params.mode || 'online'; 
+  const mode = params.mode || 'local-multiplayer';
   
   console.log("Params:", params);
 
@@ -12,7 +11,6 @@ export function renderGamePage(params: RouteParams): void {
     return;
   }
 
-  let gameState: any = null;
   let localGameState: any = null;
   let gameLoop: number | null = null;
   
@@ -192,131 +190,33 @@ export function renderGamePage(params: RouteParams): void {
     };
   }
 
-  function setupOnlineGame() {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket(`${protocol}://${window.location.host}/sessions/${gameId}`);
-    
-    socket.onopen = () => {
-      console.log(`✅ Connected to game session: ${gameId}`);
-      sendDimensions();
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === 'GAME_INITIALIZED') {
-          gameState = message.state;
-          console.log('Game initialized with state:', gameState);
-          render(gameState);
-          setupInputHandlers();
-        }
-
-        if (message.type === 'STATE') {
-          gameState = message.s; 
-          render(gameState);
-        }
-      } catch (err) {
-        console.error("❌ Failed to parse state:", err);
-      }
-    };
-
-    socket.onerror = (err) => {
-      console.error("❌ WebSocket error:", err);
-    };
-
-    function sendPlayerInput(input: any) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'PLAYER_INPUT',
-          input
-        }));
-      }
-    }
-
-    function sendDimensions() {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: 'DIMENSIONS',
-            width:  canvasWidth,
-            height: canvasHeight,
-            dpr:    window.devicePixelRatio
-          })
-        );
-      }
-    }
-
-    function setupInputHandlers() {
-      const keys = {
-        w: false,
-        s: false,
-        ArrowUp: false,
-        ArrowDown: false
-      };
-
-      let lastInputSent = 0;
-      const INPUT_THROTTLE = 1000; 
-      
-      function sendThrottledInput(input: any) {
-        const now = Date.now();
-        if (now - lastInputSent >= INPUT_THROTTLE) {
-          lastInputSent = now;
-          sendPlayerInput(input);
-        }
-      }
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key in keys && !keys[e.key as keyof typeof keys]) {
-          keys[e.key as keyof typeof keys] = true;
-          sendThrottledInput({ keys });
-        }
-        
-        if (e.key === 'Enter' && gameState && !gameState.gameStarted) {
-          sendPlayerInput({ action: 'START_GAME' });
-        }
-      });
-
-      document.addEventListener('keyup', (e) => {
-        if (e.key in keys && keys[e.key as keyof typeof keys]) {
-          keys[e.key as keyof typeof keys] = false;
-          sendThrottledInput({ keys });
-        }
-      });
-
-      canvas.onclick = () => {
-        if (gameState && !gameState.gameStarted) {
-          sendPlayerInput({ action: 'START_GAME' });
-        }
-      };
-    }
-
-    window.addEventListener('resize', () => {
-      canvasWidth = window.innerWidth;
-      canvasHeight = window.innerHeight;
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-      sendDimensions();
-    });
-  }
-
-  // Game initialization
   if (isLocalMode(mode)) {
     localGameState = createLocalGameState();
     render(localGameState);
     setupLocalInputHandlers();
     startLocalGameLoop();
-  } else {
-    setupOnlineGame();
   }
 
   function render(state: any) {
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    drawCenterLine();
-    if (state.ball) drawBall(state.ball);
-    if (state.players) drawPaddles(state.players);
-    if (state.score) drawScore(state.score);
-    if (!state.gameStarted) {
-      drawStartMessage();
+    try {
+
+      if (!state) {
+        console.warn("⚠️ Cannot render - no state provided");
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawCenterLine();
+      
+      if (state.ball) drawBall(state.ball);
+      if (state.players) drawPaddles(state.players);
+      if (state.score) drawScore(state.score);
+      if (!state.gameStarted) {
+        drawStartMessage();
+      }
+    } catch (err) {
+      console.error("❌ Render error:", err);
+      console.error("❌ Invalid state:", state);
     }
   }
 

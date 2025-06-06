@@ -3,8 +3,9 @@
   "$id": "schema:games:createTournament",
   "required": [
     "name",
-    "mode",
-    "maxPlayers"
+    "maxPlayers",
+    "gameMode",
+    "gameType"
   ],
   "properties": {
     "name": {
@@ -12,74 +13,25 @@
       "minLength": 1,
       "maxLength": 50
     },
-    "mode": {
-      "type": "string",
-      "enum": [
-        "solo",
-        "duo",
-        "online"
-      ]
-    },
     "maxPlayers": {
       "type": "integer",
       "minimum": 2,
-      "maximum": 100,
+      "maximum": 32,
       "multipleOf": 2
-    }
-  }, 
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "mode": {
-            "enum": ["solo"]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "maxPlayers": {
-            "allOf": [
-              { "$ref": "#/properties/maxPlayers" },
-              { "type": "integer", "maximum": 1 }
-            ]
-          }
-        }
-      }
     },
-    {
-      "if": {
-        "properties": {
-          "mode": { "enum": ["duo"] }
-        }
-      },
-      "then": {
-        "properties": {
-          "maxPlayers": {
-            "allOf": [
-              { "$ref": "#/properties/maxPlayers" },
-              { "type": "integer", "maximum": 2 }
-            ]
-          }
-        }
-      }
+    "gameType": {
+      "type": "string",
+      "enum": [ 
+        "singles",
+        "doubles"
+      ]
     },
-    {
-      "if": {
-        "properties": {
-          "mode": { "enum": ["online"] }
-        }
-      },
-      "then": {
-        "properties": {
-          "maxPlayers": {
-            "allOf": [
-              { "$ref": "#/properties/maxPlayers" },
-              { "type": "integer", "minimum": 2 }
-            ]
-          }
-        }
-      }
+    "gameMode": {
+      "type": "string",
+      "enum": [ 
+        "public",
+        "private"
+      ]
     }
-  ]
+  }
 }
