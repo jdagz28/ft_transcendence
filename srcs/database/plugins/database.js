@@ -311,8 +311,8 @@ async function databaseConnector(fastify) {
         content TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (sender_id) REFERENCES users(id),
-        FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
@@ -350,21 +350,6 @@ async function databaseConnector(fastify) {
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE (conversation_id, user_id)
-      );
-    `);
-  }
-
-  function createMessagesTable() {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversation_id INTEGER NOT NULL,
-        sender_id INTEGER NOT NULL,
-        message_text TEXT NOT NULL,
-        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }

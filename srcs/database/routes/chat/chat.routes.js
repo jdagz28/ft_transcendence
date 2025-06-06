@@ -54,7 +54,7 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const  response = await fastify.dbChat.sendGroupMessage(fromUserId, groupId, message)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).sen({error: `${err.message}`})
+      return reply.status(500).send({error: `${err.message}`})
     }
 
   })
