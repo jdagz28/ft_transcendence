@@ -196,6 +196,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Game started:', data) //! DELETE
       return data
+    },
+
+    async getGameDetails(request, gameId) {
+      const { data } = await dbApi.get(`/games/${gameId}/details`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Game details retrieved:', data) //! DELETE
+      return data
     }
 
 
