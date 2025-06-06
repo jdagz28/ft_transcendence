@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "$id": "schema:games:createTournament",
+  "required": [
+    "name",
+    "maxPlayers",
+    "gameMode",
+    "gameType"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "maxPlayers": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 32,
+      "multipleOf": 2
+    },
+    "gameType": {
+      "type": "string",
+      "enum": [ 
+        "singles",
+        "doubles"
+      ]
+    },
+    "gameMode": {
+      "type": "string",
+      "enum": [ 
+        "public",
+        "private"
+      ]
+    }
+  }
+}

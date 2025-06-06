@@ -40,6 +40,47 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
+    async OAuthCreateUser(user) {
+      try {
+        const {
+          username, 
+          password, 
+          salt, 
+          email,
+          provider,
+          nickname = username
+        } = user
+        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email, nickname) VALUES (?, ?, ?, ?, ?)`)
+        const result = query.run(username, password, salt, email, nickname)
+        const userId = result.lastInsertRowid
+
+        const oauthQuery = fastify.db.prepare(`INSERT INTO oauth (user_id, provider, provider_uid) VALUES (?, ?, ?)`)
+        const result2 = oauthQuery.run(userId, provider, username)
+        return result2.lastInsertRowid
+      } catch (err) {
+        fastify.log.error(`OAuthCreateUser error: ${err.message}`)
+        throw new Error('OAuth user creation failed')
+      }
+    },
+
+    async OAuthReadUser(usernameORemail) {
+      try {
+        fastify.log.debug(`Looking for OAuth user: ${usernameORemail}`)
+        const query = fastify.db.prepare(`
+          SELECT users.id, users.username, users.email, users.nickname, oauth.provider, oauth.provider_uid
+          FROM users
+          JOIN oauth ON users.id = oauth.user_id
+          WHERE oauth.provider_uid = ? OR users.email = ? OR users.username = ?
+        `)
+        const row = query.get(usernameORemail, usernameORemail, usernameORemail)
+        return row
+      } catch (err) {
+        fastify.log.error(`OAuthReadUser error: ${err.message}`)
+        throw new Error('OAuth user retrieval failed')
+      }
+    },
+
+
     async getUserProfile(userId, request) {
       try {
         const query = fastify.db.prepare(`

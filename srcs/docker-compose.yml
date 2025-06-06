@@ -89,12 +89,81 @@ services:
       - backend
       - development
 
+  games:
+    container_name: games
+    build: ./games
+    image: games:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${GAMES_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - game
+      - backend
+      - development
+      
+  frontend:
+    container_name: frontend
+    build: ./frontend
+    image: frontend:typescript
+    command: ["npm", "run", "build"]
+    volumes:
+      - frontend_dist:/app/dist
+    networks:
+      - transcendence
+    profiles:
+      - build
+  
+  backend:
+    container_name: backend
+    build: ./backend
+    image: backend:typescript
+    volumes:
+      - frontend_dist:/app/dist
+    environment:
+      - PORT=${BACKEND_PORT}
+    networks:
+      - transcendence
+    profiles:
+      - build
+
+  gamestate:
+    container_name: gamestate
+    build: ./gamestate
+    image: gamestate:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${GAMESTATE_PORT}
+    ports:
+      - ${GAMESTATE_PORT}:${GAMESTATE_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - game
+      - backend
+      - development
+
 volumes:
   db-sqlite:
     driver: local
     driver_opts:
       type: none
       device: ../data/ft_transcendence/sqlite
+      o: bind
+  frontend_dist:
+    driver: local
+    driver_opts:
+      type: none
+      device: ../data/ft_transcendence/frontend
       o: bind
 
 networks:

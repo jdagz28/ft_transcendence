@@ -7,6 +7,7 @@ RUN mkdir -p /etc/nginx/ssl
 
 COPY ./conf/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY ./conf/nginx-start.sh /nginx-start.sh
+COPY ./conf/proxy_params /etc/nginx/proxy_params
 RUN chmod +x /nginx-start.sh
 
 ENTRYPOINT ["/nginx-start.sh"]

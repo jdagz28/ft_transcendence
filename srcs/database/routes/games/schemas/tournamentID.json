@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "$id": "schema:games:tournamentID",
+  "properties": {
+    "tournamentId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    }
+  }
+}

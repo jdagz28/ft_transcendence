@@ -51,6 +51,49 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/users/oauth', {
+      schema: {
+        body: fastify.getSchema('schema:users:createOAuthUser'),
+      },
+      handler: async function createOAuthUser (request, reply) {
+        try {
+          const newUserId = await fastify.dbUsers.OAuthCreateUser(request.body)
+          console.log('OAuth User created with ID:', newUserId) //! DELETE
+          reply.status(201).send({ userId: newUserId })
+        } catch (err) {
+          fastify.log.error(`Error creating OAuth user: ${err.message}`)
+          reply.code(500).send({ error: 'OAuth user creation failed' })
+        }
+      }
+    })
+
+    fastify.get('/users/oauth/search/:username', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUser')
+      },
+      response: { 200: fastify.getSchema('schema:users:OAuthGetUser')},
+      handler: async function getOAuthUser (request, reply) {
+        try {
+          const { username } = request.params;
+          console.log('Looking for OAuth user:', username) //! DELETE
+          const user = await fastify.dbUsers.OAuthReadUser(username)
+          if (!user) {
+            fastify.log.error('OAuth User not found')
+            reply.code(404);
+            return { error: 'User not found' }
+          }
+          return user
+        } catch (err) {
+          fastify.log.error(`Error retrieving OAuth user: ${err.message}`)
+          reply.code(500)
+          return { error: 'Internal Server Error' }
+        }
+      }
+    })
+
+
+
+
     fastify.get('/users/me', {
       schema: { 
         querystring: fastify.getSchema('schema:users:getProfile')
@@ -79,35 +122,29 @@ module.exports = fp(
         params: fastify.getSchema('schema:users:avatar'),
       },
       handler: async function getAvatar (request, reply) {
-        try {
-          const { userId } = request.params
-          console.log('Fetching avatar for user ID:', userId) //! DELETE
-          const query = fastify.db.prepare(`
-            SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
-          `)
-          const row = query.get(userId)
-          console.log('Row:', row) //! DELETE
-          let avatarBuffer = row?.avatar
-          let mimeType = row?.mime_type
-          
-          if (!avatarBuffer && fastify.defaultAssets.defaultAvatar) {
-            avatarBuffer = fastify.defaultAssets.defaultAvatar
-            mimeType     = fastify.defaultAssets.defaultAvatarMime
-          }
-      
-          if (!avatarBuffer && !mimeType) {
-            reply.code(404).send('Avatar not found')
-            return
-          }
-      
-          reply
-            .header('Content-Type', mimeType)
-            .header('Cache-Control', 'public, max-age=3600')
-            .send(avatarBuffer)
-        } catch (err) { 
-          fastify.log.error(`Error serving avatar for user ${request.params.userId}: ${err.message}`)
-          reply.code(500).send('Internal servera error')
+        const userId = Number(request.params.userId)
+        console.log('Fetching avatar for user ID:', userId) //! DELETE
+        const query = fastify.db.prepare(`
+          SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        console.log('Row:', row) //! DELETE
+        let avatarBuffer = row?.avatar
+        let mimeType = row?.mime_type
+        
+        if (!avatarBuffer && fastify.defaultAvatar) {
+          avatarBuffer = fastify.defaultAvatar;
+          mimeType = fastify.defaultAvatarMime;
         }
+    
+        if (!avatarBuffer && !mimeType) {
+          return reply.code(404).send('Avatar not found')
+        }
+    
+        reply
+          .type(mimeType)
+          .header('Cache-Control', 'public, max-age=3600')
+          .send(avatarBuffer);
       }
     })
 
@@ -275,6 +312,6 @@ module.exports = fp(
 
   }, {
     name: 'user',
-    dependencies: [ 'userAutoHooks', 'database']
+    dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']
 })
 

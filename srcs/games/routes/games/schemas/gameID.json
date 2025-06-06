@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "$id": "schema:games:gameID",
+  "properties": {
+    "gameId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    }
+  }
+}

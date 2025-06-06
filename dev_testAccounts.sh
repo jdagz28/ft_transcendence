@@ -7,9 +7,9 @@ PASSWORD=password
 #################
 declare -a USERS=(
   "test:test@test.com"
-  "jdagoy:jdagoy@test.com"
-  "cortiz:cortiz@test.com"
-  "doperyat:doperyat@test.com"
+  "testjdagoy:jdagoy@test.com"
+  "testcortiz:cortiz@test.com"
+  "testdopeyrat:dopeyrat@test.com"
   "user:user@test.com"
 )
 

@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "$id": "schema:users:OAuthGetUser",
+  "required": [
+    "id",
+    "username",
+    "email",
+    "provider",
+    "provider_uid"
+  ],
+  "properties": {
+    "id": { "type": "number" },
+    "username": { "type": "string" },
+    "email": { "type": "string" },
+    "nickname": { "type": "string" },
+    "provider": { 
+      "type": "string",
+      "enum": [
+        "42",
+        "Google" ]
+    },
+    "provider_uid": { "type": "string" }
+  }
+}

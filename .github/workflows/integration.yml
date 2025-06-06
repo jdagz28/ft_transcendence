@@ -18,7 +18,7 @@ jobs:
       - name: Check PR Title
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '\[(FEATURE|FIX|DOCUMENTATION|STYLE|TEST|DEVOPS|REFRACTOR|REVERT)\] .+$'
+          pattern: '\[(FEATURE|FIX|DOCUMENTATION|STYLE|TEST|DEVOPS|REFACTOR|REVERT)\] .+$'
           error: 'Pull-Request should start with type "[FIX]".'
           excludeDescription: 'true' 
           excludeTitle: 'false'  

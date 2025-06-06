@@ -1,12 +1,14 @@
 SRCS_DIR		:= ./srcs/
 DB_DIR			:= ./data/ft_transcendence/sqlite
+FRONT_DIR		:= ./data/ft_transcendence/frontend
 
 COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
 
 dev-up:
 	mkdir -p $(DB_DIR)
-	# chmod -R 777 $(DB_DIR) #change
+	mkdir -p $(FRONT_DIR)
+	docker compose -f $(COMPOSE_FILE) --profile build up -d
 	docker compose -f $(COMPOSE_FILE) --profile development up -d
 
 dev-down:
@@ -20,6 +22,9 @@ dev-stop:
 
 dev-build:
 	docker compose -f $(COMPOSE_FILE) --profile development build
+
+game:
+	docker compose -f $(COMPOSE_FILE) --profile game up -d
 
 testAccounts:
 	@chmod +x dev_testAccounts.sh
@@ -55,6 +60,8 @@ clean: stop-containers remove-containers remove-images remove-networks
 
 prune: clean
 	rm -rf $(DB_DIR)
+	rm -rf $(FRONT_DIR)
 	docker system prune --volumes
 
 .PHONY:
+

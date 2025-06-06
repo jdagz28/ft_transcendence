@@ -1,5 +1,5 @@
 # Docker multistage build
-FROM node:23-slim as builder
+FROM node:23-slim AS builder
 
 WORKDIR /builder
 COPY package.json package-lock.json ./
@@ -15,7 +15,6 @@ FROM node:23-slim
 # dumb-init registers signal handlers for every signal that can be caught
 RUN apt-get update && apt-get install -y dumb-init && \
     rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /data/sqlite && chown -R node:node /data/sqlite 
 
 # Copy production dependencies from the builder app
 WORKDIR /app
