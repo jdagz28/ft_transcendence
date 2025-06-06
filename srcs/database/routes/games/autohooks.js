@@ -427,6 +427,55 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     },
 
+    async getGameDetails(gameId) {
+      try {
+        const selectPlayers = fastify.db.prepare(`
+           SELECT
+              gp.player_id,
+              gp.paddle_loc,
+              gp.paddle_side,
+              u.username
+            FROM game_players gp
+            JOIN users u ON u.id = gp.player_id
+            WHERE gp.game_id = ?
+        `)
+        const playerRows = selectPlayers.all(gameId)
+        const settingsQuery = fastify.db.prepare(`
+           SELECT
+              mode,
+              game_type,
+              game_mode,
+              max_players,
+              num_games,
+              num_matches,
+              ball_speed,
+              death_timed,
+              time_limit_s
+            FROM game_settings
+            WHERE game_id = ?
+        `)
+        const settingsRow = settingsQuery.get(gameId)
+        return {
+          gameId,
+          settings: {
+            mode:        settingsRow.mode,
+            game_type:   settingsRow.game_type,
+            game_mode:   settingsRow.game_mode,
+            max_players: settingsRow.max_players,
+            num_games:   settingsRow.num_games,
+            num_matches: settingsRow.num_matches,
+            ball_speed:  settingsRow.ball_speed,
+            death_timed: Boolean(settingsRow.death_timed),
+            time_limit_s: settingsRow.time_limit_s
+          },
+          players: playerRows
+        }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve game details')
+      }
+    },
+
     async startGame(gameId, userId, players) {
       try {
         fastify.db.exec('BEGIN')
@@ -491,48 +540,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         fastify.db.exec('COMMIT')
 
-        const selectPlayers = fastify.db.prepare(`
-           SELECT
-              gp.player_id,
-              gp.paddle_loc,
-              gp.paddle_side,
-              u.username
-            FROM game_players gp
-            JOIN users u ON u.id = gp.player_ids
-            WHERE gp.game_id = ?
-        `)
-        const playerRows = selectPlayers.all(gameId)
-        const settingsQuery = fastify.db.prepare(`
-           SELECT
-              mode,
-              game_type,
-              game_mode,
-              max_players,
-              num_games,
-              num_matches,
-              ball_speed,
-              death_timed,
-              time_limit_s
-            FROM game_settings
-            WHERE game_id = ?
-        `)
-        const settingsRow = settingsQuery.get(gameId)
-        return {
-          gameId,
-          matchId,
-          settings: {
-            mode:        settingsRow.mode,
-            game_type:   settingsRow.game_type,
-            game_mode:   settingsRow.game_mode,
-            max_players: settingsRow.max_players,
-            num_games:   settingsRow.num_games,
-            num_matches: settingsRow.num_matches,
-            ball_speed:  settingsRow.ball_speed,
-            death_timed: Boolean(settingsRow.death_timed),
-            time_limit_s: settingsRow.time_limit_s
-          },
-          players: playerRows
-        }
+        return { message: 'Game started successfully' }
       } catch (err) {
         fastify.log.error(err)
         fastify.db.exec('ROLLBACK')

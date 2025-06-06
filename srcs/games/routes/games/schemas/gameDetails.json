@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "$id": "schema:games:gameDetails",
+  "required": ["gameId", "settings"],
+  "properties": {
+    "gameId": { "type": "number" },
+    "matchId": { "type": "number" },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "mode":        { "type": "string" },
+        "game_type":   { "type": "string" },
+        "game_mode":   { "type": "string" },
+        "max_players": { "type": "number" },
+        "num_games":   { "type": "number" },
+        "num_matches": { "type": "number" },
+        "ball_speed":  { "type": "number" },
+        "death_timed": { "type": "boolean" },
+        "time_limit_s":{ "type": "number" }
+      },
+      "required": [
+        "mode",
+        "game_type",
+        "game_mode",
+        "max_players",
+        "num_games",
+        "num_matches",
+        "ball_speed",
+        "death_timed",
+        "time_limit_s"
+      ],
+      "additionalProperties": false
+    },
+    "players": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "player_id":   { "type": "number" },
+          "paddle_loc":  { "type": "string" },
+          "paddle_side": { "type": "string" },
+          "username":    { "type": "string" }
+        },
+        "required": ["player_id", "paddle_loc", "paddle_side", "username"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
