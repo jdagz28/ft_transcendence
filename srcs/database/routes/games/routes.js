@@ -328,6 +328,29 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/games/:gameId/start', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function startGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const userId = request.user.id
+          const players = request.body.options
+          const result = await fastify.dbGames.startGame(gameId, userId, players)
+          if (!result) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',

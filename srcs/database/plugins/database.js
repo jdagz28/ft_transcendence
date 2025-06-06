@@ -290,8 +290,8 @@ async function databaseConnector(fastify) {
         player_id INTEGER NOT NULL,
         is_remote BOOLEAN NOT NULL DEFAULT FALSE,
         joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        paddle_loc TEXT NOT NULL DEFAULT 'none'
-          CHECK(paddle_loc IN ('left','right', 'none')),
+        paddle_loc TEXT 
+          CHECK(paddle_loc IN ('left','right')),
         paddle_side TEXT 
           CHECK(paddle_side IN ('top', 'bottom')),
         UNIQUE(game_id, player_id),

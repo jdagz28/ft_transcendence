@@ -246,6 +246,21 @@ module.exports = fp(
       }
     })
 
+    // * Start a game - update game status 
+    fastify.patch('/games/:gameId/start', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function startGameHandler(request, reply) {
+        const { gameId } = request.params
+        const result = await fastify.gameService.startGame(request, gameId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(result)
+      }
+    })
 
 
     //! ============ MATCHMAKING ============
@@ -261,7 +276,7 @@ module.exports = fp(
 
     
 
-    //! Start a game - update game status 
+  
 
   }, {
     name: 'gameRoutes',

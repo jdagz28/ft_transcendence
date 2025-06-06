@@ -187,6 +187,15 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Game players retrieved:', data) //! DELETE
       return data
+    },
+
+    async startGame(request, gameId) {
+      const options = request.body
+      const { data } = await dbApi.patch(`/games/${gameId}/start`, 
+        options, { headers: internalHeaders(request) },
+      )
+      console.log('Game started:', data) //! DELETE
+      return data
     }
 
 

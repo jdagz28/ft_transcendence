@@ -30,26 +30,26 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Failed to create game settings')
         }
         console.log('Game Settings created with ID:', result1.lastInsertRowid) //! DELETE
-
+s
         // game matches table
-        const query2 = fastify.db.prepare(
-          'INSERT INTO game_matches (game_id, status) VALUES (?, ?)'
-        )
-        const result2 = query2.run(gameId, 'pending')
-        if (result2.changes === 0) {
-          throw new Error('Failed to create game')
-        }   
-        const matchId = result2.lastInsertRowid
-        console.log('Game Match created with ID:', matchId) //! DELETE
+        // const query2 = fastify.db.prepare(
+        //   'INSERT INTO game_matches (game_id, status) VALUES (?, ?)'
+        // )
+        // const result2 = query2.run(gameId, 'pending')
+        // if (result2.changes === 0) {
+        //   throw new Error('Failed to create game')
+        // }   
+        // const matchId = result2.lastInsertRowid
+        // console.log('Game Match created with ID:', matchId) //! DELETE
         
-        // match players table - match_scores
-        const query3 = fastify.db.prepare(
-          'INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)'
-        )
-        const result3 = query3.run(matchId, userId)
-        if (result3.changes === 0) {
-          throw new Error('Failed to create game')
-        }
+        // // match players table - match_scores
+        // const query3 = fastify.db.prepare(
+        //   'INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)'
+        // )
+        // const result3 = query3.run(matchId, userId)
+        // if (result3.changes === 0) {
+        //   throw new Error('Failed to create game')
+        // }
 
         // game players table
         const query4 = fastify.db.prepare(
@@ -61,7 +61,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         console.log('Game Players created with ID:', result4.lastInsertRowid) //! DELETE
 
-        console.log('Game Match Players created with ID:', result3.lastInsertRowid) //! DELETE
+        // console.log('Game Match Players created with ID:', result3.lastInsertRowid) //! DELETE
 
         return gameId
       } catch (err) {
@@ -438,6 +438,65 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve game players')
+      }
+    },
+
+    async startGame(gameId, userId, players) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM games WHERE id = ? AND created_by = ?'
+        )
+        const checkGame = check.get(gameId, userId)
+        if (!checkGame) {
+          throw new Error('Game not found or user not authorized')
+        }
+
+        const startQuery = fastify.db.prepare(
+          'UPDATE games SET status = ? WHERE id = ?'
+        )
+        const result = startQuery.run('active', gameId)
+        if (result.changes === 0) {
+          throw new Error('Failed to start game')
+        }
+
+        const insertMatch = fastify.db.prepare(`
+          INSERT INTO game_matches (game_id, status, started) VALUES (?, ?, CURRENT_TIMESTAMP)
+        `);
+        const matchResult = insertMatch.run(gameId, 'active');
+        if (matchResult.changes === 0) {
+          throw new Error('Failed to update match status to active');
+        }
+        const matchId = matchResult.lastInsertRowid;
+        console.log('Match started with ID:', matchId) //! DELETE
+
+
+        const updatePlayer = fastify.db.prepare(`
+          UPDATE game_players SET paddle_loc  = ?, paddle_side = ? WHERE game_id = ? AND player_id = ?
+        `);
+
+        const insertMatchScore = fastify.db.prepare(`
+          INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
+        `);
+
+        for (const p of players) {
+          const playerId   = p.userId;
+          const paddleLoc  = p.paddle_loc;
+          const paddleSide = p.paddle_side;
+
+          const updResult = updatePlayer.run(paddleLoc, paddleSide, gameId, playerId);
+          if (updResult.changes === 0) {
+            throw new Error(`Failed to update paddle for player ${playerId}`);
+          }
+
+          const insResult = insertMatchScore.run(matchId, playerId);
+          if (insResult.changes === 0) {
+            throw new Error(`Failed to add player ${playerId} to match_scores`);
+          }
+        }
+        return { message: 'Game started successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to start game')
       }
     }
 
