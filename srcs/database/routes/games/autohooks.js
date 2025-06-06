@@ -457,41 +457,82 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
 
         const insertMatch = fastify.db.prepare(`
           INSERT INTO game_matches (game_id, status, started) VALUES (?, ?, CURRENT_TIMESTAMP)
-        `);
-        const matchResult = insertMatch.run(gameId, 'active');
+        `)
+        const matchResult = insertMatch.run(gameId, 'active')
         if (matchResult.changes === 0) {
-          throw new Error('Failed to update match status to active');
+          throw new Error('Failed to update match status to active')
         }
-        const matchId = matchResult.lastInsertRowid;
+        const matchId = matchResult.lastInsertRowid
         console.log('Match started with ID:', matchId) //! DELETE
 
 
         const updatePlayer = fastify.db.prepare(`
           UPDATE game_players SET paddle_loc  = ?, paddle_side = ? WHERE game_id = ? AND player_id = ?
-        `);
+        `)
 
         const insertMatchScore = fastify.db.prepare(`
           INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
-        `);
+        `)
 
         for (const p of players) {
-          const playerId   = p.userId;
-          const paddleLoc  = p.paddle_loc;
-          const paddleSide = p.paddle_side;
+          const playerId   = p.userId
+          const paddleLoc  = p.paddle_loc
+          const paddleSide = p.paddle_side
 
-          const updResult = updatePlayer.run(paddleLoc, paddleSide, gameId, playerId);
+          const updResult = updatePlayer.run(paddleLoc, paddleSide, gameId, playerId)
           if (updResult.changes === 0) {
-            throw new Error(`Failed to update paddle for player ${playerId}`);
+            throw new Error(`Failed to update paddle for player ${playerId}`)
           }
 
-          const insResult = insertMatchScore.run(matchId, playerId);
+          const insResult = insertMatchScore.run(matchId, playerId)
           if (insResult.changes === 0) {
-            throw new Error(`Failed to add player ${playerId} to match_scores`);
+            throw new Error(`Failed to add player ${playerId} to match_scores`)
           }
         }
         fastify.db.exec('COMMIT')
 
-        return { message: 'Game started successfully' }
+        const selectPlayers = fastify.db.prepare(`
+           SELECT
+              gp.player_id,
+              gp.paddle_loc,
+              gp.paddle_side,
+              u.username
+            FROM game_players gp
+            JOIN users u ON u.id = gp.player_ids
+            WHERE gp.game_id = ?
+        `)
+        const playerRows = selectPlayers.all(gameId)
+        const settingsQuery = fastify.db.prepare(`
+           SELECT
+              mode,
+              game_type,
+              game_mode,
+              max_players,
+              num_games,
+              num_matches,
+              ball_speed,
+              death_timed,
+              time_limit_s
+            FROM game_settings
+            WHERE game_id = ?
+        `)
+        const settingsRow = settingsQuery.get(gameId)
+        return {
+          gameId,
+          matchId,
+          settings: {
+            mode:        settingsRow.mode,
+            game_type:   settingsRow.game_type,
+            game_mode:   settingsRow.game_mode,
+            max_players: settingsRow.max_players,
+            num_games:   settingsRow.num_games,
+            num_matches: settingsRow.num_matches,
+            ball_speed:  settingsRow.ball_speed,
+            death_timed: Boolean(settingsRow.death_timed),
+            time_limit_s: settingsRow.time_limit_s
+          },
+          players: playerRows
+        }
       } catch (err) {
         fastify.log.error(err)
         fastify.db.exec('ROLLBACK')
