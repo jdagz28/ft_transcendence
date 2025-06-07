@@ -361,7 +361,6 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     }
 
-
   })
 }, {
   name: 'userAutoHooks',

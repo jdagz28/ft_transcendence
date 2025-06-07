@@ -1,0 +1,120 @@
+'use strict'
+
+const fp = require('fastify-plugin')
+const axios = require('axios')
+
+module.exports.prefixOverride = ''
+module.exports = fp(async function chatRoutes(fastify, opts) {
+
+  fastify.post('/chat/join/dm', async (request, reply) => {
+    const { fromUserId, toUserId } = request.body;
+    try {
+      const result = await fastify.dbChat.joinDirectMessage(fromUserId, toUserId);
+      reply.send(result);
+    } catch (error) {
+      console.error('Error joining direct message:', error);
+      reply.status(500).send({ error: 'Internal Server Error' });
+    }
+  }),
+
+  fastify.get('/chat/can-join/room/:roomId/:userId', async (request, reply) => {
+    const roomId = Number(request.params.roomId)
+    const userId = Number(request.params.userId)
+    try {
+      const response = await fastify.dbChat.canJoinGroup(userId, roomId)
+      console.log(response)
+      reply.send(response)
+    } catch (err) {
+      console.error(`error checking if user can join group: ${err.message}`)
+      return reply.status(500).send({ error: `${err.message}` })
+    }
+  })
+
+  fastify.post('/chat/send/dm', async (request, reply) => {
+    const { fromUserId, groupId, message} = request.body
+    if (
+    typeof fromUserId !== 'number' || !Number.isInteger(fromUserId) ||
+    typeof groupId !== 'number' || typeof message !== 'string' || message.trim() === ''
+  ) {
+    return reply.status(400).send({ error: 'userA and groupId must be integers and message should not be empty' });
+  }
+    try {
+      const response = await fastify.dbChat.sendDirectMessage(fromUserId, groupId, message)
+      return reply.send(response)
+    } catch (err) {
+      console.error(`error joining direct message: ${err.message}`)
+      return reply.status(500).send({ error: `${err.message}` })
+    }
+  }),
+
+  fastify.post('/chat/send/group', async (request, reply) => {
+    const {fromUserId, groupId, message} = request.body
+
+    try {
+      const  response = await fastify.dbChat.sendGroupMessage(fromUserId, groupId, message)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+
+  })
+
+  fastify.post('/chat/create/group', async (request, reply) => {
+    const { userId, name, type } = request.body
+
+    try {
+      const response = await fastify.dbChat.createGroup(userId,name,type)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.post('/chat/join/group', async (request, reply) => {
+    const { userId, groupId } = request.body
+
+    try {
+      const response = await fastify.dbChat.joinGroup(userId, groupId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.post('/chat/invite/group', async (request, reply) => {
+    const { fromUserId, toUserId, groupId } = request.body
+
+    try {
+      const response = await fastify.dbChat.invitGroup(fromUserId,toUserId,groupId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.post('/chat/invite/accept', async (request, reply) => {
+    const { userId, groupId } = request.body
+
+    try {
+      const response = await fastify.dbChat.acceptInvite(userId, groupId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.post('/chat/invite/refuse', async (request, reply) => {
+    const { userId, groupId } = request.body
+
+    try {
+      const response = await fastify.dbChat.refuseInvite(userId, groupId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  })
+
+  }, {
+  name: 'chatRoutes',
+  dependencies: ['chatAutoHooks']
+})

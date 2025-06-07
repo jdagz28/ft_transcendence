@@ -71,6 +71,24 @@ services:
       - backend
       - development
 
+  chat:
+    container_name: chat
+    build: ./chat
+    image: chat:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${CHAT_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - authentication
+      - backend
+      - development
+
   games:
     container_name: games
     build: ./games
