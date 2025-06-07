@@ -1,15 +1,30 @@
 import type { RouteParams } from "../router";
 
+async function getConfig(gameId: number){
+  const response = await fetch(`https://localhost:4242/games/${gameId}/details`, {
+    method: 'GET',
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch game config for ${gameId}`);
+  }
+  return await response.json();
+}
+
 export function renderGamePage(params: RouteParams): void {
-  const gameId = params.gameId;
+  const gameIdParam = params.gameId;
+  const gameId = typeof gameIdParam === 'string' ? parseInt(gameIdParam, 10) : gameIdParam;
   const mode = params.mode || 'local-multiplayer';
   
   console.log("Params:", params);
 
-  if (!gameId) {
-    document.body.innerHTML = `<h1 style="color:white;font-family:sans-serif">Missing gameId in URL!</h1>`;
+  if (typeof gameId !== 'number' || isNaN(gameId)) {
+    document.body.innerHTML = `<h1 style="color:white;font-family:sans-serif">Missing or invalid gameId in URL!</h1>`;
     return;
   }
+
+  const configPromise = getConfig(gameId);
+  console.log("configPromise", configPromise);
 
   let localGameState: any = null;
   let gameLoop: number | null = null;
