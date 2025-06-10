@@ -53,13 +53,13 @@ export async function renderGamePage(params: RouteParams) {
 
   leftNames.innerHTML = "";
   rightNames.innerHTML = "";
-  for (const p of config.players.filter((p: PlayerConfig) => p.paddle_side === "left")) { 
+  for (const p of config.players.filter((p: PlayerConfig) => p.paddle_loc === "left")) { 
     const el = document.createElement("div");
     el.textContent = p.username;
     el.className = "bg-white/20 px-2 py-1 rounded";
     leftNames.appendChild(el);
   }
-  for (const p of config.players.filter((p: PlayerConfig) => p.paddle_side === "right")) {  
+  for (const p of config.players.filter((p: PlayerConfig) => p.paddle_loc === "right")) {  
     const el = document.createElement("div");
     el.textContent = p.username;
     el.className = "bg-white/20 px-2 py-1 rounded";
@@ -89,7 +89,7 @@ export async function renderGamePage(params: RouteParams) {
   };
 
   function isLocalMode(mode: string): boolean {
-    return mode === "local-multiplayer" || mode === "single-player";
+    return mode === "local";
   }
 
   function createLocalGameState() {
@@ -98,8 +98,8 @@ export async function renderGamePage(params: RouteParams) {
       ball: { 
         x: canvasWidth / 2, 
         y: canvasHeight / 2, 
-        vx: 5, 
-        vy: 4, 
+        vx: 7, 
+        vy: 6, 
         width: 15 
       },
       players: {
@@ -164,8 +164,8 @@ export async function renderGamePage(params: RouteParams) {
   function resetBall(ball: any, state: any) {
     ball.x = state.canvasWidth / 2;
     ball.y = state.canvasHeight / 2;
-    ball.vx = Math.random() < 0.5 ? 5 : -5;
-    ball.vy = Math.random() < 0.5 ? 4 : -4;
+    ball.vx = Math.random() < 0.5 ? 7 : -7;
+    ball.vy = Math.random() < 0.5 ? 6 : -6;
   }
 
   function updatePaddles(state:any) {
@@ -201,11 +201,19 @@ export async function renderGamePage(params: RouteParams) {
     if (!gameLoop) gameLoop = requestAnimationFrame(gameLoopFn);
   }
 
-  document.addEventListener('keydown', e => { if(e.key in keys) keys[e.key as keyof typeof keys]=true; if(e.key==='Enter') localGameState.gameStarted=true; });
-  document.addEventListener('keyup',   e => { if(e.key in keys) keys[e.key as keyof typeof keys]=false; });
+  document.addEventListener('keydown', e => { 
+    if (e.key in keys) 
+      keys[e.key as keyof typeof keys] = true; 
+    if (e.key === 'Enter') 
+      localGameState.gameStarted = true; 
+  });
+  document.addEventListener('keyup',   e => { 
+    if (e.key in keys) 
+      keys[e.key as keyof typeof keys] = false; 
+  });
   canvas.onclick = () => localGameState.gameStarted = true;
 
-  if (isLocalMode(config.settings.mode)) {
+  if (isLocalMode(config.settings.game_type)) {
     localGameState = createLocalGameState();
     render(localGameState);
     startGame();
@@ -222,30 +230,48 @@ export async function renderGamePage(params: RouteParams) {
   }
 
   function drawStartMessage(ctx:CanvasRenderingContext2D, w:number, h:number) {
-    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,w,h);
-    ctx.fillStyle='white'; ctx.font='32px sans-serif'; ctx.textAlign='center'; ctx.fillText('Press ENTER or Click to Start', w/2, h/2);
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = 'white'; 
+    ctx.font = '32px sans-serif'; 
+    ctx.textAlign = 'center'; 
+    ctx.fillText('Press ENTER or Click to Start', w / 2, h / 2);
+    // ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', canvasWidth / 2, canvasHeight / 2 + 50); //! Create Condition; player_loc and player_side
   }
 
   function drawBall(ctx:CanvasRenderingContext2D, b:any) {
-    ctx.beginPath(); ctx.arc(b.x,b.y,b.width||15,0,2*Math.PI); ctx.fillStyle='white'; ctx.fill(); ctx.closePath();
+    ctx.beginPath(); 
+    ctx.arc(b.x, b.y, b.width || 15, 0, 2 * Math.PI); 
+    ctx.fillStyle = 'white'; 
+    ctx.fill(); 
+    ctx.closePath();
   }
 
-  function drawPaddles(ctx:CanvasRenderingContext2D, players: Record<string,{x:number,y:number,width:number,height:number}>) {
+  function drawPaddles(ctx:CanvasRenderingContext2D, players: Record<string,{x:number, y:number, width:number, height:number}>) {
     for (const p of Object.values(players)) {
-      ctx.fillStyle='white';
-      ctx.fillRect(p.x,p.y,p.width,p.height);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(p.x, p.y, p.width, p.height);
     }
   }
 
   function drawScore(ctx:CanvasRenderingContext2D, score:{p1:number,p2:number}, w:number) {
-    ctx.font='100px sans-serif'; ctx.fillStyle='white';
-    ctx.textAlign='right'; ctx.fillText(String(score.p1), w/2 - 50, 100);
-    ctx.textAlign='left';  ctx.fillText(String(score.p2), w/2 + 50, 100);
+    ctx.font = '100px sans-serif'; 
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'right'; 
+    ctx.fillText(String(score.p1), w / 2 - 50, 100);
+    ctx.textAlign = 'left';  
+    ctx.fillText(String(score.p2), w / 2 + 50, 100);
   }
 
   function drawCenterLine(ctx:CanvasRenderingContext2D, w:number, h:number) {
-    ctx.strokeStyle='white'; ctx.lineWidth=3; ctx.setLineDash([10,10]);
-    ctx.beginPath(); ctx.moveTo(w/2,0); ctx.lineTo(w/2,h); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = 'white'; 
+    ctx.lineWidth = 3; 
+    ctx.setLineDash([10,10]);
+    ctx.beginPath(); 
+    ctx.moveTo(w / 2,0); 
+    ctx.lineTo(w / 2,h); 
+    ctx.stroke(); 
+    ctx.setLineDash([]);
   }
 }
 
@@ -257,11 +283,22 @@ function drawMatchBalls(
 ) {
   const radius=10, spacing=30, yPos=140;
   const drawRow=(wins:number, x:number)=>{
-    for(let i=0;i<total;i++){const cx=x+i*spacing;ctx.beginPath();ctx.arc(cx,yPos,radius,0,2*Math.PI);
-      if(i<wins){ctx.fillStyle='white';ctx.fill();}else{ctx.strokeStyle='gray';ctx.lineWidth=2;ctx.stroke();}
+    for(let i = 0; i < total; i++) {
+      const cx = x + i * spacing;
+      ctx.beginPath();
+      ctx.arc(cx, yPos, radius, 0, 2 * Math.PI);
+
+      if (i < wins) { 
+        ctx.fillStyle = 'white';
+        ctx.fill();
+      } else { 
+        ctx.strokeStyle = 'gray';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
       ctx.closePath();}
   };
-  drawRow(score.p1, canvasWidth/2 - 50 - spacing*(total-1) - radius);
-  drawRow(score.p2, canvasWidth/2 + 50 + radius);
+  drawRow(score.p1, canvasWidth / 2 - 50 - spacing * (total - 1) - radius);
+  drawRow(score.p2, canvasWidth / 2 + 50 + radius);
 }
 
