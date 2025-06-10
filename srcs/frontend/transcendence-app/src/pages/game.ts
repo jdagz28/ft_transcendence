@@ -49,7 +49,8 @@ export async function renderGamePage(params: RouteParams) {
   }
 
   const config = await getConfig(gameId);
-  const totalGames = config.settings.num_games;
+  const totalGames = 3; //config.settings.num_games; //! For testing
+  const totalMatches = 3; //config.settings.num_matches; //! For testing
 
   leftNames.innerHTML = "";
   rightNames.innerHTML = "";
@@ -117,10 +118,12 @@ export async function renderGamePage(params: RouteParams) {
         }
       },
       score: { p1: 0, p2: 0 },
+      totalScore: { p1: 0, p2: 0 },
       canvasWidth, 
       canvasHeight,
       settings: config.settings,
-      gameStarted: false
+      gameStarted: false,
+      gameOver: false,
     };
   }
 
@@ -155,10 +158,27 @@ export async function renderGamePage(params: RouteParams) {
 
     if (ball.x < 0) {
       state.score.p2++;
-      resetBall(ball, state);
+      if (state.score.p2 == totalMatches) {
+        state.totalScore.p2++;
+        state.score.p2 = 0;
+      }
+      if (state.totalScore.p2 < totalGames) {
+        resetBall(ball, state);
+      } else {
+        state.gameOver = true;
+      }
+
     } else if (ball.x > state.canvasWidth) {
       state.score.p1++;
-      resetBall(ball, state);
+      if (state.score.p1 == totalMatches) {
+        state.totalScore.p1++;
+        state.score.p1 = 0;
+      }
+      if (state.totalScore.p1 < totalGames) {
+        resetBall(ball, state);
+      } else {
+        state.gameOver = true;
+      }
     }  
   }
   function resetBall(ball: any, state: any) {
@@ -194,7 +214,8 @@ export async function renderGamePage(params: RouteParams) {
       updatePaddles(localGameState);
     }
     render(localGameState);
-    gameLoop = requestAnimationFrame(gameLoopFn);
+    if (!localGameState.gameOver)
+      gameLoop = requestAnimationFrame(gameLoopFn);
   }
 
   function startGame() {
@@ -223,10 +244,13 @@ export async function renderGamePage(params: RouteParams) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
     drawCenterLine(ctx, canvasWidth, canvasHeight);
     drawScore(ctx, state.score, canvasWidth);
-    drawMatchBalls(ctx, state.score, totalGames, canvasWidth);
+    // if (totalGames > 0)
+    drawMatchBalls(ctx, state.totalScore, totalGames, canvasWidth);
     drawBall(ctx, state.ball);
     drawPaddles(ctx, state.players);
     if (!state.gameStarted) drawStartMessage(ctx, canvasWidth, canvasHeight);
+    if (state.totalScore.p1 == totalGames || state.totalScore.p2 == totalGames)
+      drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
   }
 
   function drawStartMessage(ctx:CanvasRenderingContext2D, w:number, h:number) {
@@ -273,32 +297,55 @@ export async function renderGamePage(params: RouteParams) {
     ctx.stroke(); 
     ctx.setLineDash([]);
   }
+
+  function drawMatchBalls(
+    ctx: CanvasRenderingContext2D,
+    score: { p1:number, p2:number },
+    total: number,
+    canvasWidth: number
+  ) {
+    const radius=10, spacing=30, yPos=140;
+    const drawRow=(wins:number, x:number)=>{
+      for(let i = 0; i < total; i++) {
+        const cx = x + i * spacing;
+        ctx.beginPath();
+        ctx.arc(cx, yPos, radius, 0, 2 * Math.PI);
+
+        if (i < wins) { 
+          ctx.fillStyle = 'white';
+          ctx.fill();
+        } else { 
+          ctx.strokeStyle = 'gray';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.closePath();}
+    };
+    
+    drawRow(score.p1, canvasWidth / 2 - 50 - spacing * (total - 1) - radius);
+    drawRow(score.p2, canvasWidth / 2 + 50 + radius);
+  }
+
+  function drawWinner(
+    ctx:CanvasRenderingContext2D, 
+    w:number, 
+    h:number, 
+    score: { p1:number, p2:number }
+  ) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = 'white'; 
+    ctx.font = '80px sans-serif'; 
+    ctx.textAlign = 'center'; 
+    let winner;
+    if (score.p1 >= totalGames)
+      winner = "Left paddle wins!";
+    else
+      winner = "Right paddle wins!";
+    ctx.fillText(winner, w / 2, h / 2);
+  }
 }
 
-function drawMatchBalls(
-  ctx: CanvasRenderingContext2D,
-  score: { p1:number, p2:number },
-  total: number,
-  canvasWidth: number
-) {
-  const radius=10, spacing=30, yPos=140;
-  const drawRow=(wins:number, x:number)=>{
-    for(let i = 0; i < total; i++) {
-      const cx = x + i * spacing;
-      ctx.beginPath();
-      ctx.arc(cx, yPos, radius, 0, 2 * Math.PI);
 
-      if (i < wins) { 
-        ctx.fillStyle = 'white';
-        ctx.fill();
-      } else { 
-        ctx.strokeStyle = 'gray';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-      ctx.closePath();}
-  };
-  drawRow(score.p1, canvasWidth / 2 - 50 - spacing * (total - 1) - radius);
-  drawRow(score.p2, canvasWidth / 2 + 50 + radius);
-}
 
+  
