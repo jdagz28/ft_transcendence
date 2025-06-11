@@ -28,7 +28,18 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       console.error(`error checking if user can join group: ${err.message}`)
       return reply.status(500).send({ error: `${err.message}` })
     }
-  })
+  }),
+
+  fastify.post('/chat/can-join/dm', async (request, reply) => {
+    const { fromUserId, toUserId } = request.body
+    try {
+      const response = await fastify.dbChat.joinDirectMessage(fromUserId, toUserId)
+      reply.send(response);
+    } catch(err) {
+      console.error(`error checking if user can join grouop: ${err.message}`)
+      return reply.status(500).send({ error: `${err.message}`})
+    }
+  }),
 
   fastify.post('/chat/send/dm', async (request, reply) => {
     const { fromUserId, groupId, message} = request.body
@@ -48,10 +59,10 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
   }),
 
   fastify.post('/chat/send/group', async (request, reply) => {
-    const {fromUserId, groupId, message} = request.body
+    const {fromUserId, room, message} = request.body
 
     try {
-      const  response = await fastify.dbChat.sendGroupMessage(fromUserId, groupId, message)
+      const  response = await fastify.dbChat.sendGroupMessage(fromUserId, room, message)
       return reply.send(response)
     } catch (err) {
       return reply.status(500).send({error: `${err.message}`})

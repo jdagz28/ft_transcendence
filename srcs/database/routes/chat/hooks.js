@@ -63,8 +63,25 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
     },
 
     async joinDirectMessage(userIdA, userIdB) {
+      if (!(await this.userExist(userIdA))) {
+        throw new Error(`User ${userIdA} does not exist`);
+      }
+      if (!(await this.userExist(userIdB))) {
+        throw new Error(`User ${userIdB} does not exist`);
+      }
       if (userIdA === userIdB) {
         throw new Error('Cannot join a conversation with self');
+      }
+
+      const blockQuery = fastify.db.prepare(`
+        SELECT 1 FROM user_blocks
+        WHERE (blocker_id = ? AND blocked_user_id = ?)
+          OR (blocker_id = ? AND blocked_user_id = ?)
+        LIMIT 1
+      `);
+      const isBlocked = blockQuery.get(userIdA, userIdB, userIdB, userIdA);
+      if (isBlocked) {
+        return { Permission: false, reason: 'One user has blocked the other' };
       }
 
       const existingConversationQuery = fastify.db.prepare(`
@@ -84,8 +101,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       } else {
         conversationId = existingConversation.id;
       }
-
-      //need to check bloqued
 
       return {Permission: true, Room: conversationId};
     },
@@ -147,7 +162,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return { success: true, messageId: result.lastInsertRowid }
     },
 
-    async sendGroupMessage(fromUserId, groupId, message) {
+    async sendGroupMessage(fromUserId, room, message) {
       if (!(await this.userExist(fromUserId))) {
         throw new Error(`User ${fromUserId} does not exist`);
       }
@@ -157,7 +172,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         WHERE id = ? AND type = 'group'
         LIMIT 1
       `);
-      const group = groupQuery.get(groupId);
+      const group = groupQuery.get(room);
       if (!group) {
         throw new Error('Group not found');
       }
@@ -167,7 +182,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         WHERE conversation_id = ? AND user_id = ?
         LIMIT 1
       `);
-      const member = memberQuery.get(groupId, fromUserId);
+      const member = memberQuery.get(room, fromUserId);
       if (!member) {
         throw new Error('User is not a member of this group');
       }
@@ -186,7 +201,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         INSERT INTO messages (sender_id, conversation_id, content)
         VALUES (?, ?, ?)
       `);
-      const result = insertQuery.run(fromUserId, groupId, message);
+      const result = insertQuery.run(fromUserId, room, message);
 
       return { success: true, messageId: result.lastInsertRowid };
     },
