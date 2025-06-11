@@ -44,6 +44,14 @@ export async function renderGamePage(params: RouteParams) {
   const totalGames = config.settings.num_games; 
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
+  const mode = config.settings.mode;
+
+  let humanSide: 'left' | 'right';
+  if (mode === "training" || mode === "single-player") {
+    if (config.players.length !== 1)
+      throw new Error('Player should only be 1.');
+    humanSide = config.players[0].paddle_loc as 'left' | 'right';
+  }
 
 
   leftNames.innerHTML = "";
@@ -80,22 +88,30 @@ export async function renderGamePage(params: RouteParams) {
   const controllers: Controller[] = [];
   const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
   const rightConfs = config.players.filter(p => p.paddle_loc === 'right');
-  leftConfs.forEach((p, idx) => {
-    if (leftConfs.length === 1) {
-      controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w', downKey: 's' });
-    } else {
-      if (idx === 0) controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w' });
-      else controllers.push({ playerId: p.player_id, side: 'left', downKey: 'l' });
-    }
-  });
-  rightConfs.forEach((p, idx) => {
-    if (rightConfs.length === 1) {
-      controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp', downKey: 'ArrowDown' });
-    } else {
-      if (idx === 0) controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp' });
-      else controllers.push({ playerId: p.player_id, side: 'right', downKey: 'Numpad5' });
-    }
-  });
+
+  if (leftConfs.length >= 1 && rightConfs.length >= 1)
+  {
+    leftConfs.forEach((p, idx) => {
+      if (leftConfs.length === 1) {
+        controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w', downKey: 's' });
+      } else {
+        if (idx === 0) controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w' });
+        else controllers.push({ playerId: p.player_id, side: 'left', downKey: 'l' });
+      }
+    });
+    rightConfs.forEach((p, idx) => {
+      if (rightConfs.length === 1) {
+        controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp', downKey: 'ArrowDown' });
+      } else {
+        if (idx === 0) controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp' });
+        else controllers.push({ playerId: p.player_id, side: 'right', downKey: 'Numpad5' });
+      }
+    });
+  } else if (leftConfs.length == 1 || rightConfs.length == 1) {
+    leftConfs.forEach(p => {
+      controllers.push({ playerId: p.player_id, side: humanSide, upKey: 'ArrowUp', downKey: 'ArrowDown' });
+    });
+  }
 
   
   const paddleWidth = 25;
@@ -283,7 +299,7 @@ export async function renderGamePage(params: RouteParams) {
     else if (totalPlayers == 4)
       ctx.fillText('Left Paddle 1: W / L | Right Paddle: Arrow Up / Numpad 5', w / 2, h / 2 + 50); 
     else
-      ctx.fillText('Player 1: W/S keys', w / 2, h / 2 + 50); 
+      ctx.fillText('Player 1: Arrow Up/Down keys', w / 2, h / 2 + 50); 
   }
 
   function drawBall(ctx:CanvasRenderingContext2D, b:any) {
