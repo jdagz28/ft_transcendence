@@ -198,7 +198,7 @@ export async function renderGamePage(params: RouteParams) {
         state.totalScore.right++;
         state.score.right = 0;
       }
-      if (state.totalScore.right < totalGames) {
+      if (state.totalScore.right < totalGames || mode == "training") {
         resetBall(ball, state);
       } else {
         state.gameOver = true;
@@ -210,7 +210,7 @@ export async function renderGamePage(params: RouteParams) {
         state.totalScore.left++;
         state.score.left = 0;
       }
-      if (state.totalScore.left < totalGames) {
+      if (state.totalScore.left < totalGames || mode == "training") {
         resetBall(ball, state);
       } else {
         state.gameOver = true;
@@ -261,7 +261,7 @@ export async function renderGamePage(params: RouteParams) {
       localGameState.gameStarted = true; 
   });
  
-  document.addEventListener('keyup',   e => { 
+  document.addEventListener('keyup', e => { 
     const k = e.key;
     const c = e.code;
     if (k in keyState) 
@@ -277,13 +277,15 @@ export async function renderGamePage(params: RouteParams) {
   function render(state:any) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
     drawCenterLine(ctx, canvasWidth, canvasHeight);
-    drawScore(ctx, state.score, canvasWidth);
-    // if (totalGames > 0)
-    drawMatchBalls(ctx, state.totalScore, totalGames, canvasWidth);
+    if (mode !== "training") {
+      drawScore(ctx, state.score, canvasWidth);
+      if (totalGames > 0)
+        drawMatchBalls(ctx, state.totalScore, totalGames, canvasWidth);
+    }
     drawBall(ctx, state.ball);
     drawPaddles(ctx, state.players);
     if (!state.gameStarted) drawStartMessage(ctx, canvasWidth, canvasHeight);
-    if (state.totalScore.left == totalGames || state.totalScore.right == totalGames)
+    if ((state.totalScore.left == totalGames || state.totalScore.right == totalGames) && mode != "training")
       drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
   }
 
