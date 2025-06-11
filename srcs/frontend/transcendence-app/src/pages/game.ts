@@ -1,88 +1,153 @@
 import type { RouteParams } from "../router";
+import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
+import { getConfig } from "../api/gameService";
 
-export function renderGamePage(params: RouteParams): void {
-  const gameId = params.gameId;
-  const mode = params.mode || 'local-multiplayer';
-  
-  console.log("Params:", params);
+function setupDom(root: HTMLElement): GamePageElements {
+  root.innerHTML = "";
 
-  if (!gameId) {
-    document.body.innerHTML = `<h1 style="color:white;font-family:sans-serif">Missing gameId in URL!</h1>`;
+  const container = document.createElement('main');
+  container.id = 'game-container';
+  container.className = "relative w-full h-screen bg-black overflow-hidden";
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'pong-canvas';
+  canvas.className = "w-full h-full";
+  container.appendChild(canvas);
+
+  const leftNames = document.createElement('div');
+  leftNames.id = 'paddle-left-names';
+  leftNames.className = "absolute top-4 left-4 flex flex-col space-y-1 text-white font-sans text-lg";
+  container.appendChild(leftNames);
+
+  const rightNames = document.createElement('div');
+  rightNames.id = 'paddle-right-names';
+  rightNames.className = "absolute top-4 right-4 flex flex-col space-y-1 text-white font-sans text-lg";
+  container.appendChild(rightNames);
+
+  root.appendChild(container);
+  return { container, canvas, leftNames, rightNames}
+}
+
+export async function renderGamePage(params: RouteParams) {
+  const app = document.getElementById("app")!;
+  const { canvas, leftNames, rightNames } = setupDom(app);
+  const ctx = canvas.getContext("2d")!;
+
+  const rawId = params.gameId;
+  const gameId = typeof rawId === "string" ? parseInt(rawId, 10) : (rawId ?? NaN);
+  if (isNaN(gameId)) {
+    app.innerHTML = `<h1 class="text-white font-sans">Missing or invalid gameId!</h1>`;
     return;
   }
 
-  let localGameState: any = null;
-  let gameLoop: number | null = null;
-  
-  const currentKeys = {
-    w: false,
-    s: false,
-    ArrowUp: false,
-    ArrowDown: false
-  };
+  const config: GameDetails = await getConfig(gameId);
+  const totalGames = config.settings.num_games; 
+  const totalMatches = config.settings.num_matches;
+  const totalPlayers = config.settings.max_players;
 
-  const canvas = document.createElement('canvas');
-  document.body.appendChild(canvas);
-  const ctx = canvas.getContext('2d')!;
+
+  leftNames.innerHTML = "";
+  rightNames.innerHTML = "";
+  for (const p of config.players.filter((p: PlayerConfig) => p.paddle_loc === "left")) { 
+    const el = document.createElement("div");
+    el.textContent = p.username;
+    el.className = "bg-white/20 px-2 py-1 rounded";
+    leftNames.appendChild(el);
+  }
+  for (const p of config.players.filter((p: PlayerConfig) => p.paddle_loc === "right")) {  
+    const el = document.createElement("div");
+    el.textContent = p.username;
+    el.className = "bg-white/20 px-2 py-1 rounded";
+    rightNames.appendChild(el);
+  }
 
   let canvasWidth = window.innerWidth;
   let canvasHeight = window.innerHeight;
-
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
   canvas.style.backgroundColor = 'black';
 
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     canvasWidth = window.innerWidth;
     canvasHeight = window.innerHeight;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
-    
-    if (isLocalMode(mode) && localGameState) {
-      localGameState.canvasWidth = canvasWidth;
-      localGameState.canvasHeight = canvasHeight;
+  });
+
+  let localGameState: GameState;
+  let gameLoop: number | null = null;
+
+  const controllers: Controller[] = [];
+  const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
+  const rightConfs = config.players.filter(p => p.paddle_loc === 'right');
+  leftConfs.forEach((p, idx) => {
+    if (leftConfs.length === 1) {
+      controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w', downKey: 's' });
+    } else {
+      if (idx === 0) controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w' });
+      else controllers.push({ playerId: p.player_id, side: 'left', downKey: 'l' });
+    }
+  });
+  rightConfs.forEach((p, idx) => {
+    if (rightConfs.length === 1) {
+      controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp', downKey: 'ArrowDown' });
+    } else {
+      if (idx === 0) controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp' });
+      else controllers.push({ playerId: p.player_id, side: 'right', downKey: 'Numpad5' });
     }
   });
 
-  function isLocalMode(mode: string): boolean {
-    return mode === 'local-multiplayer' || mode === 'single-player';
+  
+  const paddleWidth = 25;
+  const paddleHeight = 200;
+  const margin = 50;
+  const state: GameState = {
+    ball: { 
+      x: canvasWidth / 2, 
+      y: canvasHeight / 2, 
+      vx: 7, 
+      vy: 6, 
+      width: 15 
+    },
+    players: [
+      { 
+        id: -1, 
+        side: 'left', 
+        x: margin,                         
+        y: canvasHeight / 2 - paddleHeight / 2, 
+        width: paddleWidth,  
+        height: paddleHeight 
+      },
+      { 
+        id: -1, 
+        side: 'right', 
+        x: canvasWidth - margin - paddleWidth, 
+        y: canvasHeight / 2 - paddleHeight / 2, 
+        width: paddleWidth,  
+        height: paddleHeight 
+      },
+    ],
+    score: { left: 0, right: 0 },
+    totalScore: { left: 0, right: 0 }, 
+    canvasWidth, 
+    canvasHeight,
+    settings: config.settings,
+    gameStarted: false,
+    gameOver: false,
   }
 
-  function createLocalGameState(): any {
-    const paddleHeight = 200;
-    const paddleWidth = 25;
-    
-    return {
-      ball: { 
-        x: canvasWidth / 2, 
-        y: canvasHeight / 2, 
-        vx: 5, 
-        vy: 4, 
-        width: 15 
-      },
-      players: { 
-        p1: { 
-          x: 50, 
-          y: canvasHeight / 2 - paddleHeight / 2, 
-          width: paddleWidth, 
-          height: paddleHeight 
-        },
-        p2: { 
-          x: canvasWidth - 50 - paddleWidth, 
-          y: canvasHeight / 2 - paddleHeight / 2, 
-          width: paddleWidth, 
-          height: paddleHeight 
-        } 
-      },
-      score: { p1: 0, p2: 0 },
-      canvasWidth,
-      canvasHeight,
-      gameStarted: false,
-      mode: mode
-    };
-  }
+  localGameState = state;
 
-  function stepLocalPhysics(state: any) {
+  const keyState: Record<string, boolean> = {};
+  controllers.forEach(c => { 
+    if(c.upKey) 
+      keyState[c.upKey] = false; 
+    if(c.downKey) 
+      keyState[c.downKey] = false; 
+  });
+
+
+  function stepLocalPhysics(state: GameState) {
     const ball = state.ball;
     ball.x += ball.vx;
     ball.y += ball.vy;
@@ -92,179 +157,215 @@ export function renderGamePage(params: RouteParams): void {
       ball.y = Math.max(ball.width, Math.min(state.canvasHeight - ball.width, ball.y));
     }
 
-    const p1 = state.players.p1;
-    const p2 = state.players.p2;
+    const left  = state.players.find(p => p.side === 'left')!;
+    const right = state.players.find(p => p.side === 'right')!;
 
-    if (ball.x - ball.width <= p1.x + p1.width && 
-        ball.y >= p1.y && 
-        ball.y <= p1.y + p1.height &&
+    if (ball.x - ball.width <= left.x + left.width && 
+        ball.y >= left.y && 
+        ball.y <= left.y + left.height &&
         ball.vx < 0) {
       ball.vx *= -1;
-      ball.x = p1.x + p1.width + ball.width;
+      ball.x = left.x + left.width + ball.width;
     }
 
-    if (ball.x + ball.width >= p2.x && 
-        ball.y >= p2.y && 
-        ball.y <= p2.y + p2.height &&
+    if (ball.x + ball.width >= right.x && 
+        ball.y >= right.y && 
+        ball.y <= right.y + right.height &&
         ball.vx > 0) {
       ball.vx *= -1;
-      ball.x = p2.x - ball.width;
+      ball.x = right.x - ball.width;
     }
 
     if (ball.x < 0) {
-      state.score.p2++;
-      resetLocalBall(ball, state);
+      state.score.right++;
+      if (state.score.right == totalMatches) {
+        state.totalScore.right++;
+        state.score.right = 0;
+      }
+      if (state.totalScore.right < totalGames) {
+        resetBall(ball, state);
+      } else {
+        state.gameOver = true;
+      }
+
     } else if (ball.x > state.canvasWidth) {
-      state.score.p1++;
-      resetLocalBall(ball, state);
-    }
+      state.score.left++;
+      if (state.score.left == totalMatches) {
+        state.totalScore.left++;
+        state.score.left = 0;
+      }
+      if (state.totalScore.left < totalGames) {
+        resetBall(ball, state);
+      } else {
+        state.gameOver = true;
+      }
+    }  
   }
 
-  function resetLocalBall(ball: any, state: any) {
+  function resetBall(ball: any, state: any) {
     ball.x = state.canvasWidth / 2;
     ball.y = state.canvasHeight / 2;
-    ball.vx = Math.random() < 0.5 ? 5 : -5;
-    ball.vy = Math.random() < 0.5 ? 4 : -4;
+    ball.vx = Math.random() < 0.5 ? 7 : -7;
+    ball.vy = Math.random() < 0.5 ? 6 : -6;
   }
 
-  function updateLocalPaddles(state: any, keys: any) {
+  function updatePaddles(state:any) {
     const paddleSpeed = 8;
-    const p1 = state.players.p1;
-    const p2 = state.players.p2;
-
-    if (keys.w && p1.y > 0) {
-      p1.y = Math.max(0, p1.y - paddleSpeed);
-    }
-    if (keys.s && p1.y < state.canvasHeight - p1.height) {
-      p1.y = Math.min(state.canvasHeight - p1.height, p1.y + paddleSpeed);
-    }
-
-    if (keys.ArrowUp && p2.y > 0) {
-      p2.y = Math.max(0, p2.y - paddleSpeed);
-    }
-    if (keys.ArrowDown && p2.y < state.canvasHeight - p2.height) {
-      p2.y = Math.min(state.canvasHeight - p2.height, p2.y + paddleSpeed);
+    for (const ctrl of controllers) {
+      const paddle = state.players.find((p: LocalPlayer) => p.side === ctrl.side)!;
+      if (ctrl.upKey && keyState[ctrl.upKey])   
+        paddle.y = Math.max(0, paddle.y - paddleSpeed);
+      if (ctrl.downKey && keyState[ctrl.downKey]) 
+        paddle.y = Math.min(state.canvasHeight - paddle.height, paddle.y + paddleSpeed);
     }
   }
 
-  function startLocalGameLoop() {
-    if (gameLoop) return;
-    
-    function loop() {
-      if (localGameState && localGameState.gameStarted) {
-        stepLocalPhysics(localGameState);
-        updateLocalPaddles(localGameState, currentKeys);
-      }
-      
-      if (localGameState) {
-        render(localGameState);
-      }
-      
-      gameLoop = requestAnimationFrame(loop);
+  function gameLoopFn() {
+    if (localGameState.gameStarted) {
+      stepLocalPhysics(localGameState);
+      updatePaddles(localGameState);
     }
-    
-    gameLoop = requestAnimationFrame(loop);
-  }
-
-  function setupLocalInputHandlers() {
-    document.addEventListener('keydown', (e) => {
-      if (e.key in currentKeys) {
-        currentKeys[e.key as keyof typeof currentKeys] = true;
-      }
-      
-      if (e.key === 'Enter' && localGameState && !localGameState.gameStarted) {
-        localGameState.gameStarted = true;
-      }
-    });
-
-    document.addEventListener('keyup', (e) => {
-      if (e.key in currentKeys) {
-        currentKeys[e.key as keyof typeof currentKeys] = false;
-      }
-    });
-
-    canvas.onclick = () => {
-      if (localGameState && !localGameState.gameStarted) {
-        localGameState.gameStarted = true;
-      }
-    };
-  }
-
-  if (isLocalMode(mode)) {
-    localGameState = createLocalGameState();
     render(localGameState);
-    setupLocalInputHandlers();
-    startLocalGameLoop();
+    if (!localGameState.gameOver)
+      gameLoop = requestAnimationFrame(gameLoopFn);
   }
 
-  function render(state: any) {
-    try {
-
-      if (!state) {
-        console.warn("⚠️ Cannot render - no state provided");
-        return;
-      }
-
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      drawCenterLine();
-      
-      if (state.ball) drawBall(state.ball);
-      if (state.players) drawPaddles(state.players);
-      if (state.score) drawScore(state.score);
-      if (!state.gameStarted) {
-        drawStartMessage();
-      }
-    } catch (err) {
-      console.error("❌ Render error:", err);
-      console.error("❌ Invalid state:", state);
-    }
+  function startGame() {
+    if (!gameLoop) gameLoop = requestAnimationFrame(gameLoopFn);
   }
 
-  function drawStartMessage() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    
-    ctx.fillStyle = 'white';
-    ctx.font = '32px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Press ENTER or Click to Start', canvasWidth / 2, canvasHeight / 2);
-    ctx.font = '16px sans-serif';
-    
-    ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', canvasWidth / 2, canvasHeight / 2 + 50);
+  document.addEventListener('keydown', e => { 
+    const k = e.key;
+    const c = e.code;
+    if (k in keyState) 
+      keyState[k] = true;
+    if (c in keyState) 
+      keyState[c] = true; 
+    if (e.key === 'Enter') 
+      localGameState.gameStarted = true; 
+  });
+ 
+  document.addEventListener('keyup',   e => { 
+    const k = e.key;
+    const c = e.code;
+    if (k in keyState) 
+      keyState[k] = false;
+    if (c in keyState) 
+      keyState[c] = false;
+  });
+  canvas.onclick = () => localGameState.gameStarted = true;
+
+  render(localGameState);
+  startGame();  
+
+  function render(state:any) {
+    ctx.clearRect(0,0,canvasWidth,canvasHeight);
+    drawCenterLine(ctx, canvasWidth, canvasHeight);
+    drawScore(ctx, state.score, canvasWidth);
+    // if (totalGames > 0)
+    drawMatchBalls(ctx, state.totalScore, totalGames, canvasWidth);
+    drawBall(ctx, state.ball);
+    drawPaddles(ctx, state.players);
+    if (!state.gameStarted) drawStartMessage(ctx, canvasWidth, canvasHeight);
+    if (state.totalScore.left == totalGames || state.totalScore.right == totalGames)
+      drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
   }
 
-  function drawBall(ball: any) {
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.width || 15, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
+  function drawStartMessage(ctx:CanvasRenderingContext2D, w:number, h:number) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = 'white'; 
+    ctx.font = '32px sans-serif'; 
+    ctx.textAlign = 'center'; 
+    ctx.fillText('Press ENTER or Click to Start', w / 2, h / 2);
+    if (totalPlayers == 2)
+      ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', w / 2, h / 2 + 50); 
+    else if (totalPlayers == 4)
+      ctx.fillText('Left Paddle 1: W / L | Right Paddle: Arrow Up / Numpad 5', w / 2, h / 2 + 50); 
+    else
+      ctx.fillText('Player 1: W/S keys', w / 2, h / 2 + 50); 
+  }
+
+  function drawBall(ctx:CanvasRenderingContext2D, b:any) {
+    ctx.beginPath(); 
+    ctx.arc(b.x, b.y, b.width || 15, 0, 2 * Math.PI); 
+    ctx.fillStyle = 'white'; 
+    ctx.fill(); 
     ctx.closePath();
   }
 
-  function drawPaddles(players: Record<string, any>) {
-    for (const player of Object.values(players)) {
-      ctx.fillStyle = 'white';
-      ctx.fillRect(player.x, player.y, player.width, player.height);
+  function drawPaddles( ctx: CanvasRenderingContext2D, players: LocalPlayer[]) {
+    ctx.fillStyle = 'white';
+    for (const p of players) {
+      ctx.fillRect(p.x, p.y, p.width, p.height);
     }
   }
 
-  function drawScore(score: { p1: number; p2: number }) {
-    ctx.font = '100px sans-serif';
+  function drawScore(ctx:CanvasRenderingContext2D, score: Record<'left'|'right', number>, w:number) {
+    ctx.font = '100px sans-serif'; 
     ctx.fillStyle = 'white';
-    ctx.textAlign = 'right';
-    ctx.fillText(String(score.p1), canvasWidth / 2 - 50, 100);
-    ctx.textAlign = 'left';
-    ctx.fillText(String(score.p2), canvasWidth / 2 + 50, 100);
+    ctx.textAlign = 'right'; 
+    ctx.fillText(String(score.left), w / 2 - 50, 100);
+    ctx.textAlign = 'left';  
+    ctx.fillText(String(score.right), w / 2 + 50, 100);
   }
 
-  function drawCenterLine() {
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([10, 10]);
-    ctx.beginPath();
-    ctx.moveTo(canvasWidth / 2, 0);
-    ctx.lineTo(canvasWidth / 2, canvasHeight);
-    ctx.stroke();
+  function drawCenterLine(ctx:CanvasRenderingContext2D, w:number, h:number) {
+    ctx.strokeStyle = 'white'; 
+    ctx.lineWidth = 3; 
+    ctx.setLineDash([10,10]);
+    ctx.beginPath(); 
+    ctx.moveTo(w / 2,0); 
+    ctx.lineTo(w / 2,h); 
+    ctx.stroke(); 
     ctx.setLineDash([]);
   }
+
+  function drawMatchBalls(
+    ctx: CanvasRenderingContext2D,
+    score: { left:number, right:number },
+    total: number,
+    canvasWidth: number
+  ) {
+    const radius=10, spacing=30, yPos=140;
+    const drawRow=(wins:number, x:number)=>{
+      for(let i = 0; i < total; i++) {
+        const cx = x + i * spacing;
+        ctx.beginPath();
+        ctx.arc(cx, yPos, radius, 0, 2 * Math.PI);
+
+        if (i < wins) { 
+          ctx.fillStyle = 'white';
+          ctx.fill();
+        } else { 
+          ctx.strokeStyle = 'gray';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.closePath();}
+    };
+    
+    drawRow(score.left, canvasWidth / 2 - 50 - spacing * (total - 1) - radius);
+    drawRow(score.right, canvasWidth / 2 + 50 + radius);
+  }
+
+  function drawWinner(
+    ctx:CanvasRenderingContext2D, 
+    w:number, 
+    h:number, 
+    score: { left:number, right:number }
+  ) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = 'white'; 
+    ctx.font = '80px sans-serif'; 
+    ctx.textAlign = 'center'; 
+    let winner;
+    if (score.left >= totalGames)
+      winner = "Left paddle wins!";
+    else
+      winner = "Right paddle wins!";
+    ctx.fillText(winner, w / 2, h / 2);
+  }
 }
+
