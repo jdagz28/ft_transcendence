@@ -23,3 +23,39 @@ export interface GameDetails {
   settings: GameSettings;
   players: PlayerConfig[];
 }
+
+
+export interface GamePageElements {
+  container: HTMLElement;
+  canvas: HTMLCanvasElement;
+  leftNames: HTMLElement;
+  rightNames: HTMLElement;
+}
+
+export interface LocalPlayer {
+  id: number;
+  side: 'left' | 'right';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface Controller {
+  playerId: number;
+  side: 'left' | 'right';
+  upKey?: string;
+  downKey?: string;
+}
+
+export interface GameState {
+  ball: { x: number; y: number; vx: number; vy: number; width: number };
+  players: LocalPlayer[];
+  score: Record<'left'|'right', number>;   
+  totalScore: Record<'left'|'right', number>; 
+  canvasWidth: number;
+  canvasHeight: number;
+  settings: GameSettings;
+  gameStarted: boolean;
+  gameOver: boolean;
+}
