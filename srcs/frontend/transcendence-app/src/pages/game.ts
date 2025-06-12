@@ -1,6 +1,7 @@
 import type { RouteParams } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
 import { getConfig } from "../api/gameService";
+import { AIOpponent } from "../class/aiOpponent";
 
 function setupDom(root: HTMLElement): GamePageElements {
   root.innerHTML = "";
@@ -44,6 +45,14 @@ export async function renderGamePage(params: RouteParams) {
   const totalGames = config.settings.num_games; 
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
+  const mode = config.settings.mode;
+
+  let humanSide: 'left' | 'right' | undefined;
+  if (mode === "training" || mode === "single-player") {
+    if (config.players.length !== 1)
+      throw new Error('Player should only be 1.');
+    humanSide = config.players[0].paddle_loc as 'left' | 'right';
+  }
 
 
   leftNames.innerHTML = "";
@@ -76,28 +85,7 @@ export async function renderGamePage(params: RouteParams) {
 
   let localGameState: GameState;
   let gameLoop: number | null = null;
-
-  const controllers: Controller[] = [];
-  const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
-  const rightConfs = config.players.filter(p => p.paddle_loc === 'right');
-  leftConfs.forEach((p, idx) => {
-    if (leftConfs.length === 1) {
-      controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w', downKey: 's' });
-    } else {
-      if (idx === 0) controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w' });
-      else controllers.push({ playerId: p.player_id, side: 'left', downKey: 'l' });
-    }
-  });
-  rightConfs.forEach((p, idx) => {
-    if (rightConfs.length === 1) {
-      controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp', downKey: 'ArrowDown' });
-    } else {
-      if (idx === 0) controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp' });
-      else controllers.push({ playerId: p.player_id, side: 'right', downKey: 'Numpad5' });
-    }
-  });
-
-  
+    
   const paddleWidth = 25;
   const paddleHeight = 200;
   const margin = 50;
@@ -138,6 +126,56 @@ export async function renderGamePage(params: RouteParams) {
 
   localGameState = state;
 
+  const controllers: Controller[] = [];
+  const aiOpponents: AIOpponent[] = [];
+
+  if (mode === "single-player" || mode === "training") {
+    const human = config.players[0];
+    const humanSide = human.paddle_loc as "left" | "right";
+    const aiSide    = humanSide === "left" ? "right" : "left";
+
+    controllers.push({
+      playerId: human.player_id,
+      side:     humanSide,
+      upKey:    "ArrowUp",
+      downKey:  "ArrowDown",
+    });
+
+    controllers.push({
+      playerId: -1,
+      side:     aiSide,
+      upKey:    "w",
+      downKey:  "s",
+    });
+  } else {
+    const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
+    const rightConfs = config.players.filter(p => p.paddle_loc === 'right');
+
+    if (leftConfs.length >= 1 && rightConfs.length >= 1)
+    {
+      leftConfs.forEach((p, idx) => {
+        if (leftConfs.length === 1) {
+          controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w', downKey: 's' });
+        } else {
+          if (idx === 0) controllers.push({ playerId: p.player_id, side: 'left', upKey: 'w' });
+          else controllers.push({ playerId: p.player_id, side: 'left', downKey: 'l' });
+        }
+      });
+      rightConfs.forEach((p, idx) => {
+        if (rightConfs.length === 1) {
+          controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp', downKey: 'ArrowDown' });
+        } else {
+          if (idx === 0) controllers.push({ playerId: p.player_id, side: 'right', upKey: 'ArrowUp' });
+          else controllers.push({ playerId: p.player_id, side: 'right', downKey: 'Numpad5' });
+        }
+      });
+    } else if (leftConfs.length == 1 || rightConfs.length == 1) {
+      leftConfs.forEach(p => {
+        controllers.push({ playerId: p.player_id, side: humanSide!, upKey: 'ArrowUp', downKey: 'ArrowDown' });
+      });
+    }
+  }
+
   const keyState: Record<string, boolean> = {};
   controllers.forEach(c => { 
     if(c.upKey) 
@@ -145,6 +183,11 @@ export async function renderGamePage(params: RouteParams) {
     if(c.downKey) 
       keyState[c.downKey] = false; 
   });
+
+  if (mode === "single-player" || mode === "training") {
+    const aiCtrl = controllers[1];
+    aiOpponents.push(new AIOpponent(localGameState, aiCtrl, keyState));
+  }
 
 
   function stepLocalPhysics(state: GameState) {
@@ -182,7 +225,7 @@ export async function renderGamePage(params: RouteParams) {
         state.totalScore.right++;
         state.score.right = 0;
       }
-      if (state.totalScore.right < totalGames) {
+      if (state.totalScore.right < totalGames || mode == "training") {
         resetBall(ball, state);
       } else {
         state.gameOver = true;
@@ -194,7 +237,7 @@ export async function renderGamePage(params: RouteParams) {
         state.totalScore.left++;
         state.score.left = 0;
       }
-      if (state.totalScore.left < totalGames) {
+      if (state.totalScore.left < totalGames || mode == "training") {
         resetBall(ball, state);
       } else {
         state.gameOver = true;
@@ -220,8 +263,9 @@ export async function renderGamePage(params: RouteParams) {
     }
   }
 
-  function gameLoopFn() {
+  function gameLoopFn(ts: number) {
     if (localGameState.gameStarted) {
+      aiOpponents.forEach(ai => ai.think(ts));
       stepLocalPhysics(localGameState);
       updatePaddles(localGameState);
     }
@@ -245,7 +289,7 @@ export async function renderGamePage(params: RouteParams) {
       localGameState.gameStarted = true; 
   });
  
-  document.addEventListener('keyup',   e => { 
+  document.addEventListener('keyup', e => { 
     const k = e.key;
     const c = e.code;
     if (k in keyState) 
@@ -261,13 +305,15 @@ export async function renderGamePage(params: RouteParams) {
   function render(state:any) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
     drawCenterLine(ctx, canvasWidth, canvasHeight);
-    drawScore(ctx, state.score, canvasWidth);
-    // if (totalGames > 0)
-    drawMatchBalls(ctx, state.totalScore, totalGames, canvasWidth);
+    if (mode !== "training") {
+      drawScore(ctx, state.score, canvasWidth);
+      if (totalGames > 0)
+        drawMatchBalls(ctx, state.totalScore, totalGames, canvasWidth);
+    }
     drawBall(ctx, state.ball);
     drawPaddles(ctx, state.players);
     if (!state.gameStarted) drawStartMessage(ctx, canvasWidth, canvasHeight);
-    if (state.totalScore.left == totalGames || state.totalScore.right == totalGames)
+    if ((state.totalScore.left == totalGames || state.totalScore.right == totalGames) && mode != "training")
       drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
   }
 
@@ -283,7 +329,7 @@ export async function renderGamePage(params: RouteParams) {
     else if (totalPlayers == 4)
       ctx.fillText('Left Paddle 1: W / L | Right Paddle: Arrow Up / Numpad 5', w / 2, h / 2 + 50); 
     else
-      ctx.fillText('Player 1: W/S keys', w / 2, h / 2 + 50); 
+      ctx.fillText('Player 1: Arrow Up/Down keys', w / 2, h / 2 + 50); 
   }
 
   function drawBall(ctx:CanvasRenderingContext2D, b:any) {
@@ -366,6 +412,7 @@ export async function renderGamePage(params: RouteParams) {
     else
       winner = "Right paddle wins!";
     ctx.fillText(winner, w / 2, h / 2);
+    //! post game stats to backend
   }
 }
 
