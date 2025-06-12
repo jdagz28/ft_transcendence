@@ -19,4 +19,5 @@ module.exports = fp(async function schemaLoaderPlugin (fastify, opts) {
   fastify.addSchema(require('./removeFriend.json'))
   fastify.addSchema(require('./createOAuthUser.json'))
   fastify.addSchema(require('./OAuthGetUser.json'))
+  fastify.addSchema(require('./setMfa.json'))
 })

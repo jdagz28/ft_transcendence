@@ -3,6 +3,7 @@
 const fp = require('fastify-plugin')
 const bcrypt = require('bcrypt')
 const axios = require('axios')
+const speakeasy = require('speakeasy')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
@@ -303,8 +304,50 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/auth/:userId/mfa/generate', {
+      onRequest: [fastify.authenticate],
+      handler: async function generateMFAsecret(request, reply) {
+        const userId = request.user.id
+        const username = request.user.username
+        try {
+          const secret = speakeasy.generateSecret({
+            name: `ft_transcendence (${username})`
+          })
+          // console.log(secret.base32) //! DELETE
+          console.log(`Generated MFA secret for user ${userId}:`, secret.base32) //! DELETE
+          await fastify.usersDataSource.setMfaSecret(userId, secret.base32);
+          return reply.send({ secret: secret.base32 })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to generate mfa token for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
+        }
+      }
+    })
+
+    fastify.put('/auth/:userId/mfa/enable', {
+      onRequest: [ fastify.authenticate ],
+      handler: async function enableMFAhandler(request, reply) {
+        const { token } = request.body;
+        const userId    = request.params.userId;
+        const user      = await fastify.usersDataSource.readUserMfa(userId);
+        const response = speakeasy.totp.verify({
+          secret:   user.mfa_secret,
+          encoding: 'base32',
+          token,
+          window: 1
+        });
+        if (!response) {
+          return reply.status(401).send({ error: 'Invalid MFA token' });
+        }
+
+      }
+    })
+      
+
+      
+    
+
   }, {
     name: 'auth-routes',
     dependencies: [ 'authAutoHooks']
 })
-

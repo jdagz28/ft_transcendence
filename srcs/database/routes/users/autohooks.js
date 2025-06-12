@@ -359,6 +359,43 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`getFriends error: ${err.message}`)
         throw new Error('Get friends failed')
       }
+    },
+
+    async setMfaSecret(userId, secret) { 
+      try {
+        const query = fastify.db.prepare(`
+          UPDATE users SET mfa_secret = ? WHERE id = ?
+        `)
+        const result = query.run(secret, userId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA secret for user ${userId}`)
+          throw new Error('MFA secret update failed')
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`setMfaSecret error: ${err.message}`)
+        throw new Error('Set MFA secret failed')
+      }
+    },
+
+    async getUserMfa(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT mfa_secret, has_mfa FROM users WHERE id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          fastify.log.error(`User not found: ${userId}`)
+          throw new Error('User not found')
+        }
+        return {
+          mfa_secret: row.mfa_secret,
+          has_mfa: row.has_mfa
+        }
+      } catch (err) {
+        fastify.log.error(`getUserMfa error: ${err.message}`)
+        throw new Error('Get user MFA failed')
+      }
     }
 
   })

@@ -310,6 +310,37 @@ module.exports = fp(
       }
     })
 
+    fastify.put('/users/:userId/mfa', {
+      schema: {
+        body: fastify.getSchema('schema:users:setMfa')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function setMfaSecretHandler(request, reply) {
+        try {
+          const { userId } = request.params
+          const { secret } = request.body
+          await fastify.dbUsers.setMfaSecret(userId, secret)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA secret: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA secret' })
+        }
+      }
+    })
+    
+    fastify.get('/users/:userId/mfa', {
+      handler: async function getMfaHandler(request, reply) {
+        try {
+          const { userId } = request.params
+          const mfaData = await fastify.dbUsers.getUserMfa(userId)
+          return reply.send(mfaData)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA data: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA data' })
+        }
+      }
+    })
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']

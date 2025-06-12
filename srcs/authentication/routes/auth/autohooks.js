@@ -12,7 +12,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async readUser(usernameORemail) {
       try {
         console.log('Looking for:', usernameORemail)
-        const response = await axios.get(`http://database:1919/users/search/${usernameORemail}`)
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/search/${usernameORemail}`)
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -26,7 +26,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async createUser(user) {
       try {
         const { username, password, salt, email } = user
-        const response = await axios.post('http://database:1919/users', user)
+        const response = await axios.post(`http://database:${process.env.DB_PORT}/users`, user)
         return response.data.userId
       } catch (err) {
         fastify.log.error(`createUser error: ${err.message}`)
@@ -37,7 +37,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async OAuthCreateUser(user) {
       try {
         const { username, password, salt, email, provider } = user
-        const response = await axios.post('http://database:1919/users/oauth', user)
+        const response = await axios.post(`http://database:${process.env.DB_PORT}/users/oauth`, user)
         return response.data.userId
       } catch (err) {
         fastify.log.error(`OAuthCreateUser error: ${err.message}`)
@@ -48,7 +48,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async OAuthReadUser(usernameORemail) {
       try {
         console.log('Looking for:', usernameORemail)
-        const response = await axios.get(`http://database:1919/users/oauth/search/${usernameORemail}`)
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/oauth/search/${usernameORemail}`)
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -58,6 +58,28 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         throw err
       }
     },
+
+    async setMfaSecret(userId, secret) {
+      try {
+        const response =  axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
+          { field: 'mfa_secret', value: secret }
+        );
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getUser error: ${err.message}`)
+        throw new Error('Failed to set mfa')
+      }
+    },
+
+    async readUserMfa(userId) {
+      try {
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`)
+        return response.data
+      } catch (err) {
+        fastify.log.error(`readUserMfa error: ${err.message}`)
+        throw new Error('Failed to read user MFA')
+      }
+    }
 
   }),
 
@@ -140,6 +162,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         throw new Error('Failed to get user data')
       }
     }
+
   })
 }, {
   name: 'authAutoHooks'
