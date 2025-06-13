@@ -25,8 +25,6 @@ export function renderLoginPage(): void {
     
     alert(`Logged in as ${username}${providerName ? ` via ${providerName}` : ''}`); //! DELETE
     window.history.replaceState({}, document.title, window.location.pathname);
-    
-    //TODO: Redirect to the main page 
     return;
   }
 
@@ -93,9 +91,11 @@ export function renderLoginPage(): void {
           throw new Error(errorData.message || 'Invalid credentials');
         }
 
+		const data = await response.json();
+		localStorage.setItem('token', data.token);
         alert(`Logged in as ${username}`); //! DELETE
-        
-        //TODO: Redirect to the main page 
+        alert(`Redirecting to main page`); //! DELETE
+        window.location.replace("#main");
 
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
