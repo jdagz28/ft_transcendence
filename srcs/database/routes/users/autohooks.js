@@ -99,7 +99,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('User not found')
         }
 
-        const baseURL = request.protocol + ":" + process.env.SERVER_NAME
+        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         const avatarUrl = baseURL + `/users/${row.id}/avatar` 
 
         return {
