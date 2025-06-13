@@ -48,6 +48,7 @@ export function renderMainPage(params: RouteParams): void {
 		window.location.replace("#login");
 		return;
 	}
+	const user = data.data.name;
 	root.innerHTML = /*html*/`
 	<nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-white text-sm font-semibold">
     	<div class="flex items-center gap-6">
@@ -59,6 +60,7 @@ export function renderMainPage(params: RouteParams): void {
 				<a href="#">Chat</a>
 			</div>
 		<div class="flex items-center gap-4">
+			<span class="text-xl">${user}<span>
 			<span class="text-xl">🔔</span>
 			<div id="avatar" class="w-8 h-8 rounded-full overflow-hidden bg-white"></div>
     	</div>
