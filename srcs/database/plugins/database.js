@@ -89,7 +89,9 @@ async function databaseConnector(fastify) {
       CREATE TABLE IF NOT EXISTS user_mfa (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        mfa_token TEXT NOT NULL,
+        mfa_secret TEXT NOT NULL,
+        mfa_token TEXT,
+        mfa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );

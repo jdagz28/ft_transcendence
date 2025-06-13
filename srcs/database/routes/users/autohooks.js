@@ -371,16 +371,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         let result;
         if (!user) {
           query = fastify.db.prepare(`
-            INSERT INTO user_mfa (user_id, mfa_token)
-            VALUES (?, ?)
+            INSERT INTO user_mfa (user_id, mfa_secret, mfa_enabled)
+            VALUES (?, ?, ?)
           `)
-          result = query.run(userId, secret)
+          result = query.run(userId, secret, 1)
         }
         else {
           query = fastify.db.prepare(`
-            UPDATE user_mfa SET mfa_token = ? WHERE user_id = ?
+            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled WHERE user_id = ?
           `)
-          result = query.run(secret, userId)
+          result = query.run(secret, 1, userId)
         }
         if (result.changes === 0) {
           fastify.log.error(`Failed to set MFA secret for user ${userId}`)
@@ -396,7 +396,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async getUserMfa(userId) {
       try {
         const query = fastify.db.prepare(`
-          SELECT mfa_token FROM user_mfa WHERE id = ?
+          SELECT mfa_secret FROM user_mfa WHERE id = ?
         `)
         const row = query.get(userId)
         if (!row) {
@@ -411,8 +411,24 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`getUserMfa error: ${err.message}`)
         throw new Error('Get user MFA failed')
       }
-    }
+    },
 
+    async disableMfa(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          UPDATE user_mfa SET mfa_enabled = false WHERE user_id = ?
+        `)
+        const result = query.run(userId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to disable MFA for user ${userId}`)
+          throw new Error('Disable MFA failed')
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`disableMfa error: ${err.message}`)
+        throw new Error('Disable MFA failed')
+      }
+    }
   })
 }, {
   name: 'userAutoHooks',

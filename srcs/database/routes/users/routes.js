@@ -317,7 +317,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function setMfaSecretHandler(request, reply) {
         try {
-          const { userId } = request.params
+          const userId = request.user.id
           const { mfa_secret } = request.body
           await fastify.dbUsers.setMfaSecret(userId, mfa_secret)
           return reply.send({ success: true })
@@ -331,12 +331,27 @@ module.exports = fp(
     fastify.get('/users/:userId/mfa', {
       handler: async function getMfaHandler(request, reply) {
         try {
-          const { userId } = request.params
+          const userId = request.user.id
           const mfaData = await fastify.dbUsers.getUserMfa(userId)
           return reply.send(mfaData)
         } catch (err) {
           fastify.log.error(`Error retrieving MFA data: ${err.message}`)
           reply.code(500).send({ error: 'Failed to retrieve MFA data' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId/mfa/disable', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function disableMfaHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Disabling MFA for user ID:', userId) //! DELETE
+          await fastify.dbUsers.disableMfa(userId)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error disabling MFA: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to disable MFA' })
         }
       }
     })

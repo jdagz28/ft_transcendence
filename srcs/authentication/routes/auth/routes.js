@@ -314,7 +314,17 @@ module.exports = fp(
             name: `ft_transcendence (${username})`
           })
           await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request);
-          return reply.send({ secret: secret.base32 })
+          const QRCode = await fastify.generateQRCode(secret)
+          if (!QRCode) {
+            throw new Error('Failed to generate QR code')
+          }
+          console.log(QRCode) //! DELETE
+          // return reply.send({ secret: secret.base32 })
+          return reply.send({
+            secret: secret.base32,
+            otpauth_url: secret.otpauth_url,
+            qr_code: QRCode
+          })
         } catch (err) {
           fastify.log.error(`Auth: failed to generate mfa token for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
@@ -322,22 +332,17 @@ module.exports = fp(
       }
     })
 
-    fastify.put('/auth/:userId/mfa/enable', {
+    fastify.put('/auth/:userId/mfa/disable', {
       onRequest: [ fastify.authenticate ],
       handler: async function enableMFAhandler(request, reply) {
-        const { token } = request.body;
-        const userId    = request.params.userId;
-        const user      = await fastify.usersDataSource.readUserMfa(userId, request);
-        const response = speakeasy.totp.verify({
-          secret:   user.mfa_token,
-          encoding: 'base32',
-          token,
-          window: 1
-        });
-        if (!response) {
-          return reply.status(401).send({ error: 'Invalid MFA token' });
+        const userId = request.user.id
+        try {
+          await fastify.usersDataSource.disableMfa(userId, request);
+          return reply.send({ message: 'MFA disabled successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to disable mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to disable mfa' })
         }
-
       }
     })
       
