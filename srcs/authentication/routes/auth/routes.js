@@ -313,9 +313,7 @@ module.exports = fp(
           const secret = speakeasy.generateSecret({
             name: `ft_transcendence (${username})`
           })
-          // console.log(secret.base32) //! DELETE
-          console.log(`Generated MFA secret for user ${userId}:`, secret.base32) //! DELETE
-          await fastify.usersDataSource.setMfaSecret(userId, secret.base32);
+          await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request);
           return reply.send({ secret: secret.base32 })
         } catch (err) {
           fastify.log.error(`Auth: failed to generate mfa token for user ${userId}: ${err.message}`)
@@ -329,9 +327,9 @@ module.exports = fp(
       handler: async function enableMFAhandler(request, reply) {
         const { token } = request.body;
         const userId    = request.params.userId;
-        const user      = await fastify.usersDataSource.readUserMfa(userId);
+        const user      = await fastify.usersDataSource.readUserMfa(userId, request);
         const response = speakeasy.totp.verify({
-          secret:   user.mfa_secret,
+          secret:   user.mfa_token,
           encoding: 'base32',
           token,
           window: 1

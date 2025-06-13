@@ -86,20 +86,17 @@ async function databaseConnector(fastify) {
 
   function createUserTokenTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS user_mfa_tokens (
+      CREATE TABLE IF NOT EXISTS user_mfa (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         mfa_token TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expiry DATETIME NOT NULL,
-        used INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        CHECK (expiry > created)
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
     db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_user_mfa_tokens_user 
-        ON user_mfa_tokens(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_mfa_user 
+        ON user_mfa(user_id);
     `);
   }
 

@@ -363,10 +363,25 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async setMfaSecret(userId, secret) { 
       try {
-        const query = fastify.db.prepare(`
-          UPDATE users SET mfa_secret = ? WHERE id = ?
+        const check = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
         `)
-        const result = query.run(secret, userId)
+        const user = check.get(userId)
+        let query;
+        let result;
+        if (!user) {
+          query = fastify.db.prepare(`
+            INSERT INTO user_mfa (user_id, mfa_token)
+            VALUES (?, ?)
+          `)
+          result = query.run(userId, secret)
+        }
+        else {
+          query = fastify.db.prepare(`
+            UPDATE user_mfa SET mfa_token = ? WHERE user_id = ?
+          `)
+          result = query.run(secret, userId)
+        }
         if (result.changes === 0) {
           fastify.log.error(`Failed to set MFA secret for user ${userId}`)
           throw new Error('MFA secret update failed')
@@ -381,7 +396,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async getUserMfa(userId) {
       try {
         const query = fastify.db.prepare(`
-          SELECT mfa_secret, has_mfa FROM users WHERE id = ?
+          SELECT mfa_token FROM user_mfa WHERE id = ?
         `)
         const row = query.get(userId)
         if (!row) {
