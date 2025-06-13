@@ -27,10 +27,15 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
     },
 
     async joinChat(data, userId) {
-      if (!data.room || typeof data.room !== "number" || data.room == 0) {
-        console.error("Field 'room' is missing or invalid must be a number")
-        return {valid: false, reason: "Field 'room' is missing or invalid must be a number"}
+      if (!data.scope || !['dm', 'group'].includes(data.scope)) {
+        console.error("Field 'scope' is missing or invalid. Must be 'dm' or 'group'");
+        return {valid: false, reason: "Field 'scope' is missing or invalid. Must be 'dm' or 'group'"}
       }
+      if (data.scope === 'group') {
+        if (!data.room || typeof data.room !== "number" || data.room == 0) {
+          console.error("Field 'room' is missing or invalid must be a number")
+          return {valid: false, reason: "Field 'room' is missing or invalid must be a number"}
+        }
         try {
           const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/can-join/room/${data.room}/${userId}`)
           if (response.data && response.data.Permission === true) {
@@ -42,6 +47,28 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
           console.error("Error checking permission:", err.message);
           return {valid: false, reason: `${err.response.data.error}`};
         }
+      }
+
+      if (data.scope === 'dm') {
+        if (!data.userId || typeof data.userId !== "number" || data.userId == 0) {
+          console.error("Field 'userId' is missing or invalid must be a number")
+          return {valid: false, reason: "Field 'userId' is missing or invalid must be a number"}
+        }
+        try{
+          const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/can-join/dm`, {
+            fromUserId: userId,
+            toUserId: data.userId
+          })
+          if (response.data && response.data.Permission === true) {
+            return {valid: true, canJjoin: true}
+          } else {
+            return {valid:false, reason: `${err.response.data.error}`}
+          }
+        } catch (err) {
+          console.error("Erorr checking permission:", err.message)
+          return {valid: false, reason: `${err.response.data.error}`}
+        }
+      }
     },
 
     async sendMessage(data, fromUserId) {
@@ -80,15 +107,11 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
           return {valid: false, reason: err.response.data.error}
         }
       } else if (data.scope === 'group') {
-        if (typeof data.groupId !== "number") {
-          console.error("Field 'groupId' is required and must be a number when 'scope' is 'group'");
-          return {valid: false, reason: "Field 'groupId' is required and must be a number when 'scope' is 'group'"}
-        }
         try {
           console.log('dans le try du group')
           const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/send/group`, {
             fromUserId: fromUserId,
-            groupId: data.room,
+            room: data.room,
             message: data.message
 
           })

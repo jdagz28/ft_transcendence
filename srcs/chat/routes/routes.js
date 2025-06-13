@@ -49,6 +49,30 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     }
   }),
 
+  fastify.post('/chat/can-join/dm', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply);
+    if (reply.sent)
+      return;
+
+    const fromUserId = data.user.id
+    const { userId } = request.body
+    if (typeof userId !== 'number' || userId <= 0 || !Number.isInteger(userId)) {
+      return reply.status(400).send({error: `Invalid field 'userId' must be number`})
+    }
+
+    try {
+      const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/can-join/dm`, {
+        fromUserId: fromUserId,
+        toUserId: userId
+      })
+      reply.send(response.data)
+    } catch(err) {
+      console.error(`error checking if user can join dm : ${err.message}`)
+      console.error(`BIG ERROOORR: ${err.response.data.error}`)
+      return reply.status(500).send({error: `${err.response.data.error}`})
+    }
+  }),
+
   fastify.post('/chat/create/group', async (request, reply) => {
     const data = await fastify.authenticate(request, reply)
     if (reply.sent)
