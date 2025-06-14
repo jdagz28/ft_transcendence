@@ -356,6 +356,21 @@ module.exports = fp(
       }
     })
 
+    fastify.put('/users/:userId/mfa/enable', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function enableMfaHandler(request, reply) {
+        const userId = request.user.id
+        try {
+          await fastify.dbUsers.enableMfa(userId, request);
+          return reply.send({ success: true, message: 'MFA enabled successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to enable mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
+        }
+      }
+    })
+
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']

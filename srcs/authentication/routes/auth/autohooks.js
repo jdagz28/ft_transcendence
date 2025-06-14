@@ -112,6 +112,24 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         fastify.log.error(`Disable MFA error: ${err.message}`)
         throw new Error('Failed to disable MFA')
       }
+    },
+
+    async enableMfa(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/enable`, {},
+          {
+            headers: {
+              Authorization: rawAuth,
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+        return ({ success: true })
+      } catch (err) {
+        fastify.log.error(`Enable MFA error: ${err.message}`)
+        throw new Error('Failed to enable MFA')
+      }
     }
 
   }),

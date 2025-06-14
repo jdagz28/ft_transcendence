@@ -319,7 +319,6 @@ module.exports = fp(
             throw new Error('Failed to generate QR code')
           }
           return reply.send({
-            secret: secret.base32,
             otpauth_url: secret.otpauth_url,
             qr_code: QRCode
           })
@@ -332,7 +331,7 @@ module.exports = fp(
 
     fastify.put('/auth/:userId/mfa/disable', {
       onRequest: [ fastify.authenticate ],
-      handler: async function enableMFAhandler(request, reply) {
+      handler: async function disableMFAhandler(request, reply) {
         const userId = request.user.id
         try {
           await fastify.usersDataSource.disableMfa(userId, request);
@@ -343,7 +342,20 @@ module.exports = fp(
         }
       }
     })
-      
+    
+    fastify.put('/auth/:userId/mfa/enable', {
+      onRequest: fastify.authenticate, 
+      handler: async function enableMFAhandler(request, reply) {
+        const userId = request.user.id
+        try {
+          await fastify.usersDataSource.enableMfa(userId, request);
+          return reply.send({ success: true, message: 'MFA enabled successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to enable mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
+        }
+      }
+    })
     
     
 
