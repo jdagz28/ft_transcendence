@@ -357,6 +357,43 @@ module.exports = fp(
       }
     })
     
+    fastify.post('/auth/:userId/mfa/verify', {
+      schema: {
+        body: fastify.getSchema('schema:auth:mfaVerify')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function verifyMFAhandler(request, reply) {
+        const userId = request.user.id
+        const { token } = request.body
+        const rawAuth = request.headers.authorization
+        try {
+          const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
+            {
+            headers: {
+              Authorization: rawAuth,                
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          })
+          const { mfa_secret, mfa_enabled } = response.data
+          if (!mfa_enabled) {
+            return reply.status(403).send({ error: 'MFA is not enabled for this user' })
+          }
+          const isValid = speakeasy.totp.verify({
+            secret: mfa_secret,
+            encoding: 'base32',
+            token,
+            window: 1
+          })
+          if (!isValid) {
+            return reply.status(401).send({ error: 'Invalid MFA token' })
+          }
+          return reply.send({ success: true, message: 'MFA token verified successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to verify mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to verify mfa' })
+        }
+      }
+    })
     
 
   }, {

@@ -329,6 +329,7 @@ module.exports = fp(
     })
     
     fastify.get('/users/:userId/mfa', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function getMfaHandler(request, reply) {
         try {
           const userId = request.user.id
@@ -369,7 +370,6 @@ module.exports = fp(
         }
       }
     })
-
 
   }, {
     name: 'user',

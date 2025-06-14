@@ -131,7 +131,6 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         throw new Error('Failed to enable MFA')
       }
     }
-
   }),
 
 

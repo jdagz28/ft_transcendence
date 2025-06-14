@@ -396,16 +396,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async getUserMfa(userId) {
       try {
         const query = fastify.db.prepare(`
-          SELECT mfa_secret FROM user_mfa WHERE id = ?
+          SELECT mfa_secret, mfa_enabled FROM user_mfa WHERE user_id = ?
         `)
         const row = query.get(userId)
         if (!row) {
           fastify.log.error(`User not found: ${userId}`)
           throw new Error('User not found')
         }
-        return {
+        return { 
           mfa_secret: row.mfa_secret,
-          has_mfa: row.has_mfa
+          mfa_enabled: row.mfa_enabled
         }
       } catch (err) {
         fastify.log.error(`getUserMfa error: ${err.message}`)
