@@ -378,7 +378,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         }
         else {
           query = fastify.db.prepare(`
-            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled WHERE user_id = ?
+            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled = ? WHERE user_id = ?
           `)
           result = query.run(secret, 1, userId)
         }
@@ -416,7 +416,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async disableMfa(userId) {
       try {
         const query = fastify.db.prepare(`
-          UPDATE user_mfa SET mfa_enabled = false WHERE user_id = ?
+          UPDATE user_mfa SET mfa_enabled = 0 WHERE user_id = ?
         `)
         const result = query.run(userId)
         if (result.changes === 0) {

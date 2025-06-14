@@ -318,8 +318,6 @@ module.exports = fp(
           if (!QRCode) {
             throw new Error('Failed to generate QR code')
           }
-          console.log(QRCode) //! DELETE
-          // return reply.send({ secret: secret.base32 })
           return reply.send({
             secret: secret.base32,
             otpauth_url: secret.otpauth_url,
@@ -338,7 +336,7 @@ module.exports = fp(
         const userId = request.user.id
         try {
           await fastify.usersDataSource.disableMfa(userId, request);
-          return reply.send({ message: 'MFA disabled successfully' })
+          return reply.send({ success: true, message: 'MFA disabled successfully' })
         } catch (err) {
           fastify.log.error(`Auth: failed to disable mfa for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to disable mfa' })

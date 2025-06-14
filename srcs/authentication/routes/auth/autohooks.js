@@ -99,7 +99,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
      async disableMfa(userId, request) {
       try {
         const rawAuth = request.headers.authorization
-        const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/disable`,
+        await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/disable`, {},
           {
             headers: {
               Authorization: rawAuth,                
@@ -107,7 +107,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
             }
           }
         )
-        return response.data
+        return ({success: true})
       } catch (err) {
         fastify.log.error(`Disable MFA error: ${err.message}`)
         throw new Error('Failed to disable MFA')
