@@ -21,6 +21,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         return row
     },
 
+    async getUserById(userId) {
+      const query = fastify.db.prepare('SELECT * FROM users WHERE id = ?')
+      const row = query.get(userId)
+      return row
+    },
+
     async createUser(user) {
       try {
         const { 

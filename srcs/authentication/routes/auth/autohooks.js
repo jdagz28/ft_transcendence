@@ -23,6 +23,16 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       }
     },
 
+    async readUserById(userId) {
+      try {
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/search/id/${userId}`)
+        return response.data
+      } catch (err) {
+        fastify.log.error(`readUserById error: ${err.message}`)
+        throw new Error('Failed to read user by ID')
+      }
+    },
+
     async createUser(user) {
       try {
         const { username, password, salt, email } = user

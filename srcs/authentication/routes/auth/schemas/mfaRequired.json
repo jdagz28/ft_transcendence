@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "$id": "schema:auth:mfaRequired",
+  "required": [ "mfaRequired", "userId" ],
+  "properties": {
+    "mfaRequired": { "type": "boolean" },
+    "userId": { "type": "integer" }
+  }
+}

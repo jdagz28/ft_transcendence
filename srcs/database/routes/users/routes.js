@@ -35,6 +35,27 @@ module.exports = fp(
       }
     }),
 
+    fastify.get('/users/search/id/:userId', {
+      response: { 200: fastify.getSchema('schema:users:getUser')},
+      handler: async function getUserById (request, reply) {
+        try {
+          const { userId } = request.params
+          console.log('Looking for user ID:', userId) //! DELETE
+          const user = await fastify.dbUsers.getUserById(userId)
+          if (!user) {
+            fastify.log.error('User not found')
+            reply.code(404);
+            return { error: 'User not found' }
+          }
+          return user
+        } catch (err) {
+          fastify.log.error(`Error retrieving user by ID: ${err.message}`)
+          reply.code(500)
+          return { error: 'Internal Server Error' }
+        }          
+      }
+    }),
+
     fastify.post('/users', {
       schema: {
         body: fastify.getSchema('schema:users:createUser'),
@@ -329,10 +350,10 @@ module.exports = fp(
     })
     
     fastify.get('/users/:userId/mfa', {
-      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      onRequest: [fastify.checkInternalKey],
       handler: async function getMfaHandler(request, reply) {
         try {
-          const userId = request.user.id
+          const { userId } = request.params
           const mfaData = await fastify.dbUsers.getUserMfa(userId)
           return reply.send(mfaData)
         } catch (err) {

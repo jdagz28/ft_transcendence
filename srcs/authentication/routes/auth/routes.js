@@ -49,7 +49,12 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:login'),
         response: {
-          200: fastify.getSchema('schema:auth:token')
+          200:  {
+            oneOf: [
+              fastify.getSchema('schema:auth:token'),
+              fastify.getSchema('schema:auth:mfaRequired')    
+            ]
+          }
         }
       },
       handler: async function authenticateHandler(request, reply) {
@@ -67,6 +72,20 @@ module.exports = fp(
           err.statusCode = 401
           throw err
         }
+
+        const userId = user.id
+        const checkMfa = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`, {
+            headers: { 'x-internal-key': process.env.INTERNAL_KEY }
+        })
+
+        const { mfa_enabled } = checkMfa.data
+        if (mfa_enabled) {
+           return reply.code(200).send({
+            mfaRequired: true,
+            userId: userId
+           })
+        }
+
         request.user = {
           id: user.id,
           username: user.username,
@@ -361,18 +380,12 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:mfaVerify')
       },
-      onRequest: fastify.authenticate,
       handler: async function verifyMFAhandler(request, reply) {
-        const userId = request.user.id
+        const { userId } = request.params
         const { token } = request.body
-        const rawAuth = request.headers.authorization
         try {
-          const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
-            {
-            headers: {
-              Authorization: rawAuth,                
-              'x-internal-key': process.env.INTERNAL_KEY
-            }
+          const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`, {
+            headers: { 'x-internal-key': process.env.INTERNAL_KEY }
           })
           const { mfa_secret, mfa_enabled } = response.data
           if (!mfa_enabled) {
@@ -387,7 +400,19 @@ module.exports = fp(
           if (!isValid) {
             return reply.status(401).send({ error: 'Invalid MFA token' })
           }
-          return reply.send({ success: true, message: 'MFA token verified successfully' })
+          
+          const user = await this.usersDataSource.readUserById(userId)
+          if (!user) {
+            const err = new Error('User do not exist')
+            err.statusCode = 401
+            throw err
+          }
+
+          request.user = {
+            id: user.id,
+            username: user.username,
+          }
+          return refreshHandler(request, reply)
         } catch (err) {
           fastify.log.error(`Auth: failed to verify mfa for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to verify mfa' })
