@@ -27,6 +27,7 @@ async function databaseConnector(fastify) {
     try {
       db.pragma('journal_mode = WAL');
       db.pragma('foreign_keys = ON');
+      db.exec('BEGIN')
       createUsersTable();
       createOAuthTable();
       createUserTokenTable();
@@ -46,7 +47,8 @@ async function databaseConnector(fastify) {
       createConvoMembersTable();
       createMessagesTable();
       createGroupInvitationsTable();
-      fastify.log.info("Created 'users' table successfully.");
+      db.exec('COMMIT');
+      fastify.log.info("Created tables successfully.");
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
     }
@@ -84,13 +86,19 @@ async function databaseConnector(fastify) {
 
   function createUserTokenTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS user_token (
+      CREATE TABLE IF NOT EXISTS user_mfa (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        mfa_token TEXT NOT NULL,
-        mfa_valid DATETIME NOT NULL,
+        mfa_secret TEXT NOT NULL,
+        mfa_token TEXT,
+        mfa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
+    `);
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_user_mfa_user 
+        ON user_mfa(user_id);
     `);
   }
 

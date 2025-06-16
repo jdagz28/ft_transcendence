@@ -3,6 +3,7 @@
 const fp = require('fastify-plugin')
 const bcrypt = require('bcrypt')
 const axios = require('axios')
+const speakeasy = require('speakeasy')
 
 module.exports.prefixOverride = ''
 module.exports = fp(
@@ -48,7 +49,12 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:login'),
         response: {
-          200: fastify.getSchema('schema:auth:token')
+          200:  {
+            oneOf: [
+              fastify.getSchema('schema:auth:token'),
+              fastify.getSchema('schema:auth:mfaRequired')    
+            ]
+          }
         }
       },
       handler: async function authenticateHandler(request, reply) {
@@ -66,6 +72,20 @@ module.exports = fp(
           err.statusCode = 401
           throw err
         }
+
+        const userId = user.id
+        const checkMfa = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`, {
+            headers: { 'x-internal-key': process.env.INTERNAL_KEY }
+        })
+
+        const { mfa_enabled } = checkMfa.data
+        if (mfa_enabled) {
+           return reply.code(200).send({
+            mfaRequired: true,
+            userId: userId
+           })
+        }
+
         request.user = {
           id: user.id,
           username: user.username,
@@ -303,8 +323,105 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/auth/:userId/mfa/generate', {
+      onRequest: [fastify.authenticate],
+      handler: async function generateMFAsecret(request, reply) {
+        const userId = request.user.id
+        const username = request.user.username
+        try {
+          const secret = speakeasy.generateSecret({
+            name: `ft_transcendence (${username})`
+          })
+          await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request);
+          const QRCode = await fastify.generateQRCode(secret)
+          if (!QRCode) {
+            throw new Error('Failed to generate QR code')
+          }
+          return reply.send({
+            otpauth_url: secret.otpauth_url,
+            qr_code: QRCode
+          })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to generate mfa token for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
+        }
+      }
+    })
+
+    fastify.put('/auth/:userId/mfa/disable', {
+      onRequest: [ fastify.authenticate ],
+      handler: async function disableMFAhandler(request, reply) {
+        const userId = request.user.id
+        try {
+          await fastify.usersDataSource.disableMfa(userId, request);
+          return reply.send({ success: true, message: 'MFA disabled successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to disable mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to disable mfa' })
+        }
+      }
+    })
+    
+    fastify.put('/auth/:userId/mfa/enable', {
+      onRequest: fastify.authenticate, 
+      handler: async function enableMFAhandler(request, reply) {
+        const userId = request.user.id
+        try {
+          await fastify.usersDataSource.enableMfa(userId, request);
+          return reply.send({ success: true, message: 'MFA enabled successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to enable mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
+        }
+      }
+    })
+    
+    fastify.post('/auth/:userId/mfa/verify', {
+      schema: {
+        body: fastify.getSchema('schema:auth:mfaVerify')
+      },
+      handler: async function verifyMFAhandler(request, reply) {
+        const { userId } = request.params
+        const { token } = request.body
+        try {
+          const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`, {
+            headers: { 'x-internal-key': process.env.INTERNAL_KEY }
+          })
+          const { mfa_secret, mfa_enabled } = response.data
+          if (!mfa_enabled) {
+            return reply.status(403).send({ error: 'MFA is not enabled for this user' })
+          }
+          const isValid = speakeasy.totp.verify({
+            secret: mfa_secret,
+            encoding: 'base32',
+            token,
+            window: 1
+          })
+          if (!isValid) {
+            return reply.status(401).send({ error: 'Invalid MFA token' })
+          }
+          
+          const user = await this.usersDataSource.readUserById(userId)
+          if (!user) {
+            const err = new Error('User do not exist')
+            err.statusCode = 401
+            throw err
+          }
+
+          request.user = {
+            id: user.id,
+            username: user.username,
+          }
+          return refreshHandler(request, reply)
+        } catch (err) {
+          fastify.log.error(`Auth: failed to verify mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to verify mfa' })
+        }
+      }
+    })
+    
+
   }, {
     name: 'auth-routes',
     dependencies: [ 'authAutoHooks']
 })
-

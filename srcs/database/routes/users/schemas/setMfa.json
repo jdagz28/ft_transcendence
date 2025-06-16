@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:users:setMfa",
+  "required": ["mfa_secret"],
+  "properties": {
+    "mfa_secret": { "type": "string" }
+  }
+}

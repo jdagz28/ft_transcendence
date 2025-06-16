@@ -35,6 +35,27 @@ module.exports = fp(
       }
     }),
 
+    fastify.get('/users/search/id/:userId', {
+      response: { 200: fastify.getSchema('schema:users:getUser')},
+      handler: async function getUserById (request, reply) {
+        try {
+          const { userId } = request.params
+          console.log('Looking for user ID:', userId) //! DELETE
+          const user = await fastify.dbUsers.getUserById(userId)
+          if (!user) {
+            fastify.log.error('User not found')
+            reply.code(404);
+            return { error: 'User not found' }
+          }
+          return user
+        } catch (err) {
+          fastify.log.error(`Error retrieving user by ID: ${err.message}`)
+          reply.code(500)
+          return { error: 'Internal Server Error' }
+        }          
+      }
+    }),
+
     fastify.post('/users', {
       schema: {
         body: fastify.getSchema('schema:users:createUser'),
@@ -306,6 +327,67 @@ module.exports = fp(
         } catch (err) {
           fastify.log.error(`Error responding to friend request: ${err.message}`)
           reply.code(500).send({ error: 'Failed to respond to friend request' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId/mfa', {
+      schema: {
+        body: fastify.getSchema('schema:users:setMfa')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function setMfaSecretHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          const { mfa_secret } = request.body
+          await fastify.dbUsers.setMfaSecret(userId, mfa_secret)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA secret: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA secret' })
+        }
+      }
+    })
+    
+    fastify.get('/users/:userId/mfa', {
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getMfaHandler(request, reply) {
+        try {
+          const { userId } = request.params
+          const mfaData = await fastify.dbUsers.getUserMfa(userId)
+          return reply.send(mfaData)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA data: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA data' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId/mfa/disable', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function disableMfaHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Disabling MFA for user ID:', userId) //! DELETE
+          await fastify.dbUsers.disableMfa(userId)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error disabling MFA: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to disable MFA' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId/mfa/enable', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function enableMfaHandler(request, reply) {
+        const userId = request.user.id
+        try {
+          await fastify.dbUsers.enableMfa(userId, request);
+          return reply.send({ success: true, message: 'MFA enabled successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to enable mfa for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
         }
       }
     })
