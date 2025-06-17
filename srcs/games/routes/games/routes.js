@@ -281,6 +281,22 @@ module.exports = fp(
     })
 
 
+    fastify.patch('/games/:gameId/status', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:updateGameStatus')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateGameStatusHandler(request, reply) {
+        const { gameId } = request.params
+        const updatedGame = await fastify.gameService.updateGameStatus(request, gameId)
+        if (!updatedGame) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(updatedGame)
+      }
+    })
+
 
     //! ============ MATCHMAKING ============
     //! Draw randomlly to bracket players --- generate the games table

@@ -546,6 +546,68 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.db.exec('ROLLBACK')
         throw new Error('Failed to start game')
       }
+    },
+
+    async updateGameStatus(gameId, matchId, status, stats, userId) {
+      try {
+        fastify.db.exec('BEGIN')
+
+        const check = fastify.db.prepare(
+          'SELECT 1 FROM games WHERE id = ? AND created_by = ?'
+        )
+        const checkGame = check.get(gameId, userId)
+        if (!checkGame) {
+          throw new Error('Game not found or user not authorized')
+        }
+
+        const updateGame = fastify.db.prepare(`
+          UPDATE games
+            SET status = ?,
+                updated = CURRENT_TIMESTAMP,
+                started = CASE WHEN ? = 'active' AND started IS NULL THEN CURRENT_TIMESTAMP ELSE started END,
+                ended = CASE WHEN ? = 'finished' THEN CURRENT_TIMESTAMP ELSE ended END
+          WHERE id = ?
+        `)
+        const updateResult = updateGame.run(status, status, status, gameId)
+        if (updateResult.changes === 0) {
+          throw new Error('Failed to update game status')
+        }
+        console.log('Game status updated to:', status) //! DELETE
+
+        if (matchId) {
+          const updateMatch = fastify.db.prepare(`
+            UPDATE game_matches
+              SET status = ?,
+                  updated = CURRENT_TIMESTAMP,
+                  started = CASE WHEN ? = 'active' AND started IS NULL THEN CURRENT_TIMESTAMP ELSE started END,
+                  ended = CASE WHEN ? = 'finished' THEN CURRENT_TIMESTAMP ELSE ended END
+            WHERE id = ?
+          `)
+          const matchResult = updateMatch.run(status, status, status, matchId)
+          if (matchResult.changes === 0) {
+            throw new Error('Failed to update match status')
+          }
+        }
+        if (stats && stats.hits) {
+          const updateStats = fastify.db.prepare(`
+            UPDATE match_scores
+              SET hits = hits + ?,
+            WHERE match_id = ? AND player_id = ?
+          `)
+          for (const [PlayerId, hits] of Object.entries(stats.hits)) {
+            const statsResult = updateStats.run(hits, matchId, PlayerId)
+            if (statsResult.changes === 0) {
+              throw new Error(`Failed to update stats for player ${PlayerId}`)
+            }
+          }
+        }
+        fastify.db.exec('COMMIT')
+        return { success: true, message: 'Game status updated successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to update game status')
+      }
     }
 
   })
