@@ -123,6 +123,17 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
     } catch (err) {
       return reply.status(500).send({error: `${err.message}`})
     }
+  }),
+
+  fastify.get('/chat/mychats/:userId', async (request, reply) => {
+    const userId = Number(request.param.userId)
+
+    try {
+      const response = await fastify.dbChat.getUserChats(userId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
   })
 
   }, {

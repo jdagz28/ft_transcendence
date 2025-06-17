@@ -469,6 +469,13 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       updateInvitation.run(invitation.id);
 
       return { refused: true, groupId };
+    },
+
+    async getUserChats(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`)
+      }
+
     }
     
   })

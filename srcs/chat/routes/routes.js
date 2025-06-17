@@ -184,5 +184,20 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     } catch (err) {
       return reply.status(500).send({error: `${err.response.data.error}`})
     }
+  }),
+
+  fastify.get('/chat/mychats', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/mychats/${userId}`)
+      reply.send(response.data)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.response.data.error}`})
+    }
   })
 })
