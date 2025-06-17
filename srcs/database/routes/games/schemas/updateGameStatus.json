@@ -25,6 +25,15 @@
               "minimum": 0
             }
           }
+        },
+        "scores": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         }
       }
     }

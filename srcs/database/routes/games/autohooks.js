@@ -588,7 +588,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             throw new Error('Failed to update match status')
           }
         }
-        if (stats && stats.hits) {
+        if (stats?.hits) {
           const updateStats = fastify.db.prepare(`
             UPDATE match_scores
               SET hits = hits + ?,
@@ -601,6 +601,20 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             }
           }
         }
+        if (stats?.scores) {
+          const updateScores = fastify.db.prepare(`
+            UPDATE match_scores
+              SET score = score + ?
+            WHERE match_id = ? AND player_id = ?
+          `)
+          for (const [PlayerId, score] of Object.entries(stats.scores)) {
+            const scoresResult = updateScores.run(score, matchId, PlayerId)
+            if (scoresResult.changes === 0) {
+              throw new Error(`Failed to update scores for player ${PlayerId}`)
+            }
+          }
+        }
+
         fastify.db.exec('COMMIT')
         return { success: true, message: 'Game status updated successfully' }
       } catch (err) {
