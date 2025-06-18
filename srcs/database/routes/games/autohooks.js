@@ -591,11 +591,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (stats?.hits) {
           const updateStats = fastify.db.prepare(`
             UPDATE match_scores
-              SET hits = hits + ?,
+              SET hits = hits + ?
             WHERE match_id = ? AND player_id = ?
           `)
           for (const [PlayerId, hits] of Object.entries(stats.hits)) {
-            const statsResult = updateStats.run(hits, matchId, PlayerId)
+            const statsResult = updateStats.run(hits, matchId, Number(PlayerId))
             if (statsResult.changes === 0) {
               throw new Error(`Failed to update stats for player ${PlayerId}`)
             }

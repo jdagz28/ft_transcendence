@@ -26,6 +26,13 @@ dev-build:
 game:
 	docker compose -f $(COMPOSE_FILE) --profile game up -d
 
+front:
+	docker compose -f $(COMPOSE_FILE) --profile frontend up -d
+
+front-build:
+	docker compose -f $(COMPOSE_FILE) --profile frontend build
+
+
 testAccounts:
 	@chmod +x dev_testAccounts.sh
 	@./dev_testAccounts.sh
@@ -63,5 +70,8 @@ prune: clean
 	rm -rf $(FRONT_DIR)
 	docker system prune --volumes
 
-.PHONY:
+.PHONY: dev-up dev-down dev-start dev-stop dev-build \
+		game front front-stop front-build front-re testAccounts \
+		accessauth accessdb stop-containers remove-containers \
+		remove-images remove-networks clean prune
 
