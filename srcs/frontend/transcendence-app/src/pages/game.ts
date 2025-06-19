@@ -49,7 +49,7 @@ export async function renderGamePage(params: RouteParams) {
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
   const mode = config.settings.mode;
-  const currMatchId = config.matchId;
+  let currMatchId = config.matchId ? config.matchId : 1;
 
   let humanSide: 'left' | 'right' | undefined;
   if (mode === "training" || mode === "single-player") {
@@ -63,7 +63,6 @@ export async function renderGamePage(params: RouteParams) {
   });
 
   const statsTracker = new StatsTracker(sideMap);
-  let matchId: number | undefined;
   let pauseAt = 0;
 
 
@@ -255,19 +254,23 @@ export async function renderGamePage(params: RouteParams) {
     if (state.score[side] === totalMatches) {
       state.totalScore[side]++;
       state.score.left = state.score.right = 0;
-    }
-
-    const body: GameStatusUpdate = {
+      
+      const body: GameStatusUpdate = {
       status: 'active',
+      gameId: gameId,
       matchId: currMatchId,
       stats: statsTracker.finishMatch()
-    };
-    sendStatus(gameId, body).catch(console.error);
+      };
+      console.log(`Sending status update for match ${currMatchId}:`, body); //!DELETE
+      sendStatus(gameId, body).catch(console.error);
+      currMatchId++;
+    }
 
     if (state.totalScore[side] === totalGames) {
       state.gameOver = true;
       sendStatus(gameId, { 
         status: 'finished',
+        gameId: gameId,
         matchId: currMatchId,
         stats: statsTracker.finishSession()
       }).catch(console.error);
@@ -445,13 +448,15 @@ export async function renderGamePage(params: RouteParams) {
   }
 
   function togglePause() {
+    if (localGameState.gameOver) return;
     if (!localGameState.isPaused) {
       localGameState.isPaused = true;
       pauseAt = performance.now();
       cancelAnimationFrame(gameLoop!);
       sendStatus(gameId, {
         status: 'paused',
-        matchId: matchId,
+        gameId: gameId,
+        matchId: currMatchId,
       }).catch(console.error);
     } else {
       statsTracker.shiftTimes(performance.now() - pauseAt);
@@ -459,7 +464,8 @@ export async function renderGamePage(params: RouteParams) {
       gameLoop = requestAnimationFrame(gameLoopFn);
       sendStatus(gameId, {
         status: 'active',
-        matchId: matchId,
+        gameId: gameId,
+        matchId: currMatchId,
       }).catch(console.error);
     }
   }
@@ -470,7 +476,5 @@ export async function renderGamePage(params: RouteParams) {
   document.addEventListener('click', e => {
     if (!canvas.contains(e.target as Node)) togglePause();
   });
-  window.addEventListener('blur', () => togglePause());
-
 }
 

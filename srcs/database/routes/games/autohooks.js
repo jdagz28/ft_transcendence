@@ -505,11 +505,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         const insertMatch = fastify.db.prepare(`
-          INSERT INTO game_matches (game_id, status, started) VALUES (?, ?, CURRENT_TIMESTAMP)
+          INSERT INTO game_matches (game_id, started) VALUES (?, CURRENT_TIMESTAMP)
         `)
-        const matchResult = insertMatch.run(gameId, 'active')
+        const matchResult = insertMatch.run(gameId)
         if (matchResult.changes === 0) {
-          throw new Error('Failed to update match status to active')
+          throw new Error('Failed to create match entry for game')
         }
         const matchId = matchResult.lastInsertRowid
         console.log('Match started with ID:', matchId) //! DELETE
@@ -560,30 +560,53 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Game not found or user not authorized')
         }
 
-        const updateGame = fastify.db.prepare(`
-          UPDATE games
-            SET status = ?,
-                updated = CURRENT_TIMESTAMP,
-                started = CASE WHEN ? = 'active' AND started IS NULL THEN CURRENT_TIMESTAMP ELSE started END,
-                ended = CASE WHEN ? = 'finished' THEN CURRENT_TIMESTAMP ELSE ended END
-          WHERE id = ?
-        `)
-        const updateResult = updateGame.run(status, status, status, gameId)
-        if (updateResult.changes === 0) {
-          throw new Error('Failed to update game status')
-        }
-        console.log('Game status updated to:', status) //! DELETE
-
-        if (matchId) {
-          const updateMatch = fastify.db.prepare(`
-            UPDATE game_matches
+        if (['paused', 'aborted', 'finished'].includes(status)) {
+          const updateGame = fastify.db.prepare(`
+            UPDATE games
               SET status = ?,
                   updated = CURRENT_TIMESTAMP,
                   started = CASE WHEN ? = 'active' AND started IS NULL THEN CURRENT_TIMESTAMP ELSE started END,
                   ended = CASE WHEN ? = 'finished' THEN CURRENT_TIMESTAMP ELSE ended END
             WHERE id = ?
           `)
-          const matchResult = updateMatch.run(status, status, status, matchId)
+          updateGame.run(status, status, status, gameId)
+        }
+
+        if (matchId) {
+          const checkMatch = fastify.db.prepare(`
+            SELECT 1 FROM game_matches WHERE id = ? AND game_id = ?
+          `)
+          const matchExists = checkMatch.get(matchId, gameId)
+          let matchResult;
+          if (matchExists) {
+            const updateMatch = fastify.db.prepare(`
+            UPDATE game_matches
+              SET updated = CURRENT_TIMESTAMP,
+                  ended = CURRENT_TIMESTAMP
+            WHERE id = ?
+            `)
+            matchResult = updateMatch.run(matchId)
+          } else {
+            const createMatch  = fastify.db.prepare(`
+            INSERT INTO game_matches (game_id, started) VALUES (?, CURRENT_TIMESTAMP)
+            `)
+            matchResult = createMatch.run(gameId)
+            matchId = matchResult.lastInsertRowid
+
+            const players = fastify.db.prepare(`
+              SELECT player_id FROM game_players WHERE game_id = ?
+            `).all(gameId)
+            const insertMatchScore = fastify.db.prepare(`
+              INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
+            `)
+            for (const player of players) {
+              const playerId = player.player_id
+              const insResult = insertMatchScore.run(matchId, playerId)
+              if (insResult.changes === 0) {
+                throw new Error(`Failed to add player ${playerId} to match_scores`)
+              }
+            }
+          }
           if (matchResult.changes === 0) {
             throw new Error('Failed to update match status')
           }

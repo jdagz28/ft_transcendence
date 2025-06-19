@@ -279,8 +279,6 @@ async function databaseConnector(fastify) {
       CREATE TABLE IF NOT EXISTS game_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         game_id INTEGER NOT NULL,
-        status TEXT NOT NULL
-          CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT NULL,
         started DATETIME DEFAULT NULL,
         ended DATETIME DEFAULT NULL,
