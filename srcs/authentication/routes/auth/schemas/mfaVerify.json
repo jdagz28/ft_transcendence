@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:auth:mfaVerify",
+  "required": [ "token" ],
+  "properties": {
+    "token": { "type": "string" }
+  }
+}

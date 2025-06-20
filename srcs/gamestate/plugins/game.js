@@ -41,43 +41,119 @@ module.exports = fp(async function (fastify, opts) {
     const playerId = session.sockets.size <= 1 ? 'p1' : 'p2'; 
     const { input } = message;
     const state = session.state;
+
     if (!state.gameStarted && input.action === 'START_GAME') {
       state.gameStarted = true;
+      const startMessage = {
+        type: 'GAME_STARTED',
+        state: {
+          gameStarted: true,
+          ball: state.ball,
+          players: state.players,
+          score: state.score
+        }
+      };
+      
+      const msg = JSON.stringify(startMessage);
+      for (const socket of session.sockets) {
+        if (socket.readyState === 1) {
+          socket.send(msg);
+        }
+      }
+      
       if (!session.tickHandle) {
         fastify.startGameLoop(session);
       }
     }
+  
     if (input.keys) {
       fastify.updatePaddlePosition(state, playerId, input.keys);
     }
   });
 
   fastify.decorate('startGameLoop', function (session) {
-    if (session.tickHandle) return;
+    const TICK_RATE = 60;
+    const BROADCAST_RATE = 60;
+    let tickCount = 0;
+
+    if (session.tickHandle) {
+      console.log('⚠️ Game loop already exists');
+      return;
+    }
+    
+    console.log('🎯 Creating game loop interval');
     session.startedAt = Date.now();
+    session.lastBroadcast = 0;
 
     session.tickHandle = setInterval(() => {
-      if (session.state.gameStarted) {
-        fastify.stepPhysics(session.state);
-
-        const now = Date.now();
-        if (now - session.lastBroadcast >= 50) {
-          session.lastBroadcast = now;
-        }
-        
-        const msg = JSON.stringify({
-          type: 'STATE',
-          t: Date.now(),
-          s: session.state
-        });
-
-        for (const socket of session.sockets) {
-          if (socket.readyState === 1) { 
-            socket.send(msg);
-          }
-        }
+      if (!session.state.gameStarted) {
+        console.log('⏸️ Game not started, skipping tick');
+        return;
       }
-    }, 1000 / 60); 
+
+      fastify.stepPhysics(session.state);
+      tickCount++;
+      
+      if (tickCount % Math.floor(TICK_RATE / BROADCAST_RATE) === 0) {
+        fastify.broadcastState(session);
+      }
+      
+      if (tickCount % 60 === 0) {
+        console.log(`🎮 Game tick ${tickCount}, ball at (${session.state.ball.x}, ${session.state.ball.y})`);
+      }
+    }, 1000 / TICK_RATE); 
+    
+    console.log('✅ Game loop started with handle:', session.tickHandle);
+  });
+
+
+  fastify.decorate('broadcastState', function (session) {
+    if (!session.state) {
+      console.warn('⚠️ No session state to broadcast');
+      return;
+    }
+    const { ball, players, score, gameStarted } = session.state;
+
+    if (!ball || !players || !score) {
+      console.warn('⚠️ Invalid state structure:', { ball: !!ball, players: !!players, score: !!score });
+      return;
+    }
+
+    const payload = {
+      type: 'GAME_STATE',
+      t: Date.now(),
+      lastSeq: session.lastProcessedSeq || 0,
+      s: {
+        ball: {
+          x: ball.x,
+          y: ball.y,
+          width: ball.width
+        },
+        players: {
+          p1: {
+            x: players.p1.x,
+            y: players.p1.y,
+            width: players.p1.width,
+            height: players.p1.height
+          },
+          p2: {
+            x: players.p2.x,
+            y: players.p2.y,
+            width: players.p2.width,
+            height: players.p2.height
+          }
+        },
+        score,
+        gameStarted 
+      }
+    };
+  
+    const msg = JSON.stringify(payload);
+    for (const socket of session.sockets) {
+      if (socket.readyState === 1) {
+        socket.send(msg);
+      }
+    }
   });
 
   fastify.decorate('stepPhysics', function (state) {
@@ -121,7 +197,7 @@ module.exports = fp(async function (fastify, opts) {
   });
 
   fastify.decorate('updatePaddlePosition', function (state, playerId, keys) {
-    const paddleSpeed = 5;
+    const paddleSpeed = 8;
     const paddleHeight = state.players.p1.height;
     
     if (playerId === 'p1') {

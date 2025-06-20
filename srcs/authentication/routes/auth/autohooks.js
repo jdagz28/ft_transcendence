@@ -12,7 +12,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async readUser(usernameORemail) {
       try {
         console.log('Looking for:', usernameORemail)
-        const response = await axios.get(`http://database:1919/users/search/${usernameORemail}`)
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/search/${usernameORemail}`)
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -23,10 +23,20 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       }
     },
 
+    async readUserById(userId) {
+      try {
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/search/id/${userId}`)
+        return response.data
+      } catch (err) {
+        fastify.log.error(`readUserById error: ${err.message}`)
+        throw new Error('Failed to read user by ID')
+      }
+    },
+
     async createUser(user) {
       try {
         const { username, password, salt, email } = user
-        const response = await axios.post('http://database:1919/users', user)
+        const response = await axios.post(`http://database:${process.env.DB_PORT}/users`, user)
         return response.data.userId
       } catch (err) {
         fastify.log.error(`createUser error: ${err.message}`)
@@ -37,7 +47,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async OAuthCreateUser(user) {
       try {
         const { username, password, salt, email, provider } = user
-        const response = await axios.post('http://database:1919/users/oauth', user)
+        const response = await axios.post(`http://database:${process.env.DB_PORT}/users/oauth`, user)
         return response.data.userId
       } catch (err) {
         fastify.log.error(`OAuthCreateUser error: ${err.message}`)
@@ -48,7 +58,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
     async OAuthReadUser(usernameORemail) {
       try {
         console.log('Looking for:', usernameORemail)
-        const response = await axios.get(`http://database:1919/users/oauth/search/${usernameORemail}`)
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/oauth/search/${usernameORemail}`)
         return response.data
       } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -59,6 +69,78 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       }
     },
 
+    async setMfaSecret(userId, secret, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        const response =  axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
+          { mfa_secret: secret },
+          {
+            headers: {
+              Authorization: rawAuth,                
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        );
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getUser error: ${err.message}`)
+        throw new Error('Failed to set mfa')
+      }
+    },
+
+    async readUserMfa(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
+          {
+            headers: {
+              Authorization: rawAuth,                
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+        return response.data
+      } catch (err) {
+        fastify.log.error(`readUserMfa error: ${err.message}`)
+        throw new Error('Failed to read user MFA')
+      }
+    },
+
+     async disableMfa(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/disable`, {},
+          {
+            headers: {
+              Authorization: rawAuth,                
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+        return ({success: true})
+      } catch (err) {
+        fastify.log.error(`Disable MFA error: ${err.message}`)
+        throw new Error('Failed to disable MFA')
+      }
+    },
+
+    async enableMfa(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/enable`, {},
+          {
+            headers: {
+              Authorization: rawAuth,
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+        return ({ success: true })
+      } catch (err) {
+        fastify.log.error(`Enable MFA error: ${err.message}`)
+        throw new Error('Failed to enable MFA')
+      }
+    }
   }),
 
 
@@ -140,6 +222,7 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         throw new Error('Failed to get user data')
       }
     }
+
   })
 }, {
   name: 'authAutoHooks'

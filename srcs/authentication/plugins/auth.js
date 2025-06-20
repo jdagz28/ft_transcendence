@@ -3,7 +3,7 @@
 const fp = require('fastify-plugin')
 const jwt = require('@fastify/jwt')
 const bcrypt = require('bcrypt')
-
+const QRCode = require('qrcode')
 
 module.exports = fp(async function authenticationPlugin (fastify, opts) {
   const revokedTokens = new Map()
@@ -46,6 +46,15 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
     const hash = await bcrypt.hash(password, salt)
   
     return { salt, hash }
+  })
+
+  fastify.decorate('generateQRCode', async function generateQRCode (data) {
+    try {
+      const qrCode = await QRCode.toDataURL(data.otpauth_url, { errorCorrectionLevel: 'H' })
+      return qrCode
+    } catch (err) {
+      throw new Error('Failed to generate QR code')
+    }
   })
 
 }), {

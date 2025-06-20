@@ -1,9 +1,7 @@
 'use strict';
 
-// const websocketPlugin = require('@fastify/websocket');
 
-module.exports = async function (fastify, opts) {
-  // fastify.register(websocketPlugin); 
+module.exports = async function (fastify, opts) { 
 
   fastify.get('/sessions/:gameId', 
     { websocket: true,
@@ -36,25 +34,36 @@ module.exports = async function (fastify, opts) {
         return;
       }
 
-      if (message.type === 'DIMENSIONS') {
+      if (message.type === 'DIMENSIONS' && !session.state) {
         console.log('Received dimensions:', {
           width: message.width,
           height: message.height,
           dpr: message.dpr
         });
+
+        if (!session.state) {
+          session.state = fastify.createInitialGameState(message.width, message.height);
+        }
+
+        socket.send(JSON.stringify({
+          type: 'GAME_INITIALIZED',
+          state: session.state
+        }));
+        return
       }
 
-      if (!session.state) {
-        session.state = fastify.createInitialGameState(message.width, message.height);
+      if (!session.inputThrottle) {
+        session.inputThrottle = new Map();
       }
-      
-      socket.send(JSON.stringify({
-        type: 'GAME_INITIALIZED',
-        state: session.state
-      }));
 
       if (message.type === 'PLAYER_INPUT') {
-        fastify.handlePlayerInput(session, message, socket);
+        const now = Date.now();
+        const lastInput = session.inputThrottle.get(socket) || 0;
+        
+        if (now - lastInput >= 16) { 
+          session.inputThrottle.set(socket, now);
+          fastify.handlePlayerInput(session, message, socket);
+        }
       }
     });
 

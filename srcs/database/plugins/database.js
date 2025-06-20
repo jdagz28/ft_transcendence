@@ -27,6 +27,7 @@ async function databaseConnector(fastify) {
     try {
       db.pragma('journal_mode = WAL');
       db.pragma('foreign_keys = ON');
+      db.exec('BEGIN')
       createUsersTable();
       createOAuthTable();
       createUserTokenTable();
@@ -35,14 +36,19 @@ async function databaseConnector(fastify) {
       createFriendRequestsTable();
       createUserBlocksTable();
       createTournamentTable();
+      createTournamentSettingsTable();
       createTourPlayersTable();
       createGamesTable();
+      createGamesSettingsTable();
       createGameMatchesTable();
       createGameMatchesScoresTable();
+      createGamePlayers();
       createConversationsTable();
       createConvoMembersTable();
       createMessagesTable();
-      fastify.log.info("Created 'users' table successfully.");
+      createGroupInvitationsTable();
+      db.exec('COMMIT');
+      fastify.log.info("Created tables successfully.");
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
     }
@@ -80,13 +86,19 @@ async function databaseConnector(fastify) {
 
   function createUserTokenTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS user_token (
+      CREATE TABLE IF NOT EXISTS user_mfa (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        mfa_token TEXT NOT NULL,
-        mfa_valid DATETIME NOT NULL,
+        mfa_secret TEXT NOT NULL,
+        mfa_token TEXT,
+        mfa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
+    `);
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_user_mfa_user 
+        ON user_mfa(user_id);
     `);
   }
 
@@ -154,17 +166,36 @@ async function databaseConnector(fastify) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS tournaments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        status TEXT NOT NULL
-          CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
-        mode TEXT NOT NULL
-          CHECK (mode IN ('solo', 'duo', 'online')),
-        max_players INTEGER NOT NULL,
-        winner_id INTEGER,
         created_by INTEGER NOT NULL,
-        name TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        status TEXT NOT NULL
+          CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
+        started DATETIME DEFAULT NULL,
+        ended DATETIME DEFAULT NULL,
+        winner_id INTEGER DEFAULT NULL,
+        name TEXT NOT NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+    `);
+  }
+
+  function  createTournamentSettingsTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS tournament_settings (
+        tournament_id INTEGER PRIMARY KEY,
+        game_type TEXT NOT NULL
+          CHECK (game_type IN ('singles', 'doubles')),
+        game_mode TEXT NOT NULL
+          CHECK (game_mode IN ('public', 'private')),
+        max_players INTEGER NOT NULL,
+        num_games INTEGER DEFAULT 1,
+        num_matches INTEGER DEFAULT 1,
+        ball_speed INTEGER DEFAULT 1,
+        death_timed BOOLEAN DEFAULT FALSE,
+        time_limit_s INTEGER DEFAULT 0,
+        FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
       );
     `);
   }
@@ -177,12 +208,16 @@ async function databaseConnector(fastify) {
         user_id INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
         FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE (tournament_id, user_id)
       );
+      CREATE INDEX IF NOT EXISTS idx_tour_players_tournament_id
+        ON tour_players(tournament_id);
+      CREATE INDEX IF NOT EXISTS idx_tour_players_user_id
+        ON tour_players(user_id);
     `);
   }
 
-  //! Need upper table for tournament matches
 
   function createGamesTable() {
     db.exec(`
@@ -191,29 +226,49 @@ async function databaseConnector(fastify) {
         created_by INTEGER NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        mode TEXT NOT NULL
-          CHECK (mode IN ('training', 'single-player', 'local-multiplayer', 'online-multiplayer', 'tournament')),
+        started DATETIME DEFAULT NULL,
+        ended DATETIME DEFAULT NULL,
         status TEXT NOT NULL
           CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
-        winner_id INTEGER DEFAULT 0,
-        total_players INTEGER DEFAULT 1,
-        total_games INTEGER DEFAULT 1,
-        total_duration DATETIME,
+        winner_id INTEGER DEFAULT NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+    `);
+  }
+
+  function createGamesSettingsTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS game_settings (
+        game_id INTEGER PRIMARY KEY,
+        mode TEXT NOT NULL
+          CHECK (mode IN ('training', 'single-player', 'multiplayer', 'tournament')),
+        game_type TEXT NOT NULL
+          CHECK (game_type IN ('local', 'remote')),
+        game_mode TEXT NOT NULL
+          CHECK (game_mode IN ('private', 'public')),
         max_players INTEGER DEFAULT 1,
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        num_games INTEGER DEFAULT 1,
+        num_matches INTEGER DEFAULT 1,
+        ball_speed INTEGER DEFAULT 1,
+        death_timed BOOLEAN DEFAULT FALSE,
+        time_limit_s INTEGER DEFAULT 0,
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
       );
     `);
   }
 
   function createGameMatchesScoresTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS games_match_scores (
+      CREATE TABLE IF NOT EXISTS match_scores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        games_match_id INTEGER NOT NULL,
+        match_id INTEGER NOT NULL,
         player_id INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
         hits INTEGER DEFAULT 0,
-        FOREIGN KEY (games_match_id) REFERENCES games_match(id) ON DELETE CASCADE
+        UNIQUE(match_id, player_id),
+        FOREIGN KEY (match_id) REFERENCES game_matches(id) ON DELETE CASCADE,
+        FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
@@ -221,14 +276,49 @@ async function databaseConnector(fastify) {
 
   function createGameMatchesTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS games_match (
+      CREATE TABLE IF NOT EXISTS game_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         game_id INTEGER NOT NULL,
-        status TEXT NOT NULL
-          CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
-        winner_id INTEGER DEFAULT 0,
+        winner_id INTEGER DEFAULT NULL,
+        started DATETIME DEFAULT NULL,
+        ended DATETIME DEFAULT NULL,
+        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+    `);
+  }
+
+  function createGamePlayers() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS game_players (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_id INTEGER NOT NULL,
+        player_id INTEGER NOT NULL,
+        is_remote BOOLEAN NOT NULL DEFAULT FALSE,
+        joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        paddle_loc TEXT 
+          CHECK(paddle_loc IN ('left','right')),
+        paddle_side TEXT 
+          CHECK(paddle_side IN ('top', 'bottom')),
+        UNIQUE(game_id, player_id),
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
+  function createMessagesTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER NOT NULL,
+        conversation_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
@@ -270,35 +360,23 @@ async function databaseConnector(fastify) {
     `);
   }
 
-  function createMessagesTable() {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversation_id INTEGER NOT NULL,
-        sender_id INTEGER NOT NULL,
-        message_text TEXT NOT NULL,
-        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-    `);
-  }
-
-  function createMessagesTable() {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_id INTEGER NOT NULL,
-        conversation_id INTEGER NOT NULL,
-        content TEXT NOT NULL,
-        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (sender_id) REFERENCES users(id),
-        FOREIGN KEY (conversation_id) REFERENCES conversations(id)
-      );
-    `);
-  }
+  function createGroupInvitationsTable() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS group_invitations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL,
+      invited_user_id INTEGER NOT NULL,
+      invited_by_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'declined')),
+      created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      responded DATETIME DEFAULT NULL,
+      FOREIGN KEY (group_id) REFERENCES conversations(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+}
 
   fastify.decorate('db', db);
   fastify.log.info("Fastify instance has 'db': " + fastify.hasDecorator('db'));

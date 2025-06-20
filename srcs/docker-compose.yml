@@ -14,7 +14,6 @@ services:
       - transcendence
     restart: always
     profiles:
-      - frontend
       - backend
       - development
   
@@ -71,6 +70,24 @@ services:
       - backend
       - development
 
+  chat:
+    container_name: chat
+    build: ./chat
+    image: chat:fastify
+    depends_on:
+      - database
+    environment:
+      - PORT=${CHAT_PORT}
+    env_file:
+      - .env
+    networks:
+      - transcendence
+    restart: always
+    profiles:
+      - authentication
+      - backend
+      - development
+
   games:
     container_name: games
     build: ./games
@@ -100,6 +117,7 @@ services:
       - transcendence
     profiles:
       - build
+      - frontend
   
   backend:
     container_name: backend
@@ -113,6 +131,7 @@ services:
       - transcendence
     profiles:
       - build
+      # - frontend
 
   gamestate:
     container_name: gamestate
