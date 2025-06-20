@@ -1,6 +1,6 @@
 import type { RouteParams } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
-import { getAiId, getConfig, sendStatus } from "../api/gameService";
+import { getConfig, sendStatus } from "../api/gameService";
 import { AIOpponent } from "../class/AiOpponent";
 import { StatsTracker } from "../class/StatsTracker";
 import type { GameStatusUpdate } from "../types/game_api";
@@ -52,11 +52,6 @@ export async function renderGamePage(params: RouteParams) {
   let currMatchId = config.matchId ? config.matchId : 1;
 
   let humanSide: 'left' | 'right' | undefined;
-  if (mode === "training" || mode === "single-player") {
-    if (config.players.length !== 1)
-      throw new Error('Player should only be 1.');
-    humanSide = config.players[0].paddle_loc as 'left' | 'right';
-  }
   const sideMap: Record<'left'|'right', number[]> = { left: [], right: [] };
   config.players.forEach((p: PlayerConfig) => {
     sideMap[p.paddle_loc as 'left' | 'right'].push(p.player_id);
@@ -140,17 +135,16 @@ export async function renderGamePage(params: RouteParams) {
 
   const controllers: Controller[] = [];
   const aiOpponents: AIOpponent[] = [];
-  const aiId = await getAiId();
 
   if (mode === "single-player" || mode === "training") {
-    const human = config.players[0];
-    const humanSide = human.paddle_loc as "left" | "right";
-    
-    const ai = config.players.find(p => p.player_id === aiId);
-    if (!ai) {
-      throw new Error(`AI player with ID ${aiId} not found in game config.`);
+    const ai    = config.players.find(p => p.username === "AiOpponent");
+    const human = config.players.find(p => p.username !== "AiOpponent");
+    if (!human || !ai) {
+      throw new Error("Couldn’t identify human or AI from config.players");
     }
-    const aiSide    = ai.paddle_loc as "left" | "right";
+    const humanSide = human.paddle_loc as "left" | "right";
+
+    const aiSide    = ai.paddle_loc   as "left" | "right";
 
     controllers.push({
       playerId: human.player_id,

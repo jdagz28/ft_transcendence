@@ -496,14 +496,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Game is not in pending status')
         }
 
-        const checkMode = fastify.db.prepare(
-          'SELECT mode FROM game_settings WHERE game_id = ?'
-        )
-        const mode = checkMode.get(gameId)
-        if (!mode) {
-          throw new Error('Game settings not found')
-        }
-
         const startQuery = fastify.db.prepare(
           'UPDATE games SET status = ? WHERE id = ?'
         )
@@ -531,31 +523,24 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
         `)
         
-        let aiSide;
         for (const p of players) {
-          const playerId   = p.userId
-          const paddleLoc  = p.paddle_loc
-          const paddleSide = p.paddle_side
-
-          const updResult = updatePlayer.run(paddleLoc, paddleSide, gameId, playerId)
-          if (updResult.changes === 0) {
-            throw new Error(`Failed to update paddle for player ${playerId}`)
-          }
-
-          const insResult = insertMatchScore.run(matchId, playerId)
-          if (insResult.changes === 0) {
-            throw new Error(`Failed to add player ${playerId} to match_scores`)
-          }
+          updatePlayer.run(p.paddle_loc, p.paddle_side, gameId, p.userId)
+          insertMatchScore.run(matchId, p.userId)
         }
-        if (mode === 'single-player' || mode === 'training') {
-          const aiId = fastify.aiUserId
-          const humanSide = players[0].paddle_side
-          aiLoc = humanSide === 'left' ? 'right' : 'left'
+
+        const modeRow = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId).mode
+        if (modeRow === 'single-player' || modeRow === 'training') {
+          const aiId       = fastify.aiUserId
+          const humanSide  = players[0].paddle_loc
+          const aiSide     = humanSide === 'left' ? 'right' : 'left'
 
           fastify.db.prepare(`
             INSERT INTO game_players (game_id, player_id, paddle_loc)
             VALUES (?, ?, ?)
-          `).run(gameId, aiId, aiLoc)
+          `).run(gameId, aiId, aiSide)
+          insertMatchScore.run(matchId, aiId)
         }
         fastify.db.exec('COMMIT')
 
@@ -679,21 +664,21 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         JOIN   game_matches ON game_matches.game_id = games.id
         JOIN   match_scores ON match_scores.match_id = game_matches.id
         JOIN   game_players ON game_players.player_id = match_scores.player_id
-        WHERE  games.id = ?
+        WHERE  games.id = 2
         GROUP  BY games.id;
 
-        SELECT game_matches.id,
+        SELECT
+              game_matches.id AS matchId,
               game_matches.started,
-              game_matches.ended,
-              (strftime('%s',game_matches.ended)-strftime('%s',game_matches.started)) AS duration_s,
-              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='left')   AS scoreLeft,
-              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='right')  AS scoreRight,
-              SUM(match_scores.hits)  FILTER(WHERE game_players.paddle_loc='left')   AS hitsLeft,
-              SUM(match_scores.hits)  FILTER(WHERE game_players.paddle_loc='right')  AS hitsRight
+              game_matches.ended, (strftime('%s', game_matches.ended) - strftime('%s', game_matches.started)) AS duration_s,
+              SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'left')  AS scoreLeft,
+              SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'right')  AS scoreRight,
+              SUM(match_scores.hits) FILTER (WHERE game_players.paddle_loc = 'left')  AS hitsLeft,
+              SUM(match_scores.hits) FILTER (WHERE game_players.paddle_loc = 'right')  AS hitsRight
         FROM   game_matches
         JOIN   match_scores ON match_scores.match_id = game_matches.id
         JOIN   game_players ON game_players.player_id = match_scores.player_id
-        WHERE  game_matches.game_id = ?
+        WHERE game_matches.game_id = 2
         GROUP  BY game_matches.id
         ORDER  BY game_matches.started;
       `)

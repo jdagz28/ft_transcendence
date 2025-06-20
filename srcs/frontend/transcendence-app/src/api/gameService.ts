@@ -31,13 +31,3 @@ export async function sendStatus(
     body: json
   });
 }
-
-export async function getAiId(){
-  const aiId = await fetch('https://localhost:4242/users/ai', {
-    method: 'GET',
-    credentials: 'include'
-  });
-  if (!aiId)
-    throw new Error('AI user not set up');
-  return Number(aiId);
-}
