@@ -44,8 +44,7 @@ function parseRoute(full: string): [string, RouteParams] {
       params[key] = value;
     }
   }
-  alert(path);
-  return [path, params];
+ return [path, params];
 }
 
 export function initRouter() {
