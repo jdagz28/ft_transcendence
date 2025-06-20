@@ -352,14 +352,9 @@ module.exports = fp(
     fastify.get('/users/:userId/mfa', {
       onRequest: [fastify.checkInternalKey],
       handler: async function getMfaHandler(request, reply) {
-        try {
-          const { userId } = request.params
-          const mfaData = await fastify.dbUsers.getUserMfa(userId)
-          return reply.send(mfaData)
-        } catch (err) {
-          fastify.log.error(`Error retrieving MFA data: ${err.message}`)
-          reply.code(500).send({ error: 'Failed to retrieve MFA data' })
-        }
+        const { userId } = request.params
+        const mfaData = await fastify.dbUsers.getUserMfa(userId)
+        return reply.send(mfaData)
       }
     })
 

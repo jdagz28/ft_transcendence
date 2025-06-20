@@ -476,6 +476,18 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         throw new Error(`User ${userId} does not exist`)
       }
 
+      const groupChatsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type
+        FROM conversations c
+        JOIN convo_members m ON c.id = m.conversation_id
+        WHERE m.user_id = ?
+          AND c.type = 'group'
+          AND m.banned_at IS NULL
+          AND m.kicked_at IS NULL
+      `);
+      const groups = groupChatsQuery.all(userId);
+
+      return groups;
     }
     
   })

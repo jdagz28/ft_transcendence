@@ -58,4 +58,5 @@ export interface GameState {
   settings: GameSettings;
   gameStarted: boolean;
   gameOver: boolean;
+  isPaused: boolean;
 }

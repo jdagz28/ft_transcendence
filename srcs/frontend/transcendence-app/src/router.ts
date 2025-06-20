@@ -4,15 +4,17 @@ import { renderLoginPage } from "./pages/login";
 import { renderRegisterPage } from "./pages/register";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
+import { renderDefault } from "./pages/default";
 import { renderChat } from "./chat";
 
-export const ROUTE_GAMES_NEW = "#games-new";
-export const ROUTE_GAMES_PAGE = "#games";
-export const ROUTE_LOGIN = "#login";
-export const ROUTE_REGISTER = "#register";
-export const ROUTE_MAIN = "#main";
-export const ROUTE_LOBBY = "#lobby";
-export const ROUTE_CHAT = "#chat";
+export const ROUTE_GAMES_NEW = "/#games-new";
+export const ROUTE_GAMES_PAGE = "/#games";
+export const ROUTE_LOGIN = "/#login";
+export const ROUTE_REGISTER = "/#register";
+export const ROUTE_MAIN = "/#main";
+export const ROUTE_LOBBY = "/#lobby";
+export const DEFAULT = "/#404";
+export const ROUTE_CHAT = "/#chat";
 
 export type RouteParams = Record<string, string | undefined>;
 type RouteHandler = (params: RouteParams) => void;
@@ -26,27 +28,30 @@ const routes: Record<string, RouteHandler> = {
   [ROUTE_MAIN]: (params) => renderMainPage(params),
   [ROUTE_LOBBY]: (params) => renderLobbyPage(params),
   [ROUTE_CHAT]: () => renderChat(),
+  [DEFAULT]: () => renderDefault(),
 };
 
 /**
  * Split the hash into a “path” and a query-string, then convert
  * the query part to a plain object.
  */
-function parseHash(hash: string): [string, RouteParams] {
-  const [path, queryString] = hash.split("?");
+function parseRoute(full: string): [string, RouteParams] {
+  const routeQuery: string = full.substring(window.location.origin.length);
+  const [path, queryString] = routeQuery.split("?");
   const params: RouteParams = {};
   if (queryString) {
     for (const [key, value] of new URLSearchParams(queryString).entries()) {
       params[key] = value;
     }
   }
+  alert(path);
   return [path, params];
 }
 
 export function initRouter() {
   const render = () => {
-    const [path, params] = parseHash(window.location.hash);
-    const view = routes[path] ?? routes[""];
+    const [path, params] = parseRoute(window.location.href);
+    const view = routes[path] ?? routes[DEFAULT];
     view(params);
   };
 

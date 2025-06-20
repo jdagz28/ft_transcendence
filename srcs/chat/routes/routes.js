@@ -186,7 +186,7 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     }
   }),
 
-  fastify.get('/chat/mychats', async (request, reply) => {
+  fastify.get('/chat/mychats/:userId', async (request, reply) => {
     const data = await fastify.authenticate(request, reply)
     if (reply.sent)
       return;

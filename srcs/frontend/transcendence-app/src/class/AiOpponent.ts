@@ -28,12 +28,6 @@ export class AIOpponent {
     const centerY = me.y + me.height / 2;
     const threshold = 10;
 
-    console.log(
-      `[AI:${this.controller.side}] now=${now.toFixed(0)} lastThink=${this.lastThink.toFixed(0)} ` +
-      `ball=(${ball.x.toFixed(1)},${ball.y.toFixed(1)}) vx=${ball.vx.toFixed(1)} vy=${ball.vy.toFixed(1)} ` +
-      `timeToReach=${timeToReach.toFixed(1)} futureY=${futureY.toFixed(1)} centerY=${centerY.toFixed(1)}`
-    ); //! DELETE 
-
     if (centerY < futureY - threshold) {
       this.setKeys('down');
     } else if (centerY > futureY + threshold) {
@@ -44,7 +38,6 @@ export class AIOpponent {
   }
 
   private setKeys(dir: 'up' | 'down') {
-    console.log(`[AI:${this.controller.side}] setKeys → ${dir.toUpperCase()}`); //! DELETE
     if (this.controller.upKey)
       this.keyState[this.controller.upKey] = false;
     if (this.controller.downKey)
@@ -57,7 +50,6 @@ export class AIOpponent {
   }
 
   private clearKeys() {
-    console.log(`[AI:${this.controller.side}] clearKeys`); //! DELETE
     if (this.controller.upKey)
       this.keyState[this.controller.upKey] = false;
     if (this.controller.downKey)
