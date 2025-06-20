@@ -574,6 +574,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             WHERE id = ?
           `)
           updateGame.run(status, status, status, gameId)
+          if (status === 'finished') 
+            return { success: true, message: 'Game finished and updated successfully' }
         }
 
         if (matchId) {
@@ -651,61 +653,67 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     },
 
-    async getGameHistory(gameId) {
-      const query = fastify.db.prepare(`
-        SELECT games.id,
-              games.created,
-              games.ended,
-              games.status,
-              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='left')  AS finalScoreLeft,
-              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='right') AS finalScoreRight,
-              COUNT(DISTINCT game_matches.id) AS numMatches
-        FROM   games
-        JOIN   game_matches ON game_matches.game_id = games.id
-        JOIN   match_scores ON match_scores.match_id = game_matches.id
-        JOIN   game_players ON game_players.player_id = match_scores.player_id
-        WHERE  games.id = 2
-        GROUP  BY games.id;
-
+    async getGameSummary(gameId) {
+      const summary = fastify.db.prepare(`
         SELECT
-              game_matches.id AS matchId,
-              game_matches.started,
-              game_matches.ended, (strftime('%s', game_matches.ended) - strftime('%s', game_matches.started)) AS duration_s,
-              SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'left')  AS scoreLeft,
-              SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'right')  AS scoreRight,
-              SUM(match_scores.hits) FILTER (WHERE game_players.paddle_loc = 'left')  AS hitsLeft,
-              SUM(match_scores.hits) FILTER (WHERE game_players.paddle_loc = 'right')  AS hitsRight
-        FROM   game_matches
-        JOIN   match_scores ON match_scores.match_id = game_matches.id
-        JOIN   game_players ON game_players.player_id = match_scores.player_id
-        WHERE game_matches.game_id = 2
-        GROUP  BY game_matches.id
-        ORDER  BY game_matches.started;
-      `)
-      const rows = query.all(gameId, gameId)
-      if (!rows || rows.length === 0) {
-        throw new Error('No game history found')
-      }
-      const gameInfo = rows[0]
-      const matches = rows.slice(1).map(row => ({
-        matchId: row.matchId,
-        started: row.started,
-        ended: row.ended,
-        duration_s: row.duration_s,
-        scoreLeft: row.scoreLeft,
-        scoreRight: row.scoreRight,
-        hitsLeft: row.hitsLeft,
-        hitsRight: row.hitsRight
-      }))
+          games.id AS gameId,
+          MAX(CASE WHEN game_players.paddle_loc = 'left' THEN users.username END) AS leftPlayer,
+          MAX(CASE WHEN game_players.paddle_loc = 'right' THEN users.username END) AS rightPlayer,
+          SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'left') AS totalScoreLeft,
+          SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'right') AS totalScoreRight
+        FROM games
+        JOIN game_matches ON game_matches.game_id = games.id
+        JOIN match_scores ON match_scores.match_id = game_matches.id
+        JOIN game_players ON game_players.game_id   = games.id
+        AND game_players.player_id = match_scores.player_id
+        JOIN users ON users.id = game_players.player_id
+        WHERE  games.id = ?
+        GROUP  BY games.id;
+      `).get(gameId)
+
+      const matches = fastify.db.prepare(`
+        SELECT
+          game_matches.id AS matchId,
+          game_matches.started,
+          game_matches.ended,
+          MAX(CASE WHEN game_players.paddle_loc = 'left' THEN users.username END) AS leftPlayer,
+          SUM(CASE WHEN game_players.paddle_loc = 'left' THEN match_scores.score END) AS scoreLeft,
+          SUM(CASE WHEN game_players.paddle_loc = 'left' THEN match_scores.hits  END) AS hitsLeft,
+          MAX(CASE WHEN game_players.paddle_loc = 'right' THEN users.username END) AS rightPlayer,
+          SUM(CASE WHEN game_players.paddle_loc = 'right' THEN match_scores.score END) AS scoreRight,
+          SUM(CASE WHEN game_players.paddle_loc = 'right' THEN match_scores.hits  END) AS hitsRight
+        FROM game_matches
+        JOIN match_scores ON match_scores.match_id = game_matches.id
+        JOIN game_players ON game_players.game_id = game_matches.game_id
+        AND game_players.player_id = match_scores.player_id
+        JOIN users ON users.id = game_players.player_id
+        WHERE game_matches.game_id = ?
+        GROUP BY game_matches.id
+        ORDER BY game_matches.started;
+      `).all(gameId)
+
+      const matchesWonByLeft  = matches.filter(m => m.scoreLeft  > m.scoreRight).length;
+      const matchesWonByRight = matches.filter(m => m.scoreRight > m.scoreLeft ).length;
+
       return {
-        gameId: gameInfo.gameId,
-        created: gameInfo.created,
-        ended: gameInfo.ended,
-        status: gameInfo.status,
-        finalScoreLeft: gameInfo.finalScoreLeft,
-        finalScoreRight: gameInfo.finalScoreRight,
-        numMatches: gameInfo.numMatches,
-        matches: matches
+        gameId:           summary.gameId,
+        leftPlayer:       summary.leftPlayer,
+        rightPlayer:      summary.rightPlayer,
+        matchesWonByLeft: matchesWonByLeft,
+        matchesWonByRight: matchesWonByRight,
+        finalScoreLeft:   summary.totalScoreLeft,
+        finalScoreRight:  summary.totalScoreRight,
+        matches: matches.map(m => ({
+          matchId:     m.matchId,
+          started:     m.started,
+          ended:       m.ended,
+          leftPlayer:  m.leftPlayer,
+          scoreLeft:   m.scoreLeft,
+          hitsLeft:    m.hitsLeft,
+          rightPlayer: m.rightPlayer,
+          scoreRight:  m.scoreRight,
+          hitsRight:   m.hitsRight
+        }))
       }
     }
 

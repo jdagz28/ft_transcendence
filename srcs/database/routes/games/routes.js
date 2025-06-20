@@ -399,7 +399,7 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/games/:gameId/history', {
+    fastify.get('/games/:gameId/summary', {
       schema: {
         params: fastify.getSchema('schema:games:gameID'),
         // response: {
@@ -407,15 +407,15 @@ module.exports = fp(
         // }
       },
       onRequest: fastify.authenticate,
-      handler: async function getGameHistoryHandler(request, reply) {
+      handler: async function getGameSummaryHandler(request, reply) {
         try {
           const { gameId } = request.params
-          const history = await fastify.dbGames.getGameHistory(gameId)
-          if (!history) {
+          const summary = await fastify.dbGames.getGameSummary(gameId)
+          if (!summary) {
             reply.status(404).send({ error: 'Game not found' })
             return
           }
-          reply.status(200).send(history)
+          reply.status(200).send(summary)
         } catch (err) {
           fastify.log.error(err)
           reply.status(500).send({ error: 'Internal Server Error' })

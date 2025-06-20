@@ -217,11 +217,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       return data
     },
 
-    async getGameHistory(request, gameId) {
-      const { data } = await dbApi.get(`/games/${gameId}/history`, 
+    async getGameSummary(request, gameId) {
+      const { data } = await dbApi.get(`/games/${gameId}/summary`, 
         { headers: internalHeaders(request) },
       )
-      console.log('Game history retrieved:', data) //! DELETE
+      console.log('Game summary retrieved:', data) //! DELETE
       return data
     },
 

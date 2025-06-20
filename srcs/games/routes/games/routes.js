@@ -297,19 +297,19 @@ module.exports = fp(
       }
     })
 
-    // * game history
-    fastify.get('/games/:gameId/history', {
+    // * game summary
+    fastify.get('/games/:gameId/summary', {
       schema: {
         params: fastify.getSchema('schema:games:gameID')
       },
       onRequest: fastify.authenticate,
-      handler: async function getGameHistoryHandler(request, reply) {
+      handler: async function getGameSummaryHandler(request, reply) {
         const { gameId } = request.params
-        const history = await fastify.gameService.getGameHistory(request, gameId)
-        if (!history) {
+        const summary = await fastify.gameService.getGameSummary(request, gameId)
+        if (!summary) {
           return reply.code(404).send({ error: 'Game not found' })
         }
-        return reply.code(200).send(history)
+        return reply.code(200).send(summary)
       }
     })
 
