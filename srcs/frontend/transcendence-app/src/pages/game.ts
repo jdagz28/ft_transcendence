@@ -145,7 +145,12 @@ export async function renderGamePage(params: RouteParams) {
   if (mode === "single-player" || mode === "training") {
     const human = config.players[0];
     const humanSide = human.paddle_loc as "left" | "right";
-    const aiSide    = humanSide === "left" ? "right" : "left";
+    
+    const ai = config.players.find(p => p.player_id === aiId);
+    if (!ai) {
+      throw new Error(`AI player with ID ${aiId} not found in game config.`);
+    }
+    const aiSide    = ai.paddle_loc as "left" | "right";
 
     controllers.push({
       playerId: human.player_id,
@@ -155,7 +160,7 @@ export async function renderGamePage(params: RouteParams) {
     });
 
     controllers.push({
-      playerId: aiId,
+      playerId: ai.player_id,
       side:     aiSide,
       upKey:    "w",
       downKey:  "s",

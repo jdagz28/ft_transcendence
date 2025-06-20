@@ -496,6 +496,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Game is not in pending status')
         }
 
+        const checkMode = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        )
+        const mode = checkMode.get(gameId)
+        if (!mode) {
+          throw new Error('Game settings not found')
+        }
+
         const startQuery = fastify.db.prepare(
           'UPDATE games SET status = ? WHERE id = ?'
         )
@@ -522,7 +530,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const insertMatchScore = fastify.db.prepare(`
           INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
         `)
-
+        
+        let aiSide;
         for (const p of players) {
           const playerId   = p.userId
           const paddleLoc  = p.paddle_loc
@@ -537,6 +546,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           if (insResult.changes === 0) {
             throw new Error(`Failed to add player ${playerId} to match_scores`)
           }
+        }
+        if (mode === 'single-player' || mode === 'training') {
+          const aiId = fastify.aiUserId
+          const humanSide = players[0].paddle_side
+          aiLoc = humanSide === 'left' ? 'right' : 'left'
+
+          fastify.db.prepare(`
+            INSERT INTO game_players (game_id, player_id, paddle_loc)
+            VALUES (?, ?, ?)
+          `).run(gameId, aiId, aiLoc)
         }
         fastify.db.exec('COMMIT')
 
@@ -660,7 +679,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         JOIN   game_matches ON game_matches.game_id = games.id
         JOIN   match_scores ON match_scores.match_id = game_matches.id
         JOIN   game_players ON game_players.player_id = match_scores.player_id
-        WHERE  games.id = 5
+        WHERE  games.id = ?
         GROUP  BY games.id;
 
         SELECT game_matches.id,
@@ -674,7 +693,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         FROM   game_matches
         JOIN   match_scores ON match_scores.match_id = game_matches.id
         JOIN   game_players ON game_players.player_id = match_scores.player_id
-        WHERE  game_matches.game_id = 5
+        WHERE  game_matches.game_id = ?
         GROUP  BY game_matches.id
         ORDER  BY game_matches.started;
       `)

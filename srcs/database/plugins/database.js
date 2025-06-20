@@ -379,7 +379,26 @@ async function databaseConnector(fastify) {
 }
 
   fastify.decorate('db', db);
-  fastify.log.info("Fastify instance has 'db': " + fastify.hasDecorator('db'));
+  fastify.log.info("Fastify instance has 'db': " + fastify.hasDecorator('db')); 
+
+  const aiUserExists = fastify.db.prepare(`
+    SELECT id FROM users WHERE username = 'AiOpponent'
+  `).get();
+  if (aiUserExists) {
+    fastify.log.info("AI user already exists, skipping creation.");
+    fastify.decorate('aiUserId', aiUserExists.id);
+    return;
+  }
+  else {
+    const { id: aiId } = fastify.db.prepare(`
+      INSERT INTO users (username, email, password, salt, nickname)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('AiOpponent', 'ai@example.com', 'password', 'salt', 'AI AiOpponent');
+    fastify.log.info(`AI user created with ID: ${aiId}`);
+
+    fastify.decorate('aiUserId', aiId);
+    fastify.log.info("Fastify instance has 'aiUserId': " + fastify.hasDecorator('aiUserId'));
+  } 
 
   fastify.addHook('onClose', (instance, done) => {
     if (instance.db) {
