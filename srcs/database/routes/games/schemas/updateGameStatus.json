@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "$id": "schema:games:updateGameStatus",
+  "required": ["status"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["active", "paused", "aborted", "finished"]
+    },
+    "matchId": {
+      "type": "integer"
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hits": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "scores": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  }
+}

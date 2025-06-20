@@ -204,8 +204,18 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Game details retrieved:', data) //! DELETE
       return data
-    }
+    },
 
+    async updateGameStatus(request, gameId) {
+      const { status, matchId, stats } = request.body
+      const userId = request.user.id
+      const { data } = await dbApi.patch(`/games/${gameId}/status`, 
+        { userId, status, matchId, stats }, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Game status updated:', data) //! DELETE
+      return data
+    }
 
   })
 }, {

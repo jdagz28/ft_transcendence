@@ -1,7 +1,10 @@
 import type { RouteParams } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
-import { getConfig } from "../api/gameService";
-import { AIOpponent } from "../class/aiOpponent";
+import { getConfig, sendStatus } from "../api/gameService";
+import { AIOpponent } from "../class/AiOpponent";
+import { StatsTracker } from "../class/StatsTracker";
+import type { GameStatusUpdate } from "../types/game_api";
+
 
 function setupDom(root: HTMLElement): GamePageElements {
   root.innerHTML = "";
@@ -46,6 +49,7 @@ export async function renderGamePage(params: RouteParams) {
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
   const mode = config.settings.mode;
+  let currMatchId = config.matchId ? config.matchId : 1;
 
   let humanSide: 'left' | 'right' | undefined;
   if (mode === "training" || mode === "single-player") {
@@ -53,6 +57,13 @@ export async function renderGamePage(params: RouteParams) {
       throw new Error('Player should only be 1.');
     humanSide = config.players[0].paddle_loc as 'left' | 'right';
   }
+  const sideMap: Record<'left'|'right', number[]> = { left: [], right: [] };
+  config.players.forEach((p: PlayerConfig) => {
+    sideMap[p.paddle_loc as 'left' | 'right'].push(p.player_id);
+  });
+
+  const statsTracker = new StatsTracker(sideMap);
+  let pauseAt = 0;
 
 
   leftNames.innerHTML = "";
@@ -99,7 +110,7 @@ export async function renderGamePage(params: RouteParams) {
     },
     players: [
       { 
-        id: -1, 
+        id: sideMap.left[0] ?? -1,
         side: 'left', 
         x: margin,                         
         y: canvasHeight / 2 - paddleHeight / 2, 
@@ -107,7 +118,7 @@ export async function renderGamePage(params: RouteParams) {
         height: paddleHeight 
       },
       { 
-        id: -1, 
+        id: sideMap.right[0] ?? -1, 
         side: 'right', 
         x: canvasWidth - margin - paddleWidth, 
         y: canvasHeight / 2 - paddleHeight / 2, 
@@ -122,6 +133,7 @@ export async function renderGamePage(params: RouteParams) {
     settings: config.settings,
     gameStarted: false,
     gameOver: false,
+    isPaused: false,
   }
 
   localGameState = state;
@@ -209,6 +221,7 @@ export async function renderGamePage(params: RouteParams) {
         ball.vx < 0) {
       ball.vx *= -1;
       ball.x = left.x + left.width + ball.width;
+      statsTracker.hit(left.id);
     }
 
     if (ball.x + ball.width >= right.x && 
@@ -217,32 +230,52 @@ export async function renderGamePage(params: RouteParams) {
         ball.vx > 0) {
       ball.vx *= -1;
       ball.x = right.x - ball.width;
+      statsTracker.hit(right.id);
     }
 
     if (ball.x < 0) {
       state.score.right++;
-      if (state.score.right == totalMatches) {
-        state.totalScore.right++;
-        state.score.right = 0;
-      }
+      statsTracker.addPoint('right');
+      handlePoint('right', state);
       if (state.totalScore.right < totalGames || mode == "training") {
         resetBall(ball, state);
-      } else {
-        state.gameOver = true;
-      }
-
+      } 
     } else if (ball.x > state.canvasWidth) {
       state.score.left++;
-      if (state.score.left == totalMatches) {
-        state.totalScore.left++;
-        state.score.left = 0;
-      }
+      statsTracker.addPoint('left');
+      handlePoint('left', state);
       if (state.totalScore.left < totalGames || mode == "training") {
         resetBall(ball, state);
-      } else {
-        state.gameOver = true;
-      }
+      } 
     }  
+  }
+
+  function handlePoint(side: 'left' | 'right', state: GameState) {
+    if (state.score[side] === totalMatches) {
+      state.totalScore[side]++;
+      state.score.left = state.score.right = 0;
+      
+      const body: GameStatusUpdate = {
+      status: 'active',
+      gameId: gameId,
+      matchId: currMatchId,
+      stats: statsTracker.finishMatch()
+      };
+      console.log(`Sending status update for match ${currMatchId}:`, body); //!DELETE
+      sendStatus(gameId, body).catch(console.error);
+      currMatchId++;
+    }
+
+    if (state.totalScore[side] === totalGames) {
+      state.gameOver = true;
+      sendStatus(gameId, { 
+        status: 'finished',
+        gameId: gameId,
+        matchId: currMatchId,
+        stats: statsTracker.finishSession()
+      }).catch(console.error);
+    }
+    resetBall(state.ball, state);
   }
 
   function resetBall(ball: any, state: any) {
@@ -412,7 +445,36 @@ export async function renderGamePage(params: RouteParams) {
     else
       winner = "Right paddle wins!";
     ctx.fillText(winner, w / 2, h / 2);
-    //! post game stats to backend
   }
+
+  function togglePause() {
+    if (localGameState.gameOver) return;
+    if (!localGameState.isPaused) {
+      localGameState.isPaused = true;
+      pauseAt = performance.now();
+      cancelAnimationFrame(gameLoop!);
+      sendStatus(gameId, {
+        status: 'paused',
+        gameId: gameId,
+        matchId: currMatchId,
+      }).catch(console.error);
+    } else {
+      statsTracker.shiftTimes(performance.now() - pauseAt);
+      localGameState.isPaused = false;
+      gameLoop = requestAnimationFrame(gameLoopFn);
+      sendStatus(gameId, {
+        status: 'active',
+        gameId: gameId,
+        matchId: currMatchId,
+      }).catch(console.error);
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') togglePause();
+  });
+  document.addEventListener('click', e => {
+    if (!canvas.contains(e.target as Node)) togglePause();
+  });
 }
 
