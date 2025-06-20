@@ -1,9 +1,14 @@
+import { ROUTE_MAIN } from "../router"
+import { DEFAULT } from "../router"
 
 export function renderLoginPage(): void {
+	 alert("IN LOGIN");
   const root = document.getElementById("app");
 
+  alert("PRE FIRST RETURN");
   if (!root) return;
 
+  localStorage.setItem('loginredir', "");
   const urlParams = new URLSearchParams(window.location.search);
   const authSuccess = urlParams.get('auth');
   const username = urlParams.get('username');
@@ -27,7 +32,7 @@ export function renderLoginPage(): void {
     window.history.replaceState({}, document.title, window.location.pathname);
     return;
   }
-
+alert("PAST PROVIDERS");
   root.innerHTML = /*html*/ `
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] selection:bg-blue-400 selection:text-white relative z-10">
       <div class="bg-[#0d2551] p-8 rounded-xl shadow-xl/20 w-full max-w-md text-white backdrop-blur-sm bg-opacity-90">
@@ -93,9 +98,13 @@ export function renderLoginPage(): void {
 
 		const data = await response.json();
 		localStorage.setItem('token', data.token);
-        alert(`Logged in as ${username}`); //! DELETE
-        alert(`Redirecting to main page`); //! DELETE
-        window.location.replace("#main");
+		const redir = localStorage.getItem('loginredir') ?? "";
+		if (redir !== "") {
+			localStorage.setItem('loginredir', "");
+			window.location.replace(window.location.origin + redir);
+		}
+		else
+        	window.location.replace(window.location.origin + ROUTE_MAIN);
 
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
