@@ -645,7 +645,66 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to update game status')
       }
+    },
+
+    async getGameHistory(gameId) {
+      const query = fastify.db.prepare(`
+        SELECT games.id,
+              games.created,
+              games.ended,
+              games.status,
+              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='left')  AS finalScoreLeft,
+              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='right') AS finalScoreRight,
+              COUNT(DISTINCT game_matches.id) AS numMatches
+        FROM   games
+        JOIN   game_matches ON game_matches.game_id = games.id
+        JOIN   match_scores ON match_scores.match_id = game_matches.id
+        JOIN   game_players ON game_players.player_id = match_scores.player_id
+        WHERE  games.id = 5
+        GROUP  BY games.id;
+
+        SELECT game_matches.id,
+              game_matches.started,
+              game_matches.ended,
+              (strftime('%s',game_matches.ended)-strftime('%s',game_matches.started)) AS duration_s,
+              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='left')   AS scoreLeft,
+              SUM(match_scores.score) FILTER(WHERE game_players.paddle_loc='right')  AS scoreRight,
+              SUM(match_scores.hits)  FILTER(WHERE game_players.paddle_loc='left')   AS hitsLeft,
+              SUM(match_scores.hits)  FILTER(WHERE game_players.paddle_loc='right')  AS hitsRight
+        FROM   game_matches
+        JOIN   match_scores ON match_scores.match_id = game_matches.id
+        JOIN   game_players ON game_players.player_id = match_scores.player_id
+        WHERE  game_matches.game_id = 5
+        GROUP  BY game_matches.id
+        ORDER  BY game_matches.started;
+      `)
+      const rows = query.all(gameId, gameId)
+      if (!rows || rows.length === 0) {
+        throw new Error('No game history found')
+      }
+      const gameInfo = rows[0]
+      const matches = rows.slice(1).map(row => ({
+        matchId: row.matchId,
+        started: row.started,
+        ended: row.ended,
+        duration_s: row.duration_s,
+        scoreLeft: row.scoreLeft,
+        scoreRight: row.scoreRight,
+        hitsLeft: row.hitsLeft,
+        hitsRight: row.hitsRight
+      }))
+      return {
+        gameId: gameInfo.gameId,
+        created: gameInfo.created,
+        ended: gameInfo.ended,
+        status: gameInfo.status,
+        finalScoreLeft: gameInfo.finalScoreLeft,
+        finalScoreRight: gameInfo.finalScoreRight,
+        numMatches: gameInfo.numMatches,
+        matches: matches
+      }
     }
+
 
   })
 }, {

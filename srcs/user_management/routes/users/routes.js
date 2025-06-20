@@ -253,6 +253,28 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/ai', {
+      schema: {
+        response: {
+          200: { type: 'integer' }
+        }
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getAiId (request, reply) {
+         try {
+           const { data } = await dbApi.get('/users/ai', {
+             headers: internalHeaders(request)
+           })
+           return reply.send( data.id )
+         } catch (err) {
+           if (err.response?.status === 404) {
+             return reply.code(404).send({ error: 'UserMgmt: AI user not found' })
+           }
+           throw err
+         }
+      }
+    })
+
 
     /*
     // Blocked users

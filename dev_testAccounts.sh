@@ -6,6 +6,7 @@ PASSWORD=password
 
 #################
 declare -a USERS=(
+  "AiOpponent:ai@admin.com"
   "test:test@test.com"
   "testjdagoy:jdagoy@test.com"
   "testcortiz:cortiz@test.com"

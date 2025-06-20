@@ -1,6 +1,6 @@
 import type { RouteParams } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
-import { getConfig, sendStatus } from "../api/gameService";
+import { getAiId, getConfig, sendStatus } from "../api/gameService";
 import { AIOpponent } from "../class/AiOpponent";
 import { StatsTracker } from "../class/StatsTracker";
 import type { GameStatusUpdate } from "../types/game_api";
@@ -140,6 +140,7 @@ export async function renderGamePage(params: RouteParams) {
 
   const controllers: Controller[] = [];
   const aiOpponents: AIOpponent[] = [];
+  const aiId = await getAiId();
 
   if (mode === "single-player" || mode === "training") {
     const human = config.players[0];
@@ -154,7 +155,7 @@ export async function renderGamePage(params: RouteParams) {
     });
 
     controllers.push({
-      playerId: -1,
+      playerId: aiId,
       side:     aiSide,
       upKey:    "w",
       downKey:  "s",

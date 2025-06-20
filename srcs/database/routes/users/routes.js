@@ -387,6 +387,19 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/ai', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getAiUser(request, reply) {
+        const query = fastify.db.prepare(`
+          SELECT id FROM users WHERE username = ?;
+        `)
+        const result = query.get('AiOpponent')
+        if (!result)
+          return reply.code(404).send({ error: 'AI user not found' })
+        return result.id
+      }
+    })
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']
