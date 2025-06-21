@@ -49,9 +49,9 @@ export async function renderGamePage(params: RouteParams) {
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
   const mode = config.settings.mode;
-  let currMatchId = config.matchId ? config.matchId : 1;
+  let currMatchId = config.matchId
 
-  let humanSide: 'left' | 'right' | undefined;
+  let humanSide: 'left' | 'right';
   const sideMap: Record<'left'|'right', number[]> = { left: [], right: [] };
   config.players.forEach((p: PlayerConfig) => {
     sideMap[p.paddle_loc as 'left' | 'right'].push(p.player_id);
@@ -142,7 +142,7 @@ export async function renderGamePage(params: RouteParams) {
     if (!human || !ai) {
       throw new Error("Couldn’t identify human or AI from config.players");
     }
-    const humanSide = human.paddle_loc as "left" | "right";
+    humanSide = human.paddle_loc as "left" | "right";
 
     const aiSide    = ai.paddle_loc   as "left" | "right";
 
@@ -254,16 +254,17 @@ export async function renderGamePage(params: RouteParams) {
     if (state.score[side] === totalMatches) {
       state.totalScore[side]++;
       state.score.left = state.score.right = 0;
-      
+
       const body: GameStatusUpdate = {
-      status: 'active',
-      gameId: gameId,
-      matchId: currMatchId,
-      stats: statsTracker.finishMatch()
+        status: 'active',
+        gameId: gameId,
+        matchId: currMatchId,
+        stats: statsTracker.finishMatch()
       };
       console.log(`Sending status update for match ${currMatchId}:`, body); //!DELETE
       sendStatus(gameId, body).catch(console.error);
-      currMatchId++;
+      if (state.totalScore[side] !== totalGames) 
+        currMatchId++;
     }
 
     if (state.totalScore[side] === totalGames) {
