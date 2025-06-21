@@ -434,7 +434,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
               gp.player_id,
               gp.paddle_loc,
               gp.paddle_side,
-              u.username
+              u.username 
             FROM game_players gp
             JOIN users u ON u.id = gp.player_id
             WHERE gp.game_id = ?
@@ -442,21 +442,24 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const playerRows = selectPlayers.all(gameId)
         const settingsQuery = fastify.db.prepare(`
            SELECT
-              mode,
-              game_type,
-              game_mode,
-              max_players,
-              num_games,
-              num_matches,
-              ball_speed,
-              death_timed,
-              time_limit_s
-            FROM game_settings
-            WHERE game_id = ?
+              gs.mode,
+              gs.game_type,
+              gs.game_mode,
+              gs.max_players,
+              gs.num_games,
+              gs.num_matches,
+              gs.ball_speed,
+              gs.death_timed,
+              gs.time_limit_s,
+              gm.id AS matchId
+            FROM game_settings AS gs
+            JOIN game_matches gm ON gm.game_id = gs.game_id
+            WHERE gs.game_id = ?
         `)
         const settingsRow = settingsQuery.get(gameId)
         return {
           gameId,
+          matchId: settingsRow.matchId,
           settings: {
             mode:        settingsRow.mode,
             game_type:   settingsRow.game_type,
@@ -522,21 +525,25 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const insertMatchScore = fastify.db.prepare(`
           INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
         `)
-
+        
         for (const p of players) {
-          const playerId   = p.userId
-          const paddleLoc  = p.paddle_loc
-          const paddleSide = p.paddle_side
+          updatePlayer.run(p.paddle_loc, p.paddle_side, gameId, p.userId)
+          insertMatchScore.run(matchId, p.userId)
+        }
 
-          const updResult = updatePlayer.run(paddleLoc, paddleSide, gameId, playerId)
-          if (updResult.changes === 0) {
-            throw new Error(`Failed to update paddle for player ${playerId}`)
-          }
+        const modeRow = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId).mode
+        if (modeRow === 'single-player' || modeRow === 'training') {
+          const aiId       = fastify.aiUserId
+          const humanSide  = players[0].paddle_loc
+          const aiSide     = humanSide === 'left' ? 'right' : 'left'
 
-          const insResult = insertMatchScore.run(matchId, playerId)
-          if (insResult.changes === 0) {
-            throw new Error(`Failed to add player ${playerId} to match_scores`)
-          }
+          fastify.db.prepare(`
+            INSERT INTO game_players (game_id, player_id, paddle_loc)
+            VALUES (?, ?, ?)
+          `).run(gameId, aiId, aiSide)
+          insertMatchScore.run(matchId, aiId)
         }
         fastify.db.exec('COMMIT')
 
@@ -565,11 +572,26 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             UPDATE games
               SET status = ?,
                   updated = CURRENT_TIMESTAMP,
-                  started = CASE WHEN ? = 'active' AND started IS NULL THEN CURRENT_TIMESTAMP ELSE started END,
                   ended = CASE WHEN ? = 'finished' THEN CURRENT_TIMESTAMP ELSE ended END
             WHERE id = ?
           `)
-          updateGame.run(status, status, status, gameId)
+          updateGame.run(status, status, gameId)
+          fastify.db.exec('COMMIT')
+          if (status === 'finished') 
+            return { success: true, message: 'Game finished and updated successfully' }
+          return 
+        }
+        const currStatus = fastify.db.prepare(`
+          SELECT status FROM games WHERE id = ?
+        `).get(gameId).status
+        if (status === 'active' && currStatus === 'paused') {
+          const updateGame = fastify.db.prepare(`
+            UPDATE games
+              SET status = ?,
+                  updated = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `)
+          updateGame.run(status, gameId)
         }
 
         if (matchId) {
@@ -587,10 +609,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             `)
             matchResult = updateMatch.run(matchId)
           } else {
+            const prev = fastify.db.prepare(`
+              SELECT ended FROM game_matches
+              WHERE game_id = ?
+              ORDER BY id DESC
+              LIMIT 1
+            `).get(gameId);
             const createMatch  = fastify.db.prepare(`
-            INSERT INTO game_matches (game_id, started) VALUES (?, CURRENT_TIMESTAMP)
+              INSERT INTO game_matches (game_id, started, ended) VALUES (?, ?, CURRENT_TIMESTAMP)
             `)
-            matchResult = createMatch.run(gameId)
+            matchResult = createMatch.run(gameId, prev.ended)
             matchId = matchResult.lastInsertRowid
 
             const players = fastify.db.prepare(`
@@ -645,7 +673,82 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to update game status')
       }
+    },
+
+    async getGameSummary(gameId) {
+      const summary = fastify.db.prepare(`
+        SELECT
+          games.id AS gameId,
+          games.created,
+          games.ended,
+          (strftime('%s', games.ended)  - strftime('%s', games.created)) AS duration,
+          games.status,
+          MAX(CASE WHEN game_players.paddle_loc = 'left' THEN users.username END) AS leftPlayer,
+          MAX(CASE WHEN game_players.paddle_loc = 'right' THEN users.username END) AS rightPlayer,
+          SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'left') AS totalScoreLeft,
+          SUM(match_scores.score) FILTER (WHERE game_players.paddle_loc = 'right') AS totalScoreRight
+        FROM games
+        JOIN game_matches ON game_matches.game_id = games.id
+        JOIN match_scores ON match_scores.match_id = game_matches.id
+        JOIN game_players ON game_players.game_id   = games.id
+        AND game_players.player_id = match_scores.player_id
+        JOIN users ON users.id = game_players.player_id
+        WHERE  games.id = ?
+        GROUP  BY games.id;
+      `).get(gameId)
+
+      const matches = fastify.db.prepare(`
+        SELECT
+          game_matches.id AS matchId,
+          game_matches.started,
+          game_matches.ended,
+          (strftime('%s', game_matches.ended) - strftime('%s', game_matches.started)) AS duration,
+          MAX(CASE WHEN game_players.paddle_loc = 'left' THEN users.username END) AS leftPlayer,
+          SUM(CASE WHEN game_players.paddle_loc = 'left' THEN match_scores.score END) AS scoreLeft,
+          SUM(CASE WHEN game_players.paddle_loc = 'left' THEN match_scores.hits  END) AS hitsLeft,
+          MAX(CASE WHEN game_players.paddle_loc = 'right' THEN users.username END) AS rightPlayer,
+          SUM(CASE WHEN game_players.paddle_loc = 'right' THEN match_scores.score END) AS scoreRight,
+          SUM(CASE WHEN game_players.paddle_loc = 'right' THEN match_scores.hits  END) AS hitsRight
+        FROM game_matches
+        JOIN match_scores ON match_scores.match_id = game_matches.id
+        JOIN game_players ON game_players.game_id = game_matches.game_id
+        AND game_players.player_id = match_scores.player_id
+        JOIN users ON users.id = game_players.player_id
+        WHERE game_matches.game_id = ?
+        GROUP BY game_matches.id
+        ORDER BY game_matches.started;
+      `).all(gameId)
+
+      const matchesWonByLeft  = matches.filter(m => m.scoreLeft  > m.scoreRight).length;
+      const matchesWonByRight = matches.filter(m => m.scoreRight > m.scoreLeft ).length;
+
+      return {
+        gameId:           summary.gameId,
+        created:          summary.created,
+        ended:            summary.ended,
+        duration:         summary.duration,
+        status:           summary.status,
+        leftPlayer:       summary.leftPlayer,
+        rightPlayer:      summary.rightPlayer,
+        matchesWonByLeft: matchesWonByLeft,
+        matchesWonByRight: matchesWonByRight,
+        finalScoreLeft:   summary.totalScoreLeft,
+        finalScoreRight:  summary.totalScoreRight,
+        matches: matches.map(m => ({
+          matchId:     m.matchId,
+          duration:    m.duration,
+          started:     m.started,
+          ended:       m.ended,
+          leftPlayer:  m.leftPlayer,
+          scoreLeft:   m.scoreLeft,
+          hitsLeft:    m.hitsLeft,
+          rightPlayer: m.rightPlayer,
+          scoreRight:  m.scoreRight,
+          hitsRight:   m.hitsRight
+        }))
+      }
     }
+
 
   })
 }, {
