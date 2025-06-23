@@ -9,7 +9,7 @@ export class AIOpponent {
   constructor(
     state: GameState,
     controller: Controller,
-    keyState: Record<string, boolean>
+    keyState: Record<string, boolean>,
   ) {
     this.state = state;
     this.controller = controller;
@@ -55,4 +55,6 @@ export class AIOpponent {
     if (this.controller.downKey)
       this.keyState[this.controller.downKey] = false;
   }
+
+
 }

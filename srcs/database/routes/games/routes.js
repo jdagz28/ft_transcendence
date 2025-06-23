@@ -399,6 +399,30 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/:gameId/summary', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        // response: {
+        //   200: fastify.getSchema('schema:games:gameHistory')
+        // }
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getGameSummaryHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const summary = await fastify.dbGames.getGameSummary(gameId)
+          if (!summary) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(summary)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',

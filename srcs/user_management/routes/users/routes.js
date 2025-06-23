@@ -253,6 +253,18 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/ai', {
+      schema: {
+        response: {
+          200: { type: 'integer' }
+        }
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getAiId (request, reply) {
+         return fastify.aiUserId
+      }
+    })
+
 
     /*
     // Blocked users

@@ -297,6 +297,22 @@ module.exports = fp(
       }
     })
 
+    // * game summary
+    fastify.get('/games/:gameId/summary', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getGameSummaryHandler(request, reply) {
+        const { gameId } = request.params
+        const summary = await fastify.gameService.getGameSummary(request, gameId)
+        if (!summary) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(summary)
+      }
+    })
+
 
     //! ============ MATCHMAKING ============
     //! Draw randomlly to bracket players --- generate the games table
