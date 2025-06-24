@@ -316,7 +316,22 @@ module.exports = fp(
 
     //! ============ MATCHMAKING ============
     //! Draw randomlly to bracket players --- generate the games table
-    //! Start a tournament - update tournament status
+    // * Start a tournament - update tournament status
+    fastify.patch('/games/tournaments/:tournamentId/start', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function startTournamentHandler(request, reply) {
+        const { tournamentId } = request.params
+        const result = await fastify.gameService.startTournament(request, tournamentId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(result)
+      }
+    })
+
 
     //! Get all tournaments games
 

@@ -222,12 +222,12 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         console.log('Tournament Players created with ID:', tourPlayersResult.lastInsertRowid) //! DELETE
         fastify.db.exec('COMMIT')        
 
-        // Create game
-        const gameId = await fastify.dbGames.createGame(userId, "tournament", maxPlayers, "remote", gameMode)
-        if (!gameId) {
-          throw new Error('Failed to create game for tournament')
-        }
-        console.log('Game created for tournament with ID:', gameId) //! DELETE
+        //! Create games -> when tournament starts; after seeding the bracket
+        // const gameId = await fastify.dbGames.createGame(userId, "tournament", maxPlayers, "remote", gameMode)
+        // if (!gameId) {
+        //   throw new Error('Failed to create game for tournament')
+        // }
+        // console.log('Game created for tournament with ID:', gameId) //! DELETE
 
         return tournamentId
       } catch (err) {
@@ -747,8 +747,113 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           hitsRight:   m.hitsRight
         }))
       }
-    }
+    },
 
+
+    async startTournament(tournamentId, userId) {
+      try{
+        fastify.db.exec('BEGIN')
+        
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
+        )
+        const checkResult = check.get(tournamentId, userId)
+        if (!checkResult) {
+          throw new Error('Tournament not found or user not authorized')
+        }
+        if (checkResult.status !== 'pending') {
+          throw new Error('Tournament is not in pending status')
+        }
+        fastify.db.exec('COMMIT')
+        await fastify.dbGames.seedBracket(tournamentId);
+        const updateTournament = fastify.db.prepare(`
+          UPDATE tournaments
+            SET 
+              status = ?,
+              started = CURRENT_TIMESTAMP,  
+              updated = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `)
+        const result = updateTournament.run('active', tournamentId)
+        if (result.changes === 0) {
+          throw new Error('Failed to start tournament')
+        }
+        return { success: true, message: 'Tournament started successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to start tournament')
+      }
+    },
+
+    async pairOffPlayers (players) {
+      try {
+        const shuffledPlayers = players.sort(() => Math.random() - 0.5)
+        const pairs = []
+        for (let i = 0; i < shuffledPlayers.length; i += 2) {
+          if (i + 1 < shuffledPlayers.length) {
+            pairs.push([shuffledPlayers[i], shuffledPlayers[i + 1]])
+          } else {
+            pairs.push([shuffledPlayers[i], null]) // Odd player without a pair
+          }
+        }
+        return pairs
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to pair off players')
+      }
+    },
+
+    async seedBracket(tournamentId) {
+      try {
+        fastify.db.exec('BEGIN')
+        const players = fastify.db.prepare(
+          'SELECT user_id FROM tour_players WHERE tournament_id = ?'
+        ).all(tournamentId).map(p => p.user_id)
+
+        if (players.length < 2) {
+          throw new Error('Not enough players to seed the bracket')
+        }
+
+        if (players.length !== 4 && players.length !== 8 && players.length !== 16) {
+          throw new Error('Invlaid number of tournament players, cannot seed bracket')
+        }
+
+        const tourConfig = fastify.db.prepare(
+          'SELECT game_mode, game_type FROM tournament_settings WHERE tournament_id = ?'
+        ).get(tournamentId)
+        if (!tourConfig) {
+          throw new Error('Tournament settings not found')
+        }
+
+
+        const pairs = await fastify.dbGames.pairOffPlayers(players)
+
+        const insertMatch = fastify.db.prepare(`
+          INSERT INTO tournament_games (tournament_id, game_id, round) VALUES (?, ?, 1)
+        `)
+        fastify.db.exec('COMMIT')
+
+        for (const [player1, player2] of pairs) {
+          const gameId = await fastify.dbGames.createGame(
+            player1, 'tournament', 2, 'local', 'private'
+          )
+          if (!gameId) {
+            throw new Error('Failed to create game for tournament match')
+          }
+          fastify.db.prepare(
+            'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
+          ).run(gameId, player2)
+          
+          insertMatch.run(tournamentId, gameId)
+        }
+        return { success: true, message: 'Tournament bracket seeded successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to seed tournament bracket')
+      }
+    }
 
   })
 }, {

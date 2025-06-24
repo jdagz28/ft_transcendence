@@ -38,6 +38,7 @@ async function databaseConnector(fastify) {
       createTournamentTable();
       createTournamentSettingsTable();
       createTourPlayersTable();
+      createTournamentGames();
       createGamesTable();
       createGamesSettingsTable();
       createGameMatchesTable();
@@ -193,7 +194,7 @@ async function databaseConnector(fastify) {
         num_games INTEGER DEFAULT 1,
         num_matches INTEGER DEFAULT 1,
         ball_speed INTEGER DEFAULT 1,
-        death_timed BOOLEAN DEFAULT FALSE,
+        death_timed BOOLEAN DEFAULT 0,
         time_limit_s INTEGER DEFAULT 0,
         FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
       );
@@ -207,6 +208,7 @@ async function databaseConnector(fastify) {
         tournament_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
+        eliminated BOOLEAN NOT NULL DEFAULT 0,
         FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE (tournament_id, user_id)
@@ -215,6 +217,19 @@ async function databaseConnector(fastify) {
         ON tour_players(tournament_id);
       CREATE INDEX IF NOT EXISTS idx_tour_players_user_id
         ON tour_players(user_id);
+    `);
+  }
+
+  function createTournamentGames() {
+    db.exec (`
+      CREATE TABLE IF NOT EXISTS tournament_games (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tournament_id INTEGER NOT NULL,
+        game_id INTEGER NOT NULL,
+        round INTEGER NOT NULL
+    );
+      CREATE INDEX IF NOT EXISTS idx_tournament_games_tournament_id
+        ON tournament_games(tournament_id);
     `);
   }
 
@@ -251,7 +266,7 @@ async function databaseConnector(fastify) {
         num_games INTEGER DEFAULT 1,
         num_matches INTEGER DEFAULT 1,
         ball_speed INTEGER DEFAULT 1,
-        death_timed BOOLEAN DEFAULT FALSE,
+        death_timed BOOLEAN DEFAULT 0,
         time_limit_s INTEGER DEFAULT 0,
         FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
       );
@@ -295,7 +310,7 @@ async function databaseConnector(fastify) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         game_id INTEGER NOT NULL,
         player_id INTEGER NOT NULL,
-        is_remote BOOLEAN NOT NULL DEFAULT FALSE,
+        is_remote BOOLEAN NOT NULL DEFAULT 0,
         joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         paddle_loc TEXT 
           CHECK(paddle_loc IN ('left','right')),

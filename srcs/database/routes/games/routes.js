@@ -423,6 +423,29 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/games/tournaments/:tournamentId/start', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function startTournamentHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.startTournament(tournamentId, userId)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    }
+    )
+
   },
   {
     name: 'gameRoutes',

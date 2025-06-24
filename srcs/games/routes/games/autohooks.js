@@ -232,7 +232,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('All game history retrieved:', data) //! DELETE
       return data
+    },
+
+    async startTournament(request, tournamentId) {
+      const { data } = await dbApi.patch(`/games/tournaments/${tournamentId}/start`, 
+        {}, { headers: internalHeaders(request) },
+      )
+      console.log('Tournament started:', data) //! DELETE
+      return data
     }
+    
 
 
   })
