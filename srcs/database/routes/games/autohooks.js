@@ -820,7 +820,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         const tourConfig = fastify.db.prepare(
-          'SELECT game_mode, game_type FROM tournament_settings WHERE tournament_id = ?'
+          'SELECT * FROM tournament_settings WHERE tournament_id = ?'
         ).get(tournamentId)
         if (!tourConfig) {
           throw new Error('Tournament settings not found')
@@ -832,11 +832,12 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const insertMatch = fastify.db.prepare(`
           INSERT INTO tournament_games (tournament_id, game_id, round) VALUES (?, ?, 1)
         `)
+
         fastify.db.exec('COMMIT')
 
         for (const [player1, player2] of pairs) {
           const gameId = await fastify.dbGames.createGame(
-            player1, 'tournament', 2, 'local', 'private'
+            player1, 'tournament', 2, 'local', tourConfig.game_mode
           )
           if (!gameId) {
             throw new Error('Failed to create game for tournament match')
@@ -844,7 +845,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           fastify.db.prepare(
             'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
           ).run(gameId, player2)
-          
+          fastify.db.prepare(
+            'UPDATE game_settings SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit_s = ? WHERE game_id = ?'
+          ).run(tourConfig.num_games, tourConfig.num_matches, tourConfig.ball_speed, tourConfig.death_timed, tourConfig.time_limit_s, gameId)
+      
           insertMatch.run(tournamentId, gameId)
         }
         return { success: true, message: 'Tournament bracket seeded successfully' }
@@ -852,6 +856,34 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.db.exec('ROLLBACK')
         fastify.log.error(err)
         throw new Error('Failed to seed tournament bracket')
+      }
+    },
+
+    async updateTournamentOptions(tournamentId, userId, num_games, num_matches, ball_speed, death_timed, time_limit) {
+      try {
+        fastify.db.exec('BEGIN')
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
+        )
+        const checkTournament = check.get(tournamentId, userId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found or user not authorized')
+        }
+
+        const deathTimedInt = death_timed ? 1 : 0 
+        const updateQuery = fastify.db.prepare(
+          `UPDATE tournament_settings SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit_s = ? WHERE tournament_id = ?`,
+        )
+        const updateResult = updateQuery.run(num_games, num_matches, ball_speed, deathTimedInt, time_limit, tournamentId)
+        if (updateResult.changes === 0) {
+          throw new Error('Failed to update game options')
+        }
+        fastify.db.exec('COMMIT')
+        return { message: 'Tournament options updated successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to update tournament options')
       }
     }
 

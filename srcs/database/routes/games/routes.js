@@ -443,8 +443,35 @@ module.exports = fp(
           reply.status(500).send({ error: 'Internal Server Error' })
         }
       }
-    }
-    )
+    })
+
+    fastify.patch('/games/tournaments/:tournamentId/options', {
+      schme: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        body: fastify.getSchema('schema:games:updateTournamentOptions')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateTournamentOptionsHandler(request, reply) {
+        try {
+          const { num_games, num_matches, 
+            ball_speed, death_timed, time_limit } = request.body
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const updatedTournament = await fastify.dbGames.updateTournamentOptions(
+            tournamentId, userId, num_games, num_matches, ball_speed, death_timed, time_limit)
+          if (!updatedTournament) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(updatedTournament)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+
 
   },
   {

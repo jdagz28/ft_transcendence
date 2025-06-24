@@ -240,8 +240,19 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Tournament started:', data) //! DELETE
       return data
+    },
+
+    async updateTournamentOptions(request, tournamentId) {
+      const { num_games, num_matches, 
+        ball_speed, death_timed, time_limit } = request.body
+      const userId = request.user.id
+      const { data } = await dbApi.patch(`/games/tournaments/${tournamentId}/options`, 
+        { userId, num_games, num_matches, ball_speed, death_timed, time_limit },
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament options updated:', data) //! DELETE
+      return data
     }
-    
 
 
   })

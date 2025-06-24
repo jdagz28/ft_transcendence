@@ -332,6 +332,22 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/games/tournaments/:tournamentId/options', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        body: fastify.getSchema('schema:games:updateTournamentOptions')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateTournamentOptionsHandler(request, reply) {
+        const { tournamentId } = request.params
+        const updatedTournament = await fastify.gameService.updateTournamentOptions(request, tournamentId)
+        if (!updatedTournament) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(updatedTournament)
+      }
+  })
+
 
     //! Get all tournaments games
 

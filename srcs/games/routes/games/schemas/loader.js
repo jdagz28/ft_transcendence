@@ -11,4 +11,5 @@ module.exports = fp(async function schemaLoaderPlugin (fastify, opts) {
   fastify.addSchema(require('./startGame.json'))
   fastify.addSchema(require('./gameDetails.json'))
   fastify.addSchema(require('./updateGameStatus.json'))
+  fastify.addSchema(require('./updateTournamentOptions.json'))
 })
