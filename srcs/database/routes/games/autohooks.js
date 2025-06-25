@@ -213,7 +213,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         console.log('Tournament Settings created with ID:', tourSettingsResult.lastInsertRowid) //! DELETE
 
         const tourPlayersQuery = fastify.db.prepare(
-          'INSERT INTO tour_players (tournament_id, user_id) VALUES (?, ?)'
+          'INSERT INTO tournament_players (tournament_id, user_id) VALUES (?, ?)'
         )
         const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId)
         if (tourPlayersResult.changes === 0) {
@@ -258,14 +258,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Tournament settings not found')
         }
         const totalPlayers = fastify.db.prepare(
-          'SELECT COUNT (*) FROM tour_players WHERE tournament_id = ?'
+          'SELECT COUNT (*) FROM tournament_players WHERE tournament_id = ?'
         )
         const totalPlayersCount = totalPlayers.get(tournamentId)['COUNT (*)']
         if (totalPlayersCount >= checkTourSettings.max_players) {
           return { error: 'Tournament is full' }
         }
         const checkPlayer = fastify.db.prepare(
-          'SELECT * FROM tour_players WHERE tournament_id = ? AND user_id = ?'
+          'SELECT * FROM tournament_players WHERE tournament_id = ? AND user_id = ?'
         )
         const existingPlayer = checkPlayer.get(tournamentId, userId)
         if (existingPlayer) {
@@ -273,7 +273,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         const tourPlayersQuery = fastify.db.prepare(
-          'INSERT INTO tour_players (tournament_id, user_id) VALUES (?, ?)'
+          'INSERT INTO tournament_players (tournament_id, user_id) VALUES (?, ?)'
         )
         const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId)
         if (tourPlayersResult.changes === 0) {
@@ -301,7 +301,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         const query = fastify.db.prepare(
-          'DELETE FROM tour_players WHERE tournament_id = ? AND user_id = ?'
+          'DELETE FROM tournament_players WHERE tournament_id = ? AND user_id = ?'
         )
         const result = query.run(tournamentId, userId)
         if (result.changes === 0) {
@@ -350,7 +350,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     async getTournamentPlayers(tournamentId) {
       try {
         const query = fastify.db.prepare(
-          'SELECT * FROM tour_players WHERE tournament_id = ?'
+          'SELECT * FROM tournament_players WHERE tournament_id = ?'
         )
         const players = query.all(tournamentId)
         if (!players) {
@@ -808,7 +808,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       try {
         fastify.db.exec('BEGIN')
         const players = fastify.db.prepare(
-          'SELECT user_id FROM tour_players WHERE tournament_id = ?'
+          'SELECT user_id FROM tournament_players WHERE tournament_id = ?'
         ).all(tournamentId).map(p => p.user_id)
 
         if (players.length < 2) {
@@ -885,7 +885,76 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to update tournament options')
       }
+    },
+
+    async createTournamentAlias(tournamentId, userId, alias) {
+      try {
+        fastify.db.exec('BEGIN')
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournament_players WHERE tournament_id = ? AND user_id = ?'
+        )
+        const checkPlayer = check.get(tournamentId, userId)
+        if (!checkPlayer) {
+          throw new Error('User not authorized to create alias for this tournament')
+        }
+        const insertAlias = fastify.db.prepare(
+          'INSERT INTO tournament_aliases (tournament_id, user_id, alias) VALUES (?, ?, ?)'
+        )
+        const result = insertAlias.run(tournamentId, userId, alias)
+        if (result.changes === 0) {
+          throw new Error('Failed to create tournament alias')
+        }
+        fastify.db.exec('COMMIT')
+        return { message: 'Tournament alias created successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to create tournament alias')
+      }
+    },
+
+    async deleteTournamentAlias(tournamentId, userId, alias) {
+      try {
+        fastify.db.exec('BEGIN')
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournament_aliases WHERE tournament_id = ? AND user_id = ? AND alias = ?'
+        )
+        const checkAlias = check.get(tournamentId, userId, alias)
+        if (!checkAlias) {
+          throw new Error('Tournament alias not found or user not authorized')
+        }
+        const deleteAlias = fastify.db.prepare(
+          'DELETE FROM tournament_aliases WHERE tournament_id = ? AND user_id = ? AND alias = ?'
+        )
+        const result = deleteAlias.run(tournamentId, userId, alias)
+        if (result.changes === 0) {
+          throw new Error('Failed to delete tournament alias')
+        }
+        fastify.db.exec('COMMIT')
+        return { message: 'Tournament alias deleted successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to delete tournament alias')
+      }
+    },
+
+    async getTournamentAliases(tournamentId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM tournament_aliases WHERE tournament_id = ?'
+        )
+        const aliases = query.all(tournamentId)
+        if (!aliases) {
+          throw new Error('Failed to retrieve tournament aliases')
+        }
+        return aliases
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament aliases')
+      }
     }
+
 
   })
 }, {

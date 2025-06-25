@@ -39,6 +39,7 @@ async function databaseConnector(fastify) {
       createTournamentSettingsTable();
       createTourPlayersTable();
       createTournamentGames();
+      createTournamentAliasesTable();
       createGamesTable();
       createGamesSettingsTable();
       createGameMatchesTable();
@@ -203,7 +204,7 @@ async function databaseConnector(fastify) {
 
   function createTourPlayersTable() {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS tour_players (
+      CREATE TABLE IF NOT EXISTS tournament_players (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tournament_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
@@ -214,9 +215,9 @@ async function databaseConnector(fastify) {
         UNIQUE (tournament_id, user_id)
       );
       CREATE INDEX IF NOT EXISTS idx_tour_players_tournament_id
-        ON tour_players(tournament_id);
+        ON tournament_players(tournament_id);
       CREATE INDEX IF NOT EXISTS idx_tour_players_user_id
-        ON tour_players(user_id);
+        ON tournament_players(user_id);
     `);
   }
 
@@ -226,10 +227,31 @@ async function databaseConnector(fastify) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tournament_id INTEGER NOT NULL,
         game_id INTEGER NOT NULL,
-        round INTEGER NOT NULL
+        round INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending', 'finished')),
+        winner_id INTEGER,
+        UNIQUE (tournament_id, game_id),
+        FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
     );
       CREATE INDEX IF NOT EXISTS idx_tournament_games_tournament_id
         ON tournament_games(tournament_id);
+    `);
+  }
+
+  function createTournamentAliasesTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS tournament_aliases (
+        tournament_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        alias TEXT NOT NULL,
+        PRIMARY KEY (tournament_id, user_id),
+        UNIQUE(alias),
+        FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
     `);
   }
 

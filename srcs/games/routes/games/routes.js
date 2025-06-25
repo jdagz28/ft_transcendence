@@ -313,9 +313,6 @@ module.exports = fp(
       }
     })
 
-
-    //! ============ MATCHMAKING ============
-    //! Draw randomlly to bracket players --- generate the games table
     // * Start a tournament - update tournament status
     fastify.patch('/games/tournaments/:tournamentId/start', {
       schema: {
@@ -346,19 +343,54 @@ module.exports = fp(
         }
         return reply.code(200).send(updatedTournament)
       }
-  })
+    })
 
+    fastify.post('/games/tournaments/:tournamentId/alias', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        body: fastify.getSchema('schema:games:alias')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentAliasHandler(request, reply) {
+        const { tournamentId } = request.params
+        const alias = await fastify.gameService.createTournamentAlias(request, tournamentId)
+        if (!alias) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(201).send(alias)
+      }
+    })
 
-    //! Get all tournaments games
+    fastify.delete('/games/tournaments/:tournamentId/alias', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        body: fastify.getSchema('schema:games:tournamentAlias')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function deleteTournamentAliasHandler(request, reply) {
+        const { tournamentId } = request.params
+        const alias = await fastify.gameService.deleteTournamentAlias(request, tournamentId)
+        if (!alias) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(alias)
+      }
+    })
 
-    //! Get a specific tournament's games
-
-    
-    
-
-    
-
-  
+    fastify.get('/games/tournaments/:tournamentId/alias', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentAliasHandler(request, reply) {
+        const { tournamentId } = request.params
+        const alias = await fastify.gameService.getTournamentAlias(request, tournamentId)
+        if (!alias) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(alias)
+      }
+    })
 
   }, {
     name: 'gameRoutes',

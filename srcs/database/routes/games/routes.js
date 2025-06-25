@@ -471,7 +471,74 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/games/tournaments/:tournamentId/alias', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        body: fastify.getSchema('schema:games:alias')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentAliasHandler(request, reply) {
+        try {
+          const { alias } = request.body
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.createTournamentAlias(tournamentId, userId, alias)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(201).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
 
+    fastify.delete('/games/tournaments/:tournamentId/alias', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        body: fastify.getSchema('schema:games:tournamentAlias')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function deleteTournamentAliasHandler(request, reply) {
+        try {
+          const { alias } = request.body
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const result = await fastify.dbGames.deleteTournamentAlias(tournamentId, userId, alias)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId/alias', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentAliasHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const aliases = await fastify.dbGames.getTournamentAliases(tournamentId)
+          if (!aliases) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(aliases)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
 
   },
   {

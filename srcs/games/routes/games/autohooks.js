@@ -252,7 +252,35 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Tournament options updated:', data) //! DELETE
       return data
-    }
+    },
+
+    async createTournamentAlias(request, tournamentId) {
+      const { alias } = request.body
+      const userId = request.user.id
+      const { data } = await dbApi.post(`/games/tournaments/${tournamentId}/alias`, 
+        { alias }, { headers: internalHeaders(request) },
+      )
+      console.log('Tournament alias created:', data) //! DELETE
+      return data
+    },
+
+    async deleteTournamentAlias(request, tournamentId) {
+      const { alias } = request.body
+      const userId = request.user.id
+      const { data } = await dbApi.delete(`/games/tournaments/${tournamentId}/alias`, 
+        { alias }, { headers: internalHeaders(request) },
+      )
+      console.log('Tournament alias deleted:', data) //! DELETE
+      return data
+    },
+
+    async getTournamentAlias(request, tournamentId) {
+      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}/alias`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament alias retrieved:', data) //! DELETE
+      return data
+    },
 
 
   })
