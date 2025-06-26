@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:games:updateTournamentOptions",
+  "$id": "schema:tournaments:updateTournamentOptions",
   "required": [ "num_games", "num_matches" ],
   "properties": {
     "num_games": { 

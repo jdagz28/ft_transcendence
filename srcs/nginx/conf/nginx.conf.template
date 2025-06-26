@@ -50,6 +50,11 @@ http {
             include /etc/nginx/proxy_params;
         }
 
+        location ^~ /tournaments/ {
+            proxy_pass         http://games:${GAMES_PORT};
+            include /etc/nginx/proxy_params;
+        }
+
         location / {
             proxy_pass          http://backend:${BACKEND_PORT};
             include /etc/nginx/proxy_params;

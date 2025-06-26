@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:games:tournamentAlias",
+  "$id": "schema:tournaments:tournamentAlias",
   "required": [
     "alias"
   ],

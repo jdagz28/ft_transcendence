@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:games:createTournament",
+  "$id": "schema:tournaments:createTournament",
   "required": [
     "name",
     "maxPlayers",
@@ -21,7 +21,7 @@
     "gameType": {
       "type": "string",
       "enum": [ 
-        "singles" ,
+        "singles",
         "doubles"
       ]
     },
