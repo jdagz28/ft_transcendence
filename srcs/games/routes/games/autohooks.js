@@ -97,81 +97,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         throw error
       }
     },
-
-    async createTournament(request) {
-      const userId = request.user.id
-      const { name, maxPlayers, gameMode, gameType } = request.body
-      const { data } = await dbApi.post('/games/tournaments/createTournament', 
-        { userId, name, maxPlayers, gameMode, gameType },
-        { headers: internalHeaders(request) },
-      )
-      console.log('Tournament created:', data)
-      return data
-    },
-
-    async joinTournament(request, tournamentId, userId) {
-      try {
-        const { data } = await dbApi.patch(`/games/tournaments/${tournamentId}/join`, 
-          { userId },
-          { headers: internalHeaders(request) },
-        )
-        console.log('Joined tournament:', data) //! DELETE
-        return data
-      } catch (error) {
-        if (error.response?.status === 409) {
-          throw fastify.httpErrors.conflict(error.response.data?.error || 'Tournament conflict')
-        }
-        throw error
-      }
-    },
-
-    async leaveTournament(request, tournamentId, userId) {
-      try {
-        const { data } = await dbApi.delete(`/games/tournaments/${tournamentId}/leave`, 
-          { data: { userId }, headers: internalHeaders(request) },
-        )
-        console.log('Left tournament:', data) //! DELETE
-        return data
-      } catch (error) {
-        if (error.response?.status === 404) {
-          throw fastify.httpErrors.notFound(error.response.data?.error || 'Tournament not found')
-        }
-        throw error
-      }
-    },
-
-    async getTournaments(request) {
-      const { data } = await dbApi.get('/games/tournaments/all', 
-        { headers: internalHeaders(request) },
-      )
-      console.log('Tournaments retrieved:', data) //! DELETE
-      return data
-    },
-
-    async getTournamentById(request, tournamentId) {
-      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}`, 
-        { headers: internalHeaders(request) },
-      )
-      console.log('Tournament retrieved:', data) //! DELETE
-      return data
-    },
-
-    async getTournamentPlayers(request, tournamentId) {
-      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}/players`, 
-        { headers: internalHeaders(request) },
-      )
-      console.log('Tournament players retrieved:', data) //! DELETE
-      return data
-    },
-
-
-    async deleteTournament(request, tournamentId) {
-      const { data } = await dbApi.delete(`/games/tournaments/${tournamentId}`, 
-        { headers: internalHeaders(request) },
-      )
-      console.log('Tournament deleted:', data) //! DELETE
-      return data
-    },
     
     async deleteGame(request, gameId) {
       const { data } = await dbApi.delete(`/games/${gameId}`, 
@@ -233,8 +158,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       console.log('All game history retrieved:', data) //! DELETE
       return data
     }
-
-
   })
 }, {
   name: 'gameAutoHooks'
