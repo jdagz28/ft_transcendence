@@ -377,7 +377,7 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/games/tournaments/:tournamentId/alias', {
+    fastify.get('/games/tournaments/:tournamentId/aliases', {
       schema: {
         params: fastify.getSchema('schema:games:tournamentID')
       },
@@ -389,6 +389,51 @@ module.exports = fp(
           return reply.code(404).send({ error: 'Tournament not found' })
         }
         return reply.code(200).send(alias)
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId/brackets', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentBracketsHandler(request, reply) {
+        const { tournamentId } = request.params
+        const brackets = await fastify.gameService.getTournamentBrackets(request, tournamentId)
+        if (!brackets) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(brackets)
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId/games', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentGamesHandler(request, reply) {
+        const { tournamentId } = request.params
+        const games = await fastify.gameService.getTournamentGames(request, tournamentId)
+        if (!games) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(games)
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId/summary', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentSummaryHandler(request, reply) {
+        const { tournamentId } = request.params
+        const summary = await fastify.gameService.getTournamentSummary(request, tournamentId)
+        if (!summary) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(summary)
       }
     })
 

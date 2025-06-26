@@ -980,11 +980,232 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament aliases')
       }
+    },
+
+    async getTournamentBrackets(tournamentId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+
+        const query = fastify.db.prepare(`
+          SELECT 
+            tournament_games.id AS tournamentGameId,
+            tournament_games.tournament_id AS tournamentId,
+            tournament_games.round,
+            tournament_games.slot,
+            tournament_games.status,
+            tournament_games.winner_id,
+            games.id AS gameId,
+            game_players.player_id AS playerId,
+            tournament_aliases.alias AS playerAlias
+          FROM tournament_games
+          JOIN games ON games.id = tournament_games.game_id
+          JOIN game_players ON game_players.game_id = tournament_games.game_id
+          LEFT JOIN tournament_aliases ON tournament_aliases.tournament_id = tournament_games.tournament_id
+          AND tournament_aliases.user_id = game_players.player_id
+          WHERE tournament_games.tournament_id = ?
+          ORDER BY tournament_games.round, tournament_games.slot
+        `)
+        const rows = query.all(tournamentId)
+        if (rows.length === 0) {
+          throw new Error('Failed to retrieve tournament brackets')
+        }
+        const brackets = [];
+        for (const row of rows) {
+          let round = brackets.find(r => r.round === row.round);
+          if (!round) {
+            round = { round: row.round, slots: [] };
+            brackets.push(round);
+          }
+
+          let slot = round.slots.find(s => s.slot === row.slot);
+          if (!slot) {
+            slot = {
+              slot: row.slot,
+              tournamentGameId: row.tournamentGameId,
+              status: row.status,
+              winnerId: row.winner_id,
+              gameId: row.gameId,
+              players: []
+            };
+            round.slots.push(slot);
+          }
+
+          if (!slot.players.some(p => p.playerId === row.playerId)) {
+            slot.players.push({
+              playerId: row.playerId,
+              playerAlias: row.playerAlias ?? null
+            });
+          }
+        }
+
+        return { tournamentId, brackets }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament brackets')
+      }
+    },
+
+    async getTournamentGames(tournamentId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+
+        const checkRound = fastify.db.prepare(`
+          SELECT MAX(round) AS max_round FROM tournament_games WHERE tournament_id = ?
+        `).get(tournamentId)
+        if (!checkRound || checkRound.max_round === null) {
+          return []
+        }
+
+        const checkPlayerInRound = fastify.db.prepare(`
+          SELECT 1 FROM tournament_games
+          JOIN game_players ON game_players.game_id = tournament_games.game_id
+          WHERE tournament_games.tournament_id = ? AND game_players.player_id = ? AND tournament_games.round = ?
+        `)
+        const playerInRound = checkPlayerInRound.get(tournamentId, userId, checkRound.max_round)
+        if (!playerInRound) {
+          throw new Error('User not found in the latest round of the tournament')
+        }
+        const query = fastify.db.prepare(`
+          SELECT 
+            tournament_games.id AS tournamentGameId,
+            tournament_games.tournament_id AS tournamentId,
+            tournament_games.round,
+            tournament_games.slot,
+            tournament_games.status,
+            tournament_games.winner_id,
+            games.id AS gameId,
+            game_players.player_id AS playerId,
+            tournament_aliases.alias AS playerAlias
+          FROM tournament_games
+          JOIN games ON games.id = tournament_games.game_id
+          JOIN game_players ON game_players.game_id = tournament_games.game_id
+          LEFT JOIN tournament_aliases ON tournament_aliases.tournament_id = tournament_games.tournament_id
+          AND tournament_aliases.user_id = game_players.player_id
+          WHERE tournament_games.tournament_id = ? AND game_players.player_id = ? AND tournament_games.round = ?
+          ORDER BY tournament_games.round, tournament_games.slot
+        `)
+        const games = query.all(tournamentId, userId, checkRound.max_round)
+        if (!games) {
+          throw new Error('Failed to retrieve tournament games')
+        }
+        return games.map(g => ({
+          tournamentGameId: g.tournamentGameId,
+          tournamentId: g.tournamentId,
+          round: g.round,
+          slot: g.slot,
+          status: g.status,
+          gameId: g.gameId,
+          players: games.map(p => ({
+            playerId: p.player_id,
+            playerAlias: p.playerAlias || null
+          })),
+        }))
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament games')
+      }
+    },
+
+    async getTournamentSummary(tournamentId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+
+        const tourQuery = fastify.db.prepare(`
+          SELECT
+            id, 
+            name,
+            status,
+            created,
+            started,
+            ended,
+            winner_id
+          FROM tournaments
+          WHERE id = ?
+        `)
+        const tournament = tourQuery.get(tournamentId)
+        if (!tournament) {
+          throw new Error('Tournament not found')
+        }
+        const rows = fastify.db.prepare(`
+          SELECT
+            tournament_games id AS tournamentGameId,
+            tournament_games round,
+            tournament_games slot,
+            tournament_games status  AS gameStatus,
+            tournament_games winner_id  AS gameWinnerId,
+            tournament_games game_id  AS gameId,
+            game_players.player_id AS playerId,
+            tournament_aliases.alias AS playerAlias
+          FROM tournament_games
+          JOIN game_players ON game_players.game_id = tournament_games game_id
+          LEFT JOIN tournament_aliases
+            ON  tournament_aliases.tournament_id = tournament_games tournament_id
+            AND tournament_aliases.user_id       = gp.player_id
+          WHERE tournament_games tournament_id = ?
+          ORDER BY tournament_games round DESC, tournament_games slot ASC
+        `).all(tournamentId);
+        if (!rows || rows.length === 0) {
+          throw new Error('No games found for this tournament')
+        }
+        const summary = {
+          tournamentId: tournament.id,
+          name: tournament.name,
+          status: tournament.status,
+          created: tournament.created,
+          started: tournament.started,
+          ended: tournament.ended,
+          winnerId: tournament.winner_id || null,
+          totalRounds: Math.max(...rows.map(r => r.round)),
+          totalGames: rows.length,
+          games: []
+        }
+        for (const row of rows) {
+          let game = summary.games.find(g => g.tournamentGameId === row.tournamentGameId);
+          if (!game) {
+            game = {
+              tournamentGameId: row.tournamentGameId,
+              round: row.round,
+              slot: row.slot,
+              status: row.gameStatus,
+              winnerId: row.gameWinnerId,
+              gameId: row.gameId,
+              players: []
+            };
+            summary.games.push(game);
+          }
+          if (!game.players.some(p => p.playerId === row.playerId)) {
+            game.players.push({
+              playerId: row.playerId,
+              playerAlias: row.playerAlias || null
+            });
+          }
+        }
+        
+        return summary
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament summary')  
+      }
     }
-
-
   })
-
   
   fastify.decorate('tournaments', {
     async onGameFinished(gameId) {

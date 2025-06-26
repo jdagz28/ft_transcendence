@@ -282,6 +282,29 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       return data
     },
 
+    async getTournamentBrackets(request, tournamentId) {
+      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}/brackets`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament brackets retrieved:', data) //! DELETE
+      return data
+    },
+
+    async getTournamentGames(request, tournamentId) {
+      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}/games`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament games retrieved:', data) //! DELETE
+      return data
+    },
+
+    async getTournamentSummary(request, tournamentId) {
+      const { data } = await dbApi.get(`/games/tournaments/${tournamentId}/summary`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament summary retrieved:', data) //! DELETE
+      return data
+    }
 
   })
 }, {

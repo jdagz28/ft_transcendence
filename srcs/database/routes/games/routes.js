@@ -540,6 +540,73 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/tournaments/:tournamentId/brackets', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentBracketsHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const brackets = await fastify.dbGames.getTournamentBrackets(tournamentId)
+          if (!brackets) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(brackets)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId/games', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentGamesHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const userId = request.user.id
+          const games = await fastify.dbGames.getTournamentGames(tournamentId, userId)
+          if (!games) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(games)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/games/tournaments/:tournamentId/summary', {
+      schema: {
+        params: fastify.getSchema('schema:games:tournamentID'),
+        // response: {
+        //   200: fastify.getSchema('schema:games:tournamentSummary')
+        // }
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentSummaryHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const summary = await fastify.dbGames.getTournamentSummary(tournamentId)
+          if (!summary) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(summary)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+  })
+
   },
   {
     name: 'gameRoutes',
