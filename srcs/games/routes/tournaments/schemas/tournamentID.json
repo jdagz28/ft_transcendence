@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "$id": "schema:games:tournamentID",
+  "$id": "schema:tournaments:tournamentID",
   "properties": {
     "tournamentId": {
       "type": "integer",
