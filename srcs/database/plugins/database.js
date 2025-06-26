@@ -231,6 +231,7 @@ async function databaseConnector(fastify) {
         status TEXT NOT NULL DEFAULT 'pending'
           CHECK (status IN ('pending', 'finished')),
         winner_id INTEGER,
+        slot INTEGER NOT NULL DEFAULT 0,
         UNIQUE (tournament_id, game_id),
         FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
         FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
@@ -238,6 +239,8 @@ async function databaseConnector(fastify) {
     );
       CREATE INDEX IF NOT EXISTS idx_tournament_games_tournament_id
         ON tournament_games(tournament_id);
+      CREATE INDEX IF NOT EXISTS idx_tournament_games_tournament_id_round_slot
+        ON tournament_games(tournament_id, round, slot);
     `);
   }
 

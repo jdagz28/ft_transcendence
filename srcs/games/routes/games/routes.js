@@ -348,7 +348,7 @@ module.exports = fp(
     fastify.post('/games/tournaments/:tournamentId/alias', {
       schema: {
         params: fastify.getSchema('schema:games:tournamentID'),
-        body: fastify.getSchema('schema:games:alias')
+        body: fastify.getSchema('schema:games:tournamentAlias')
       },
       onRequest: fastify.authenticate,
       handler: async function createTournamentAliasHandler(request, reply) {
