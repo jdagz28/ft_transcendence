@@ -1,4 +1,5 @@
 import type { RouteParams } from "../router";
+import { renderNavBar } from "../setUpLayout";
 
 /*interface CreateGameLobby {
   mode:
@@ -13,9 +14,9 @@ import type { RouteParams } from "../router";
   gameId: string;
 }*/
 
-async function checkLobbyAccess(lobbyId: string, priv: boolean) {
-	if (priv === false)
-		return true;
+async function checkLobbyAccess(lobbyId: string, priv: boolean, root: HTMLElement) {
+	renderNavBar(root);
+	if (priv === false) return true;
   try {
     const response = await fetch('/auth/gamelobby', {
       method: 'POST',
@@ -62,28 +63,13 @@ export function renderLobbyPage(params: RouteParams): void {
 	const game = (params.gameId ?? "");
 	const priv = !((params.priv ?? "true") === "false");
 	let hasAccess;
-	hasAccess = checkLobbyAccess(game, priv).then((hasAccess) => {
+	hasAccess = checkLobbyAccess(game, priv, root).then((hasAccess) => {
 	if (!hasAccess) {
 		renderLobbyError(root);
 		return ;
 	}
 	//let gameMode = (params.mode ?? "training");
 	//let playerCount = 1;
-	root.innerHTML = /*html*/`
-	<nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-white text-sm font-semibold">
-    	<div class="flex items-center gap-6">
-    		<div class="text-xl font-bold">🌊</div>
-    			<a href="#">Dashboard</a>
-				<a href="#">Games</a>
-				<a href="#">Tournament</a>
-				<a href="#">Leaderboard</a>
-				<a href="#">Chat</a>
-			</div>
-		<div class="flex items-center gap-4">
-			<span class="text-xl">🔔</span>
-			<div class="w-8 h-8 bg-white rounded-full"></div>
-    	</div>
-	</nav>`;
 	});
 	hasAccess = false;
 	if (!hasAccess) {
