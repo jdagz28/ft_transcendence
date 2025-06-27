@@ -77,24 +77,33 @@ export function renderChat(): void {
 
     const createBtn = document.getElementById("createButton");
     if (createBtn) {
+      // createBtn.addEventListener("click", async () => {
+      //   const name = prompt("Group name :");
+      //   if (!name || name.trim() === "") return;
+
+      //   let type = prompt("Groupe type ? (public/private)", "public");
+      //   if (!type) return;
+      //   type = type.toLowerCase();
+      //   if (type !== "public" && type !== "private") {
+      //     alert("Type invalid. Chose 'public' or 'private'.");
+      //     return;
+      //   }
+
+      //   const result = await createGroup(name, type);
+      //   if (result.success) {
+      //     window.location.reload();
+      //   } else {
+      //     alert("Error while creating group : " + (result.error?.error || "Unknown error"));
+      //   }
       createBtn.addEventListener("click", async () => {
-        const name = prompt("Group name :");
-        if (!name || name.trim() === "") return;
-
-        let type = prompt("Groupe type ? (public/private)", "public");
-        if (!type) return;
-        type = type.toLowerCase();
-        if (type !== "public" && type !== "private") {
-          alert("Type invalid. Chose 'public' or 'private'.");
-          return;
-        }
-
+      showCreateGroupModal(async (name, type) => {
         const result = await createGroup(name, type);
         if (result.success) {
           window.location.reload();
         } else {
-          alert("Error while creating group : " + (result.error?.error || "Unknown error"));
+          alert("Erreur lors de la création du groupe : " + (result.error?.error || "inconnue"));
         }
+        });
       });
     }
 
@@ -120,7 +129,7 @@ export function renderChat(): void {
         <span class="text-lg text-[#f8f8e7] font-semibold">${group.name}</span>
         <div class="flex gap-2">
           <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
-          <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-bold">Leave</button>
+          <!-- <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-bold">Leave</button> -->
         </div>
       `;
       groupsList.appendChild(divGroup);
@@ -175,35 +184,34 @@ export function renderChat(): void {
   }
 }
 
-// function showCreateGroupModal(onSubmit: (name: string, type: string) => void) {
-//   const modal = document.createElement('div');
-//   modal.className = "fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50";
-//   modal.innerHTML = `
-//     <div class="bg-[#18376b] rounded-xl p-8 shadow-2xl flex flex-col gap-4 min-w-[300px]">
-//       <h2 class="text-2xl text-[#f8f8e7] font-bold mb-2">Create a Group</h2>
-//       <input id="groupNameInput" type="text" placeholder="Name of Group" class="px-3 py-2 rounded w-full mb-2" />
-//       <select id="groupTypeInput" class="px-3 py-2 rounded w-full mb-4">
-//         <option value="public">Public</option>
-//         <option value="private">Private</option>
-//       </select>
-//       <div class="flex justify-end gap-2">
-//         <button id="cancelModalBtn" class="px-4 py-1 rounded bg-gray-400 text-white font-bold">Annuler</button>
-//         <button id="submitModalBtn" class="px-4 py-1 rounded bg-green-600 text-white font-bold">Créer</button>
-//       </div>
-//     </div>
-//   `;
-//   document.body.appendChild(modal);
+function showCreateGroupModal(onSubmit: (name: string, type: string) => void) {
+  const modal = document.createElement('div');
+  modal.className = "fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50";
+  modal.innerHTML = `
+    <div class="bg-[#18376b] rounded-xl p-8 shadow-2xl flex flex-col gap-4 min-w-[300px]">
+      <h2 class="text-2xl text-[#f8f8e7] font-bold mb-2">Create a Group</h2>
+      <input id="groupNameInput" type="text" placeholder="Name of Group" class="px-3 py-2 rounded w-full mb-2" />
+      <select id="groupTypeInput" class="px-3 py-2 rounded w-full mb-4">
+        <option value="public">Public</option>
+        <option value="private">Private</option>
+      </select>
+      <div class="flex justify-end gap-2">
+        <button id="cancelModalBtn" class="px-4 py-1 rounded bg-gray-400 text-white font-bold">Annuler</button>
+        <button id="submitModalBtn" class="px-4 py-1 rounded bg-green-600 text-white font-bold">Créer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 
-//   // Gestion des boutons
-//   (modal.querySelector('#cancelModalBtn') as HTMLButtonElement).onclick = () => modal.remove();
-//   (modal.querySelector('#submitModalBtn') as HTMLButtonElement).onclick = () => {
-//     const name = (modal.querySelector('#groupNameInput') as HTMLInputElement).value.trim();
-//     const type = (modal.querySelector('#groupTypeInput') as HTMLSelectElement).value;
-//     if (!name) {
-//       alert("Name is required.");
-//       return;
-//     }
-//     modal.remove();
-//     onSubmit(name, type);
-//   };
-// }
+  (modal.querySelector('#cancelModalBtn') as HTMLButtonElement).onclick = () => modal.remove();
+  (modal.querySelector('#submitModalBtn') as HTMLButtonElement).onclick = () => {
+    const name = (modal.querySelector('#groupNameInput') as HTMLInputElement).value.trim();
+    const type = (modal.querySelector('#groupTypeInput') as HTMLSelectElement).value;
+    if (!name) {
+      alert("Name is required.");
+      return;
+    }
+    modal.remove();
+    onSubmit(name, type);
+  };
+}

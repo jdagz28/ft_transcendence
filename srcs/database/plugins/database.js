@@ -368,6 +368,7 @@ async function databaseConnector(fastify) {
       CREATE TABLE IF NOT EXISTS conversations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         is_group BOOLEAN NOT NULL,
+        is_game BOOLEAN NOT NULL DEFAULT 0,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         name TEXT,
