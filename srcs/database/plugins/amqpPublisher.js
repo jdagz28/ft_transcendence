@@ -44,6 +44,9 @@ module.exports = fp(async function amqpPublisher (fastify, opts) {
 
       channel = await connection.createChannel()
       await channel.assertExchange(exchange, type, { durable: true })
+      const queueName = 'tournament.events'
+      await channel.assertQueue(queueName, { durable: true })
+      await channel.bindQueue(queueName, exchange, 'tournament.#')
 
       fastify.log.info('AMQP connected')
     } catch (err) {
