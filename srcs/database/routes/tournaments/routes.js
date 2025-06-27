@@ -337,6 +337,6 @@ module.exports = fp(
   },
   {
     name: 'tournamentRoutes',
-    dependencies: [ 'tournamentAutohooks']
+    dependencies: [ 'tournamentAutoHooks']
   }
 )

@@ -3,7 +3,7 @@
 const fp = require('fastify-plugin')
 const schemas = require('./schemas/loader')
 
-module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
+module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
   fastify.register(schemas)
 
   fastify.decorate('dbTournaments', {
@@ -199,9 +199,7 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
     },
 
     async startTournament(tournamentId, userId) {
-      try{
-        fastify.db.exec('BEGIN')
-        
+      try{        
         const check = fastify.db.prepare(
           'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
         )
@@ -212,8 +210,8 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
         if (checkResult.status !== 'pending') {
           throw new Error('Tournament is not in pending status')
         }
-        fastify.db.exec('COMMIT')
         await fastify.dbTournaments.seedBracket(tournamentId);
+        fastify.db.exec('BEGIN')
         const updateTournament = fastify.db.prepare(`
           UPDATE tournaments
             SET 
@@ -226,9 +224,11 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to start tournament')
         }
+        fastify.db.exec('COMMIT')
         return { success: true, message: 'Tournament started successfully' }
       } catch (err) {
-        fastify.db.exec('ROLLBACK')
+        if (fastify.db.inTransaction)
+          fastify.db.exec('ROLLBACK')
         fastify.log.error(err)
         throw new Error('Failed to start tournament')
       }
@@ -298,11 +298,27 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
           ).run(tourConfig.num_games, tourConfig.num_matches, tourConfig.ball_speed, tourConfig.death_timed, tourConfig.time_limit_s, gameId)
       
           insertMatch.run(tournamentId, gameId, slot)
+          await fastify.publishEvent(`tournament.game.ready.${player1}`, {
+            gameId,
+            tournamentId,
+            opponentId: player2,
+            round: 1,
+            timestamp: Date.now()
+          })
+          await fastify.publishEvent(`tournament.game.ready.${player2}`, {
+            gameId,
+            tournamentId,
+            opponentId: player1,
+            round: 1,
+            timestamp: Date.now()
+          })
           slot++
         }
+
         return { success: true, message: 'Tournament bracket seeded successfully' }
       } catch (err) {
-        fastify.db.exec('ROLLBACK')
+        if (fastify.db.inTransaction)
+          fastify.db.exec('ROLLBACK')
         fastify.log.error(err)
         throw new Error('Failed to seed tournament bracket')
       }
@@ -580,8 +596,12 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
             SET status = 'finished', winner_id = ?, ended = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(winners[0], tournamentId)
-        
-        //!notify
+
+        await fastify.publishEvent(`tournament.finished.${winners[0]}`, {
+          tournamentId,
+          winnerId: winners[0],
+          timestamp: Date.now()
+        })
 
         return { message: 'Tournament finished', winnerId: winners[0] }
       }
@@ -611,6 +631,20 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
           'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
         ).run(gameId, player2)
         insertMatch.run(tournamentId, gameId, nextRound, slot)
+        await fastify.publishEvent(`tournament.game.ready.${player1}`, {
+            gameId,
+            tournamentId,
+            opponentId: player2,
+            round: nextRound,
+            timestamp: Date.now()
+          })
+          await fastify.publishEvent(`tournament.game.ready.${player2}`, {
+            gameId,
+            tournamentId,
+            opponentId: player1,
+            round: nextRound,
+            timestamp: Date.now()
+          })
       }
     },
 
@@ -703,5 +737,6 @@ module.exports = fp(async function tournamnentAutohooks(fastify, opts) {
     }
   })
 }, {
-  name: 'tournamentAutohooks'
+  name: 'tournamentAutoHooks',
+  dependencies: ['gameAutoHooks']
 })

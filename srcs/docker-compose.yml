@@ -39,6 +39,8 @@ services:
     container_name: database
     build: ./database
     image: database:sqlite
+    depends_on:
+      - rabbitmq
     volumes:
       - db-sqlite:/data/sqlite:rw,z
     environment:
@@ -52,6 +54,7 @@ services:
       - authentication
       - backend
       - development
+
   usermanagement:
     container_name: user_management
     build: ./user_management
@@ -133,23 +136,46 @@ services:
       - build
       # - frontend
 
-  gamestate:
-    container_name: gamestate
-    build: ./gamestate
-    image: gamestate:fastify
-    depends_on:
-      - database
-    environment:
-      - PORT=${GAMESTATE_PORT}
+  # gamestate:
+  #   container_name: gamestate
+  #   build: ./gamestate
+  #   image: gamestate:fastify
+  #   depends_on:
+  #     - database
+  #   environment:
+  #     - PORT=${GAMESTATE_PORT}
+  #   ports:
+  #     - ${GAMESTATE_PORT}:${GAMESTATE_PORT}
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - transcendence
+  #   restart: always
+  #   profiles:
+  #     - game
+  #     - backend
+  #     - development
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.13-management
     ports:
-      - ${GAMESTATE_PORT}:${GAMESTATE_PORT}
-    env_file:
-      - .env
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status", "-q"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - transcendence
     restart: always
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     profiles:
-      - game
       - backend
       - development
 
@@ -165,6 +191,12 @@ volumes:
     driver_opts:
       type: none
       device: ../data/ft_transcendence/frontend
+      o: bind
+  rabbitmq_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ../data/ft_transcendence/rabbitmq
       o: bind
 
 networks:

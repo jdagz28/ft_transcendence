@@ -1,6 +1,7 @@
 SRCS_DIR		:= ./srcs/
 DB_DIR			:= ./data/ft_transcendence/sqlite
 FRONT_DIR		:= ./data/ft_transcendence/frontend
+MQ_DIR			:= ./data/ft_transcendence/rabbitmq
 
 COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 
@@ -8,6 +9,7 @@ COMPOSE_FILE 	:= $(SRCS_DIR)docker-compose.yml
 dev-up:
 	mkdir -p $(DB_DIR)
 	mkdir -p $(FRONT_DIR)
+	mkdir -p $(MQ_DIR)
 	docker compose -f $(COMPOSE_FILE) --profile build up -d
 	docker compose -f $(COMPOSE_FILE) --profile development up -d
 
@@ -68,6 +70,7 @@ clean: stop-containers remove-containers remove-images remove-networks
 prune: clean
 	rm -rf $(DB_DIR)
 	rm -rf $(FRONT_DIR)
+	rm -rf $(MQ_DIR)
 	docker system prune --volumes
 
 .PHONY: dev-up dev-down dev-start dev-stop dev-build \
