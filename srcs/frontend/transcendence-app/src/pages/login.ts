@@ -97,7 +97,7 @@ export function renderLoginPage(): void {
 		const redir = localStorage.getItem('loginredir') ?? "";
 		if (redir !== "") {
 			localStorage.setItem('loginredir', "");
-			window.location.replace(window.location.origin + redir);
+			window.location.replace(redir);
 		}
 		else
         	window.location.replace(window.location.origin + ROUTE_MAIN);
