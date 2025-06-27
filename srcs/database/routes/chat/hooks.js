@@ -469,6 +469,41 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       updateInvitation.run(invitation.id);
 
       return { refused: true, groupId };
+    },
+
+    async getUserChats(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`)
+      }
+
+      // Groupes où l'utilisateur est membre (non banni/kick)
+      const memberGroupsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type
+        FROM conversations c
+        JOIN convo_members m ON c.id = m.conversation_id
+        WHERE m.user_id = ?
+          AND c.type = 'group'
+          AND m.banned_at IS NULL
+          AND m.kicked_at IS NULL
+      `);
+      const memberGroups = memberGroupsQuery.all(userId);
+
+      // Groupes publics où il n'est PAS membre
+      const publicGroupsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type
+        FROM conversations c
+        WHERE c.type = 'group'
+          AND c.group_type = 'public'
+          AND c.id NOT IN (
+            SELECT conversation_id FROM convo_members WHERE user_id = ?
+          )
+      `);
+      const publicGroups = publicGroupsQuery.all(userId);
+
+      // Fusionner les deux listes
+      const allGroups = [...memberGroups, ...publicGroups];
+
+      return allGroups;
     }
     
   })

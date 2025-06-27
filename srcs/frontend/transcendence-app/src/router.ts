@@ -5,6 +5,7 @@ import { renderRegisterPage } from "./pages/register";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
+import { renderChat } from "./chat";
 
 export const ROUTE_GAMES_NEW = "/#games-new";
 export const ROUTE_GAMES_PAGE = "/#games";
@@ -13,6 +14,7 @@ export const ROUTE_REGISTER = "/#register";
 export const ROUTE_MAIN = "/#main";
 export const ROUTE_LOBBY = "/#lobby";
 export const DEFAULT = "/#404";
+export const ROUTE_CHAT = "/#chat";
 
 export type RouteParams = Record<string, string | undefined>;
 type RouteHandler = (params: RouteParams) => void;
@@ -25,6 +27,7 @@ const routes: Record<string, RouteHandler> = {
   [ROUTE_REGISTER]: () => renderRegisterPage(),
   [ROUTE_MAIN]: (params) => renderMainPage(params),
   [ROUTE_LOBBY]: (params) => renderLobbyPage(params),
+  [ROUTE_CHAT]: () => renderChat(),
   [DEFAULT]: () => renderDefault(),
 };
 

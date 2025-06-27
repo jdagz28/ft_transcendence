@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 set -euo pipefail
 
 API_URL=${API_URL:-https://localhost:4242/auth/register}
