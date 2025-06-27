@@ -1,31 +1,32 @@
-import { renderGameNewPage } from "./pages/game-new"; 
 import { renderGamePage } from "./pages/game";
 import { renderLoginPage } from "./pages/login";
 import { renderRegisterPage } from "./pages/register";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
+import { renderCreateTournamentPage } from "./pages/createTournament";
 
-export const ROUTE_GAMES_NEW = "/#games-new";
 export const ROUTE_GAMES_PAGE = "/#games";
 export const ROUTE_LOGIN = "/#login";
 export const ROUTE_REGISTER = "/#register";
 export const ROUTE_MAIN = "/#main";
 export const ROUTE_LOBBY = "/#lobby";
 export const DEFAULT = "/#404";
+export const ROUTE_TOURNAMENT_CREATE = "/#tournaments/create";
+
 
 export type RouteParams = Record<string, string | undefined>;
 type RouteHandler = (params: RouteParams) => void;
 
 
 const routes: Record<string, RouteHandler> = {
-  [ROUTE_GAMES_NEW]: (params) => renderGameNewPage(params),
   [ROUTE_GAMES_PAGE]: (params) => renderGamePage(params),
   [ROUTE_LOGIN]: () => renderLoginPage(),
   [ROUTE_REGISTER]: () => renderRegisterPage(),
   [ROUTE_MAIN]: (params) => renderMainPage(params),
   [ROUTE_LOBBY]: (params) => renderLobbyPage(params),
   [DEFAULT]: () => renderDefault(),
+  [ROUTE_TOURNAMENT_CREATE]: () => renderCreateTournamentPage(),
 };
 
 /**
