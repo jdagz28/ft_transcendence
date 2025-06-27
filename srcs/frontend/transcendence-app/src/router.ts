@@ -13,7 +13,7 @@ export const ROUTE_REGISTER = "/#register";
 export const ROUTE_MAIN = "/#main";
 export const ROUTE_LOBBY = "/#lobby";
 export const DEFAULT = "/#404";
-export const ROUTE_TOURNAMENT_CREATE = "/#tournament/create";
+export const ROUTE_TOURNAMENT_CREATE = "/#tournaments/create";
 export const ROUTE_CHAT = "/#chat";
 
 export type RouteParams = Record<string, string | undefined>;

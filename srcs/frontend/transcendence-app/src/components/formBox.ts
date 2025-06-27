@@ -22,24 +22,25 @@ export interface FormBoxSpec {
 
 export function buildFormBox(spec: FormBoxSpec): HTMLFormElement {
   const form = document.createElement("form");
-  form.className =
-    "w-full max-w-md mx-auto rounded-lg shadow-lg " +
-    "bg-white dark:bg-gray-800 p-6 space-y-4";
+   form.className =
+    "w-full max-w-md rounded-xl shadow-xl/20 " +
+    "bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 " +
+    "p-8 space-y-6";
 
   const h = document.createElement("h2");
   h.textContent = spec.heading;
-  h.className = "text-xl font-semibold text-gray-900 dark:text-gray-100";
+  h.className = "text-2xl font-bold text-center";
   form.appendChild(h);
 
   spec.fields.forEach((field) => {
-    const wrap = document.createElement("div");
-    wrap.className = "flex flex-col space-y-1";
+    const block = document.createElement("div");
+    block.className = "space-y-1";
 
     const label = document.createElement("label");
     label.textContent = field.label;
     label.htmlFor = field.name;
-    label.className = "text-sm font-medium text-gray-700 dark:text-gray-300";
-    wrap.appendChild(label);
+    label.className = "text-sm";
+    block.appendChild(label);
 
     if (field.type === "text") {
       const input = document.createElement("input");
@@ -47,36 +48,34 @@ export function buildFormBox(spec: FormBoxSpec): HTMLFormElement {
       input.id = input.name = field.name;
       input.placeholder = field.placeholder ?? "";
       input.className =
-        "border rounded px-3 py-2 focus:outline-none focus:ring-2 " +
-        "focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 " +
-        "dark:text-gray-100";
-      wrap.appendChild(input);
-    }
-
-    if (field.type === "select") {
+        "w-full px-4 py-2 rounded-md bg-[#081a37] " +
+        "focus:outline-none focus:ring-2 focus:ring-sky-400 " +
+        "placeholder-gray-400";
+      block.appendChild(input);
+    } else {
       const select = document.createElement("select");
       select.id = select.name = field.name;
       select.className =
-        "border rounded px-3 py-2 focus:outline-none focus:ring-2 " +
-        "focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 " +
-        "dark:text-gray-100";
+        "w-full px-4 py-2 rounded-md bg-[#081a37] " +
+        "focus:outline-none focus:ring-2 focus:ring-sky-400";
       field.options.forEach((opt) => {
         const o = document.createElement("option");
         o.value = o.textContent = opt;
         select.appendChild(o);
       });
-      wrap.appendChild(select);
+      block.appendChild(select);
     }
 
-    form.appendChild(wrap);
+    form.appendChild(block);
   });
 
   const btn = document.createElement("button");
   btn.type = "submit";
   btn.textContent = spec.submitLabel;
   btn.className =
-    "w-full py-2 rounded bg-indigo-600 text-white font-semibold " +
-    "hover:bg-indigo-700";
+    "w-full py-3 rounded-md text-lg font-semibold " +
+    "bg-gradient-to-r from-orange-500 to-orange-400 " +
+    "hover:opacity-90 transition";
   form.appendChild(btn);
 
   return form;

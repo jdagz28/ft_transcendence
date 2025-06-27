@@ -34,6 +34,14 @@ front:
 front-build:
 	docker compose -f $(COMPOSE_FILE) --profile frontend build
 
+front-re: front-stop front-build front
+
+front-stop:
+	docker compose -f $(COMPOSE_FILE) --profile frontend down
+
+front-rebuild:
+	docker compose -f $(COMPOSE_FILE) --profile frontend build --no-cache
+	docker compose -f $(COMPOSE_FILE) --profile frontend up -d
 
 testAccounts:
 	@chmod +x dev_testAccounts.sh

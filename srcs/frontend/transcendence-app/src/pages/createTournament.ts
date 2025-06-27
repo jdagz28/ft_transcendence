@@ -1,4 +1,5 @@
 import { buildFormBox, type FormBoxSpec } from "../components/formBox";
+import { setupAppLayout } from "../setUpLayout";
 
 export const createTournamentSpec: FormBoxSpec = {
   heading: "Create tournament",
@@ -12,18 +13,50 @@ export const createTournamentSpec: FormBoxSpec = {
 };
 
 export function renderCreateTournamentPage(): void {
-  const root = document.getElementById("app");
-  if (!root) {
-    console.error("#app element not found");
-    return;
-  }
-  root.innerHTML = "";
+  const { contentContainer } = setupAppLayout();
+  contentContainer.className = "flex-grow flex items-center justify-center";
 
-  const page = document.createElement("div");
-  page.className =
-    "min-h-screen flex items-center justify-center " +
-    "bg-gradient-to-b from-[#002861] to-[#001d4a] p-6";
-  root.appendChild(page);
+  const form = buildFormBox(createTournamentSpec);
 
-  page.appendChild(buildFormBox(createTournamentSpec));
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const fd = new FormData(form);
+    const payload = {
+      name:       (fd.get("tournamentName") as string).trim(),
+      maxPlayers: Number(fd.get("numPlayers")),
+      gameType:   String(fd.get("type")).toLowerCase(),
+      gameMode:   String(fd.get("gameMode")).toLowerCase()
+    };
+    if (!payload.name) {
+      alert("Tournament name is required");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token") ?? "";
+      const res = await fetch('/tournaments/create', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message ?? "Failed to create tournament");
+      }
+      alert("Tournament created 🎉");
+      // TODO: navigate to the new tournament view
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Unexpected error");
+    }
+  });
+
+  contentContainer.appendChild(form);
 }
