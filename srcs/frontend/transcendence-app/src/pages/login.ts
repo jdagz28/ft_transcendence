@@ -1,5 +1,4 @@
 import { ROUTE_MAIN } from "../router"
-import { DEFAULT } from "../router"
 
 export function renderLoginPage(): void {
   const root = document.getElementById("app");
