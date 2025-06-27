@@ -126,7 +126,7 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
   }),
 
   fastify.get('/chat/mychats/:userId', async (request, reply) => {
-    const userId = Number(request.param.userId)
+    const userId = Number(request.params.userId)
 
     try {
       const response = await fastify.dbChat.getUserChats(userId)
