@@ -10,13 +10,15 @@ export async function getTournamentPlayers(tournamentId: number): Promise<any> {
 }
 
 export async function getTournamentName(tournamentId: number): Promise<any> {
-  const response = await fetch(`/tournaments/${tournamentId}/`, {
+  const response = await fetch(`/tournaments/${tournamentId}`, {
     method: 'GET',
     credentials: 'include'
   });
   if (!response.ok) {
     throw new Error(`Failed to get tournament info for ${tournamentId}`);
   }
-  const { name: tournamentName } =  await response.json();
+  const result=  await response.json();
+  console.log(result);
+  const {name: tournamentName} = result.name;
   return tournamentName;
 }

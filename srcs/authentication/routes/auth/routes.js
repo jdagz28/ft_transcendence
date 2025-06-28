@@ -118,6 +118,14 @@ module.exports = fp(
       return { token }
     }
 
+    async function OAuthRedirect(reply, token, username, provider) {
+      const front = process.env.FRONTEND_BASE;
+      const dest = `${front}/#/main?${new URLSearchParams({
+                 token, user: username, provider }).toString()}`;
+      console.log('Redirecting to:', dest); //! DELETE
+      return reply.redirect(dest);
+    }
+
     fastify.get('/auth/42', {
       handler: async function handler42 (request, reply) {
         const authorizeURL = 'https://api.intra.42.fr/oauth/authorize'
@@ -169,7 +177,8 @@ module.exports = fp(
               id: existingEmail.id,
               username: existingEmail.username,
             }
-            return refreshHandler(request, reply)
+            const token = await request.generateToken();
+            return OAuthRedirect(reply, token, username, "42");
           }
           
           //! TEMPORARY PASSWORD
@@ -186,7 +195,9 @@ module.exports = fp(
             err.statusCode = 500
             throw err
           }
-          reply.status(201).send({ userId: newUserId })
+          request.user = { id: newUserId, username };
+          const token = await request.generateToken();
+          return OAuthRedirect(reply, token, username, "42");
         } catch (err) {
         console.error('Error during 42 authentication:', err) //! DELETE
         reply.status(err.statusCode || 500).send({ error: err.message })
@@ -250,7 +261,8 @@ module.exports = fp(
               id: existingEmail.id,
               username: existingEmail.username,
             }
-            return refreshHandler(request, reply)
+            const token = await request.generateToken();
+            return OAuthRedirect(reply, token, username, "Google");
           }
           
           //! TEMPORARY PASSWORD
@@ -267,8 +279,10 @@ module.exports = fp(
             err.statusCode = 500
             throw err
           }
-          console.log('Remote user created with ID:', newUserId)  //! DELETE
-          reply.status(201).send({ userId: newUserId })
+
+          request.user = { id: newUserId, username };
+          const token = await request.generateToken();
+          return OAuthRedirect(reply, token, username, "Google");
         } catch (err) {
         console.error('Error during Google authentication:', err) //! DELETE
         reply.status(err.statusCode || 500).send({ error: err.message })

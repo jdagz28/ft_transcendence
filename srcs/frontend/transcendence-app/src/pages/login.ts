@@ -1,34 +1,67 @@
 import { ROUTE_MAIN } from "../router"
 
+function extractOAuthParams(): {
+  token: string | null;
+  user: string | null;
+  provider: string | null;
+} {
+
+  const sessionToken = sessionStorage.getItem('oauth_token');
+  const sessionUser = sessionStorage.getItem('oauth_user');
+  const sessionProvider = sessionStorage.getItem('oauth_provider');
+  
+  if (sessionToken && sessionUser) {
+    sessionStorage.removeItem('oauth_token');
+    sessionStorage.removeItem('oauth_user');
+    sessionStorage.removeItem('oauth_provider');
+    
+    return {
+      token: sessionToken,
+      user: sessionUser,
+      provider: sessionProvider
+    };
+  }
+  
+  const params = new URLSearchParams(location.search);
+  let token = params.get('token');
+  let user = params.get('user');
+  let provider = params.get('provider');
+
+  if (!token && location.hash.includes('?')) {
+    const [, q] = location.hash.split('?');
+    const hash = new URLSearchParams(q);
+    token = hash.get('token');
+    user = hash.get('user');
+    provider = hash.get('provider');
+  }
+  
+  return { token, user, provider };
+}
+
+
 export function renderLoginPage(): void {
   const root = document.getElementById("app");
 
   if (!root) return;
 
   localStorage.setItem('loginredir', "");
-  const urlParams = new URLSearchParams(window.location.search);
-  const authSuccess = urlParams.get('auth');
-  const username = urlParams.get('username');
-  const provider = urlParams.get('provider');
+  const { token, user, provider } = extractOAuthParams();
+  console.log('OAuth params found:', { token, user, provider });
   
-  if (authSuccess === 'success' && username) {
-    let providerName;
+  if (token && token !== 'null' && user && user !== 'null') {
+    console.log('Valid OAuth success, storing token and redirecting');
+    localStorage.setItem('token', token);
     
-    switch (provider) {
-      case 'google':
-        providerName = 'Google';
-        break;
-      case '42':
-        providerName = '42 Intra';
-        break;
-      default:
-        providerName = provider;
-    }
-    
-    alert(`Logged in as ${username}${providerName ? ` via ${providerName}` : ''}`); //! DELETE
-    window.history.replaceState({}, document.title, window.location.pathname);
+    const redir = localStorage.getItem('loginredir') ?? '';
+    localStorage.setItem('loginredir', '');
+    window.location.replace(
+      redir !== '' ? redir : window.location.origin + ROUTE_MAIN
+    );
+
+    history.replaceState({}, '', window.location.pathname + window.location.hash);
     return;
   }
+
   root.innerHTML = /*html*/ `
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] selection:bg-blue-400 selection:text-white relative z-10">
       <div class="bg-[#0d2551] p-8 rounded-xl shadow-xl/20 w-full max-w-md text-white backdrop-blur-sm bg-opacity-90">
@@ -110,7 +143,6 @@ export function renderLoginPage(): void {
         }
       }
     });
-
 
     document.querySelector('.google-btn')!.addEventListener('click', () => {
       window.location.href = '/auth/google';

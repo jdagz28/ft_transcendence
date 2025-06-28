@@ -8,17 +8,15 @@ import { renderCreateTournamentPage } from "./pages/createTournament";
 import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderChat } from "./chat";
 
-export const ROUTE_GAMES_PAGE             = "/#games/:gameId";
-export const ROUTE_LOGIN_HASH             = "/#login";
-export const ROUTE_LOGIN_PATH             = "/login";
-export const ROUTE_REGISTER_HASH          = "/#register";
-export const ROUTE_REGISTER_PATH          = "/register";
-export const ROUTE_MAIN                   = "/#main";
-export const ROUTE_LOBBY                  = "/#lobby";
-export const DEFAULT                      = "/#404";
-export const ROUTE_CHAT                   = "/#chat";
-export const ROUTE_TOURNAMENT_CREATE      = "/#tournaments/create";
-export const ROUTE_TOURNAMENT_ALIAS       = "/#tournaments/:tournamentId/alias";
+export const ROUTE_GAMES_PAGE             = "/#/games/:gameId";
+export const ROUTE_LOGIN                  = "/#/login";
+export const ROUTE_REGISTER               = "/#/register";
+export const ROUTE_MAIN                   = "/#/main";
+export const ROUTE_LOBBY                  = "/#/lobby";
+export const DEFAULT                      = "/#/404";
+export const ROUTE_CHAT                   = "/#/chat";
+export const ROUTE_TOURNAMENT_CREATE      = "/#/tournaments/create";
+export const ROUTE_TOURNAMENT_ALIAS       = "/#/tournaments/:tournamentId/alias";
 
 
 
@@ -50,14 +48,12 @@ function extractParams(match: RegExpExecArray, pattern: string): RouteParams {
 
 
 const routes: RouteEntry[] = [
-  { pattern: ROUTE_LOGIN_HASH,    regex: tokenToRegex(ROUTE_LOGIN_HASH),    handler: _ => renderLoginPage() },
-  { pattern: ROUTE_LOGIN_PATH,    regex: tokenToRegex(ROUTE_LOGIN_PATH),    handler: _ => renderLoginPage() },
-  { pattern: ROUTE_REGISTER_HASH, regex: tokenToRegex(ROUTE_REGISTER_HASH), handler: _ => renderRegisterPage() },
-  { pattern: ROUTE_REGISTER_PATH, regex: tokenToRegex(ROUTE_REGISTER_PATH), handler: _ => renderRegisterPage() },
-
+  { pattern: ROUTE_LOGIN,  regex: tokenToRegex(ROUTE_LOGIN),  handler: () => renderLoginPage() },
+  { pattern: ROUTE_REGISTER, regex: tokenToRegex(ROUTE_REGISTER), handler: () => renderRegisterPage() },
   { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
+ 
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
-  { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: _ => renderCreateTournamentPage() },
+  { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
 
   // dynamic
   { pattern: ROUTE_GAMES_PAGE,
@@ -90,16 +86,48 @@ function parseRoute(full: string): [string, RouteParams] {
  return [path, params];
 }
 
+(function preserveOAuthParams() {
+  const hash = window.location.hash;
+  if (hash.includes('?')) {
+    const [, queryString] = hash.split('?');
+    const params = new URLSearchParams(queryString);
+    const token = params.get('token');
+    const user = params.get('user');
+    const provider = params.get('provider');
+    
+    if (token && user && token !== 'null' && user !== 'null') {
+      console.log('OAuth params preserved:', { token, user, provider });
+      
+      sessionStorage.setItem('oauth_token', token);
+      sessionStorage.setItem('oauth_user', user);
+      sessionStorage.setItem('oauth_provider', provider || '');
+      
+      window.history.replaceState({}, '', window.location.pathname + '#/login');
+    }
+  }
+})();
+
 export function initRouter() {
   const render = () => {
+    console.log("Router render called");
     const [path, params] = parseRoute(window.location.href);
+    console.log("Parsed path:", path);
+    console.log("Parsed params:", params);
+    
     for (const r of routes) {
+      console.log("Testing route pattern:", r.pattern);
+      console.log("Route regex:", r.regex);
       const m = r.regex.exec(path);
+      console.log("Regex match result:", m);
+      
       if (m) {
+        console.log("Route matched! Calling handler with params:", { ...params, ...extractParams(m, r.pattern) });
         r.handler({ ...params, ...extractParams(m, r.pattern) });
         return;
       }
     }
+    
+    console.log("No route matched, calling default handler");
     routes.find(r => r.pattern === DEFAULT)!.handler({});
   };
 

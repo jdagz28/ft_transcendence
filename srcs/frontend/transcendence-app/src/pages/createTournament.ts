@@ -51,9 +51,10 @@ export function renderCreateTournamentPage(): void {
         throw new Error(err.message ?? "Failed to create tournament");
       }
 
-      const { id: tournamentId } = await res.json() as { id: number };
+      const tournamentId = await res.json();
 
-      window.location.hash = `#/tournaments/${tournamentId}/alias`
+      window.location.hash = `/tournaments/${tournamentId}/alias`
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
 
 
     } catch (err) {
