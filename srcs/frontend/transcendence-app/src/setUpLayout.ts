@@ -1,4 +1,4 @@
-import { ROUTE_LOGIN } from "./router"
+import { ROUTE_LOGIN_HASH } from "./router"
 
 type userData = {
 	username: string;
@@ -50,7 +50,7 @@ export function renderNavBar(root: HTMLElement) {
 	data = whoAmI().then((data) => {
 	if (!data.success) {
 		localStorage.setItem('loginredir', window.location.href);
-		window.location.replace(window.location.origin + ROUTE_LOGIN);
+		window.location.replace(window.location.origin + ROUTE_LOGIN_HASH);
 		return ;
 	}
 	const user = data.data.username;

@@ -50,8 +50,12 @@ export function renderCreateTournamentPage(): void {
         const err = await res.json();
         throw new Error(err.message ?? "Failed to create tournament");
       }
-      alert("Tournament created 🎉");
-      // TODO: navigate to the new tournament view
+
+      const { id: tournamentId } = await res.json() as { id: number };
+
+      window.location.hash = `#/tournaments/${tournamentId}/alias`
+
+
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Unexpected error");
