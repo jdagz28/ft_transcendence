@@ -14,9 +14,7 @@ export async function renderAliasTournamentPage(tid: number): Promise<void> {
     "flex-grow flex flex-col text-white";
 
   const header = document.createElement("div");
-  header.className = 
-    "text-center py-6 bg-gradient-to-b from-blue-900/50 to-transparent";
-  
+  header.className = "text-center py-6";
   const title = document.createElement("h1");
   title.textContent = tournamentName;
   title.className = 

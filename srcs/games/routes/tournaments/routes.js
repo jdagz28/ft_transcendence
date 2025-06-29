@@ -37,6 +37,60 @@ module.exports = fp(
       }
     })
 
+    //invite someone to a tournament
+    fastify.post('/tournaments/:tournamentId/invite', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID'),
+        body: fastify.getSchema('schema:tournaments:inviteUser')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function inviteUserToTournamentHandler (request, reply) {
+        const { tournamentId } = request.params
+        const { userId } = request.body
+        const inviter = request.user.id
+        const admin = fastify.tournamentService.getTournamentById(request, tournamentId)
+        if (!admin || admin.creatorId !== inviter) {
+          return reply.code(403).send({ error: 'You are not authorized to invite users to this tournament' })
+        }
+        const result = await fastify.tournamentService.inviteUserToTournament(request, tournamentId, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
+    //get tournament invites
+    fastify.get('/tournaments/invites', {
+      onRequest: fastify.authenticate,
+      handler: async function tournamentInvitesHandler (reuqest, reply) {
+        const result = await fastify.tournamentService.getTournamentInvites(request, userId)
+        if (!result) {
+          return reply.code(404).send({ error: 'No tournament invites for user' })
+        }
+        return reply.send(result)
+      }
+    })
+
+    //respond to invite
+    fastify.patch('/tournaments/invites/:inviteId/respond', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:inviteID'),
+        body: fastify.getSchema('schema:tournaments:respondToInvite')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function respondToInviteHandler (request, reply) {
+        const { inviteId } = request.params
+        const { response, tournamentId } = request.body
+        const userId = request.user.id
+        const result = await fastify.tournamentService.respondToTournamentInvite(request, tournamentId, response, inviteId)
+        if (!result) {
+          return reply.code(404).send({ error: 'Invite not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
     // leave a tournament
     fastify.delete('/tournaments/:tournamentId/leave', {
       schema: {

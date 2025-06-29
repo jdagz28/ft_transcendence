@@ -12,8 +12,8 @@ export interface SlotOptions {
   state: SlotState;
   fetchCandidates?: (slotIndex: number) => Promise<Player[]>;
   onInvite?: (slotIndex: number, userId: number) => void;
+  onClick?: () => void;
 }
-
 
 function statusDot(color: string) {
   return `<span class="inline-block w-2 h-2 rounded-full mr-2" style="background:${color}"></span>`;
@@ -82,12 +82,19 @@ export function buildPlayerSlot(opts: SlotOptions): {
       caret.style.visibility = "visible";
 
       // fetch and show users
-      box.onclick = async (e) => {
-        e.stopPropagation();
-        if (!opts.fetchCandidates) return ;
-        const list = await opts.fetchCandidates(opts.slotIndex);
-        if (list.length) showMenu(list); 
-      };
+      if (opts.onClick) {
+        // Handle onClick if provided
+        box.onclick = (e) => {
+          e.stopPropagation();
+          opts.onClick!();
+        };
+      } else if (opts.fetchCandidates) {
+        box.onclick = async (e) => {
+          e.stopPropagation();
+          const list = await opts.fetchCandidates!(opts.slotIndex);
+          if (list.length) showMenu(list); 
+        };
+      }
     } else {
       const p = state.player;
       label.textContent = p.name;

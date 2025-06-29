@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "$id": "schema:tournaments:respondToInvite",
+  "required": [
+    "tournamentId",
+    "response"
+  ],
+  "properties": {
+    "tournamentId": { "type": "number" },
+    "response": {
+      "type": "string",
+      "enum": [
+        "accept",
+        "decline"
+      ] 
+    }
+  }
+}
