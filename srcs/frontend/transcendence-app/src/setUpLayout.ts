@@ -110,7 +110,11 @@ export function setupAppLayout() {
   root.appendChild(navContainer);
   root.appendChild(contentContainer);
   app.appendChild(root);
-  renderNavBar(navContainer);
 
+	const token = localStorage.getItem("token");
+	if (token) {
+  	renderNavBar(navContainer);
+	}
+	
   return { contentContainer };
 }

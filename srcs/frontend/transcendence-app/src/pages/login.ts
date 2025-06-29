@@ -1,4 +1,5 @@
 import { ROUTE_MAIN } from "../router"
+import { whoAmI } from "../setUpLayout";
 
 function extractOAuthParams(): {
   token: string | null;
@@ -40,8 +41,14 @@ function extractOAuthParams(): {
 
 
 export function renderLoginPage(): void {
-  const root = document.getElementById("app");
+  whoAmI().then(auth => {
+    if (auth.success) {
+      window.location.hash = ROUTE_MAIN.replace("#", "");
+      return;
+    }
+  });
 
+  const root = document.getElementById("app");
   if (!root) return;
 
   localStorage.setItem('loginredir', "");
@@ -54,11 +61,8 @@ export function renderLoginPage(): void {
     
     const redir = localStorage.getItem('loginredir') ?? '';
     localStorage.setItem('loginredir', '');
-    window.location.replace(
-      redir !== '' ? redir : window.location.origin + ROUTE_MAIN
-    );
+    window.location.hash = redir;
 
-    history.replaceState({}, '', window.location.pathname + window.location.hash);
     return;
   }
 
@@ -125,16 +129,11 @@ export function renderLoginPage(): void {
           throw new Error(errorData.message || 'Invalid credentials');
         }
 
-		const data = await response.json();
-		localStorage.setItem('token', data.token);
-		const redir = localStorage.getItem('loginredir') ?? "";
-		if (redir !== "") {
-			localStorage.setItem('loginredir', "");
-			window.location.replace(redir);
-		}
-		else
-        	window.location.replace(window.location.origin + ROUTE_MAIN);
-
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        const redir = localStorage.getItem('loginredir') || "#/main";
+        localStorage.setItem('loginredir', "");
+        window.location.hash = redir;
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
         if (errorDiv && err instanceof Error) {

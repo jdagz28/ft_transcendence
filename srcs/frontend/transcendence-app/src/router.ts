@@ -7,16 +7,17 @@ import { renderDefault } from "./pages/default";
 import { renderCreateTournamentPage } from "./pages/createTournament";
 import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderChat } from "./chat";
+import { whoAmI } from "./setUpLayout";
 
-export const ROUTE_GAMES_PAGE             = "/#/games/:gameId";
-export const ROUTE_LOGIN                  = "/#/login";
-export const ROUTE_REGISTER               = "/#/register";
-export const ROUTE_MAIN                   = "/#/main";
-export const ROUTE_LOBBY                  = "/#/lobby";
-export const DEFAULT                      = "/#/404";
-export const ROUTE_CHAT                   = "/#/chat";
-export const ROUTE_TOURNAMENT_CREATE      = "/#/tournaments/create";
-export const ROUTE_TOURNAMENT_ALIAS       = "/#/tournaments/:tournamentId/alias";
+export const ROUTE_GAMES_PAGE             = "/games/:gameId";
+export const ROUTE_LOGIN                  = "/login";
+export const ROUTE_REGISTER               = "/register";
+export const ROUTE_MAIN                   = "/main";
+export const ROUTE_LOBBY                  = "/lobby";
+export const DEFAULT                      = "/404";
+export const ROUTE_CHAT                   = "/chat";
+export const ROUTE_TOURNAMENT_CREATE      = "/tournaments/create";
+export const ROUTE_TOURNAMENT_ALIAS       = "/tournaments/:tournamentId/alias";
 
 
 
@@ -74,16 +75,11 @@ const routes: RouteEntry[] = [
   { pattern: DEFAULT, regex: tokenToRegex(DEFAULT), handler: () => renderDefault() }
 ];
 
-function parseRoute(full: string): [string, RouteParams] {
-  const routeQuery: string = full.substring(window.location.origin.length);
-  const [path, queryString] = routeQuery.split("?");
-  const params: RouteParams = {};
-  if (queryString) {
-    for (const [key, value] of new URLSearchParams(queryString).entries()) {
-      params[key] = value;
-    }
-  }
- return [path, params];
+function parseRoute(): [string, RouteParams] {
+  const hash = window.location.hash || '#/';
+  const [route] = hash.slice(1).split('?');
+  const path = route.startsWith('/') ? route : '/' + route;
+  return [path, {}];
 }
 
 (function preserveOAuthParams() {
@@ -107,12 +103,26 @@ function parseRoute(full: string): [string, RouteParams] {
   }
 })();
 
+async function handleRootRedirect() {
+  const auth = await whoAmI();
+  if (auth.success) {
+    window.location.hash = "#" + ROUTE_MAIN;
+  } else {
+    window.location.hash = "#" + ROUTE_LOGIN;
+  }
+}
+
 export function initRouter() {
-  const render = () => {
+  const render = async () => {
     console.log("Router render called");
-    const [path, params] = parseRoute(window.location.href);
+    const [path, params] = parseRoute();
     console.log("Parsed path:", path);
     console.log("Parsed params:", params);
+
+    if (path == '/') {
+      await handleRootRedirect();
+      return;
+    }
     
     for (const r of routes) {
       console.log("Testing route pattern:", r.pattern);

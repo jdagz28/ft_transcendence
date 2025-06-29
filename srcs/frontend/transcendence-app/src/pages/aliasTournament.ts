@@ -2,27 +2,41 @@ import { setupAppLayout } from "../setUpLayout";
 import { getTournamentName } from "@/api/tournament";
 
 export async function renderAliasTournamentPage(tid: number): Promise<void> {
+  const token = localStorage.getItem("token");
+  console.log("Token from localStorage:", token);
+  console.log("Token exists:", !!token);
+  console.log("Token length:", token?.length);
   const tournamentName = await getTournamentName(tid);
+  console.log("Tournament name:", tournamentName);
 
   const { contentContainer } = setupAppLayout();
   contentContainer.className =
-    "flex-grow flex flex-col items-center justify-center text-white";
+    "flex-grow flex flex-col text-white";
 
+  const header = document.createElement("div");
+  header.className = 
+    "text-center py-6 bg-gradient-to-b from-blue-900/50 to-transparent";
+  
   const title = document.createElement("h1");
   title.textContent = tournamentName;
-  title.className =
-    "absolute top-20 text-4xl md:text-5xl font-extrabold text-center";
-  contentContainer.appendChild(title);
+  title.className = 
+    "text-3xl md:text-4xl font-bold text-white mb-2"; 
+  header.appendChild(title);
+  contentContainer.appendChild(header);
 
+  const mainContent = document.createElement("div");
+  mainContent.className = 
+    "flex-grow flex flex-col items-center justify-center px-8 space-y-6";
+  
   const prompt = document.createElement("p");
   prompt.textContent = "Please enter a monicker for the tournament.";
-  prompt.className = "mb-6 text-xl md:text-2xl text-center";
-  contentContainer.appendChild(prompt);
+  prompt.className = 
+    "mb-6 text-xl text-center";
+  mainContent.appendChild(prompt);
 
   const form = document.createElement("form");
   form.className =
     "flex w-full max-w-md lg:max-w-lg rounded-lg overflow-hidden shadow-lg";
-  contentContainer.appendChild(form);
 
   // Alias Input
   const input = document.createElement("input");
@@ -30,7 +44,7 @@ export async function renderAliasTournamentPage(tid: number): Promise<void> {
   input.name = "alias";
   input.placeholder = "The Transcender";
   input.className =
-    "flex-grow px-4 py-3 text-gray-900 " +
+    "flex-grow px-4 py-3 bg-white text-gray-900 " +
     "placeholder-gray-400 focus:outline-none";
   form.appendChild(input);
 
@@ -42,6 +56,13 @@ export async function renderAliasTournamentPage(tid: number): Promise<void> {
     "bg-orange-500 hover:bg-orange-600 text-white font-semibold " +
     "px-5 md:px-6 whitespace-nowrap";
   form.appendChild(btn);
+
+  // contentContainer.appendChild(form);
+  // contentContainer.appendChild(mainContent);
+
+  mainContent.appendChild(form);
+  contentContainer.appendChild(mainContent);
+  
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

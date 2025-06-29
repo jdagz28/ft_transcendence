@@ -1,6 +1,11 @@
 export async function getTournamentPlayers(tournamentId: number): Promise<any> {
-    const response = await fetch(`/tournaments/${tournamentId}/players`, {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/tournaments/${tournamentId}/players`, {
     method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
     credentials: 'include'
   });
   if (!response.ok) {
@@ -10,8 +15,13 @@ export async function getTournamentPlayers(tournamentId: number): Promise<any> {
 }
 
 export async function getTournamentName(tournamentId: number): Promise<any> {
+  const token = localStorage.getItem("token") ?? "";
   const response = await fetch(`/tournaments/${tournamentId}`, {
     method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
     credentials: 'include'
   });
   if (!response.ok) {
@@ -19,6 +29,6 @@ export async function getTournamentName(tournamentId: number): Promise<any> {
   }
   const result=  await response.json();
   console.log(result);
-  const {name: tournamentName} = result.name;
-  return tournamentName;
+
+  return result.name;
 }
