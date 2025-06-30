@@ -27,8 +27,8 @@ export function buildPlayerSlot(opts: SlotOptions): {
 } {
   const box = document.createElement("div"); 
   box.className = 
-    "relative w-48 h-16 rounded-lg bg-[#0d2551] text-white " +
-    "flex items-center justify-between px-4 shadow-md";
+    "relative w-72 h-24 rounded-lg bg-[#0d2551] text-white " +
+    "flex items-center justify-between px-6 shadow-md text-xl font-semibold";
 
   const content = document.createElement("div");
   content.className = "flex items-center gap-3";
@@ -41,13 +41,13 @@ export function buildPlayerSlot(opts: SlotOptions): {
   caret.innerHTML = 
     '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" ' +
     'viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>';
-  caret.className = "opacity- 70";
+  caret.className = "opacity-70";
   box.appendChild(caret);
 
   // dropdown
   const menu = document.createElement("div");
   menu.className = 
-    "absolute left-0 top-full mt-1 w-48 rounded-lg bg-white text-gray-900 " +
+    "absolute left-0 top-full mt-1 w-64 rounded-lg bg-white text-gray-900 " +
     "shadow-lg overflow-y-auto max-h-60 z-20 hidden";
   box.appendChild(menu);
 
@@ -100,9 +100,10 @@ export function buildPlayerSlot(opts: SlotOptions): {
     } else {
       const p = state.player;
       label.textContent = p.alias;
+      label.className = "text-2xl font-bold";
       caret.style.visibility = "hidden";
       
-      const img = new Image(32, 32);
+      const img = new Image(48, 48);
       img.src = p.avatarUrl;
       img.className = "rounded-full";
       content.prepend(img);

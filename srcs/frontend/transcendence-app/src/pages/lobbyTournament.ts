@@ -22,7 +22,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   contentContainer.appendChild(header);
 
   const main = document.createElement("div");
-  main.className = "flex justify-start gap-8 px-8 py-10";
+  main.className = "flex justify-center items-start gap-20 px-8 py-10";
   contentContainer.appendChild(main);
 
   const players: Player[]  = await getTournamentPlayers(tournamentId);
@@ -37,7 +37,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   // Player Slots
   const sideBar = document.createElement("div");
   sideBar.id = "player-slots";
-  sideBar.className = "flex flex-col gap-4 flex-grow";
+  sideBar.className = "flex flex-col gap-4 w-64";
   main.appendChild(sideBar);
 
   const playersWithSlots = assignSlots(
@@ -83,25 +83,25 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   // Admin Buttons
   const btnContainer = document.createElement("div");
-  btnContainer.className = "mt-auto flex flex-col gap-3 w-48";
+  btnContainer.className = "absolute inset-x-0 bottom-0 pb-6 flex flex-col items-center gap-4";
   main.appendChild(btnContainer);
 
   const commonBtn =
-  "w-full text-xl font-semibold py-3 rounded-md transition";
+    "w-full max-w-xs text-xl font-semibold py-3 px-10 rounded-md shadow-sm transition";
   if (isAdmin) {
     const seedBtn = document.createElement("button");
     seedBtn.textContent = "Seed";
-    seedBtn.className = `${commonBtn} bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90`;
+    seedBtn.className = `${commonBtn} bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90`;
     btnContainer.appendChild(seedBtn);
   }
   const leaveBtn = document.createElement("button");
   leaveBtn.textContent = "Leave";
-  leaveBtn.className =`${commonBtn} bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90`;
+  leaveBtn.className =`${commonBtn} bg-gradient-to-r from-red-400 to-red-400 hover:opacity-90`;
   btnContainer.appendChild(leaveBtn);
 
   // Chat Area
   const chatBox = document.createElement("div");
-  chatBox.className = "flex-1 bg-[#1a3a5a] rounded-lg";
+  chatBox.className = "flex-1 basis-2/3 max-w-2/3 bg-[#1a3a5a] rounded-lg p-4 h-250 overflow-y-auto shadow-lg";
   main.appendChild(chatBox);
 
   
