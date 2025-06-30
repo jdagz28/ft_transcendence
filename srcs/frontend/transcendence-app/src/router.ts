@@ -14,7 +14,7 @@ import { whoAmI } from "./setUpLayout";
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
 export const ROUTE_LOGIN                  = "/login";
 export const ROUTE_REGISTER               = "/register";
-export const ROUTE_LOGIN_MFA              = "/login/mfa"; //! login logic -> pass userId; /login/:userId/mfa/verify
+export const ROUTE_LOGIN_MFA              = "/login/:userId/mfa/verify";
 export const ROUTE_MAIN                   = "/main";
 export const ROUTE_LOBBY                  = "/lobby";
 export const DEFAULT                      = "/404";
@@ -55,7 +55,7 @@ function extractParams(match: RegExpExecArray, pattern: string): RouteParams {
 const routes: RouteEntry[] = [
   { pattern: ROUTE_LOGIN,  regex: tokenToRegex(ROUTE_LOGIN),  handler: () => renderLoginPage() },
   { pattern: ROUTE_REGISTER, regex: tokenToRegex(ROUTE_REGISTER), handler: () => renderRegisterPage() },
-  { pattern: ROUTE_LOGIN_MFA, regex: tokenToRegex(ROUTE_LOGIN_MFA), handler: () => renderLoginMFA() }, 
+  { pattern: ROUTE_LOGIN_MFA, regex: tokenToRegex(ROUTE_LOGIN_MFA), handler: ({ userId }) => renderLoginMFA(Number(userId)) }, 
   { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },

@@ -129,10 +129,16 @@ export function renderLoginPage(): void {
         }
 
         const data = await response.json();
-        localStorage.setItem('token', data.token);
-        const redir = localStorage.getItem('loginredir') || "/main";
-        localStorage.setItem('loginredir', "");
-        window.location.hash = redir;
+        if (!data.token && data.mfaRequired) {
+          const userId = data.userId;
+          window.location.hash = `#/login/${userId}/mfa/verify`;
+        }
+        else {
+          localStorage.setItem('token', data.token);
+          const redir = localStorage.getItem('loginredir') || "/main";
+          localStorage.setItem('loginredir', "");
+          window.location.hash = redir;
+        }
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
         if (errorDiv && err instanceof Error) {

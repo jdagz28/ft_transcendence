@@ -1,4 +1,6 @@
-export function renderLoginMFA(): void {
+import { ROUTE_MAIN } from "../router";
+
+export function renderLoginMFA(userId: number): void {
   const root = document.getElementById("app");
   if (!root) return;
 
@@ -51,27 +53,25 @@ export function renderLoginMFA(): void {
       alert("Please enter all 6 digits.");
       return;
     }
-    
-    const response = await fetch('/auth/authenticate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ token }),
-    });
 
-    if (!response.ok) {
-      const error = await response.json();
-      alert(`Error: ${error.message}`);
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
+    try {
+      const response = await fetch(`/auth/${userId}/mfa/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) {
+        alert("Invalid code. Please try again.");
+        return;
+      }
+      const data = await response.json();
       localStorage.setItem('token', data.token);
-      window.location.hash = "#/main";
-    } else {
-      alert("Invalid code. Please try again.");
+      window.location.hash = ROUTE_MAIN;
+    } catch (err) {
+      console.error("Error verifying MFA code:", err);
+      alert("An error occurred while verifying the code. Please try again.");
     }
-
-    console.log("Verify code:", token);
   });
 }
