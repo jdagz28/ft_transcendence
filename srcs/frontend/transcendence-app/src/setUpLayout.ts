@@ -1,6 +1,7 @@
 import { ROUTE_LOGIN } from "./router"
 
 type userData = {
+  id: number;
 	username: string;
 	email:string;
 	created: string;
@@ -76,7 +77,7 @@ export function renderNavBar(root: HTMLElement) {
             </div>
             <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-hidden opacity-0 scale-95 pointer-events-none transition ease-in duration-75" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
               <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">Your Profile</a>
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-1">Account Settings</a>
+              <a href="#/users/${user}/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-1">Account Settings</a>
               <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-2">Sign out</button>
             </div>
           </div>

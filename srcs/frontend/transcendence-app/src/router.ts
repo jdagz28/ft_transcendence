@@ -10,6 +10,7 @@ import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderTournamentLobby } from "./pages/lobbyTournament";
 import { renderChat } from "./chat";
 import { whoAmI } from "./setUpLayout";
+import { renderAccountSettingsPage } from "./pages/accountSettings";
 
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
 export const ROUTE_LOGIN                  = "/login";
@@ -22,6 +23,7 @@ export const ROUTE_CHAT                   = "/chat";
 export const ROUTE_TOURNAMENT_CREATE      = "/tournaments/create";
 export const ROUTE_TOURNAMENT_ALIAS       = "/tournaments/:tournamentId/alias";
 export const ROUTE_TOURNAMENT_LOBBY       = "/tournaments/:tournamentId/lobby";
+export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
 
 
 
@@ -62,6 +64,10 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
 
   // dynamic
+  { pattern: ROUTE_ACCOUNT_SETTINGS,
+    regex: tokenToRegex(ROUTE_ACCOUNT_SETTINGS),
+    handler: ({ username }) => renderAccountSettingsPage(String(username)) },
+
   { pattern: ROUTE_GAMES_PAGE,
     regex: tokenToRegex(ROUTE_GAMES_PAGE),
     handler: ({ gameId }) => renderGamePage({ gameId }) },
