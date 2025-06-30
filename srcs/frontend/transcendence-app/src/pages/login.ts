@@ -99,7 +99,9 @@ export function renderLoginPage(): void {
         <div id="loginError" class="text-red-400 text-sm mt-3 hidden text-center"></div>
 
         <div class="text-md text-center mt-6 text-gray-400">
-          Don’t have an account? <a href="#register" class="text-orange-400 hover:underline">Register</a>
+          Don’t have an account? <a href="#/register" class="text-orange-400 hover:underline">Register</a>
+          </br> 
+          Forgot your password? <a href="#/reset" class="text-orange-400 hover:underline">Reset</a>
         </div>
       </div>
     </div>
@@ -112,7 +114,6 @@ export function renderLoginPage(): void {
       const password = (document.getElementById('password') as HTMLInputElement).value;
 
       if (!username || !password) {
-        // alert('Username and password are required.');
         return;
       }
 
@@ -131,7 +132,7 @@ export function renderLoginPage(): void {
 
         const data = await response.json();
         localStorage.setItem('token', data.token);
-        const redir = localStorage.getItem('loginredir') || "#/main";
+        const redir = localStorage.getItem('loginredir') || "/main";
         localStorage.setItem('loginredir', "");
         window.location.hash = redir;
       } catch (err: unknown) {

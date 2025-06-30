@@ -173,9 +173,16 @@ module.exports = fp(
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
             console.log(`User ${username} or email ${email} already exists`) //! DELETE
-            request.user = {
-              id: existingEmail.id,
-              username: existingEmail.username,
+            if (existingUser) {
+              request.user = {
+                id: existingUser.id,
+                username: existingUser.username,
+              }
+            } else {
+              request.user = {
+                id: existingEmail.id,
+                username: existingEmail.username,
+              }
             }
             const token = await request.generateToken();
             return OAuthRedirect(reply, token, username, "42");
@@ -257,9 +264,16 @@ module.exports = fp(
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
             console.log(`User ${username} or email ${email} already exists`) //! DELETE
-            request.user = {
-              id: existingEmail.id,
-              username: existingEmail.username,
+            if (existingUser) {
+              request.user = {
+                id: existingUser.id,
+                username: existingUser.username,
+              }
+            } else {
+              request.user = {
+                id: existingEmail.id,
+                username: existingEmail.username,
+              }
             }
             const token = await request.generateToken();
             return OAuthRedirect(reply, token, username, "Google");

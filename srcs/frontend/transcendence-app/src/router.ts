@@ -1,6 +1,7 @@
 import { renderGamePage } from "./pages/game";
 import { renderLoginPage } from "./pages/login";
 import { renderRegisterPage } from "./pages/register";
+import { renderPasswordReset } from "./pages/resetPass";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
@@ -13,6 +14,7 @@ import { whoAmI } from "./setUpLayout";
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
 export const ROUTE_LOGIN                  = "/login";
 export const ROUTE_REGISTER               = "/register";
+export const ROUTE_RESET_PASSWORD         = "/reset";
 export const ROUTE_MAIN                   = "/main";
 export const ROUTE_LOBBY                  = "/lobby";
 export const DEFAULT                      = "/404";
@@ -53,6 +55,7 @@ function extractParams(match: RegExpExecArray, pattern: string): RouteParams {
 const routes: RouteEntry[] = [
   { pattern: ROUTE_LOGIN,  regex: tokenToRegex(ROUTE_LOGIN),  handler: () => renderLoginPage() },
   { pattern: ROUTE_REGISTER, regex: tokenToRegex(ROUTE_REGISTER), handler: () => renderRegisterPage() },
+  { pattern: ROUTE_RESET_PASSWORD, regex: tokenToRegex(ROUTE_RESET_PASSWORD), handler: () => renderPasswordReset() },
   { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
@@ -78,6 +81,16 @@ const routes: RouteEntry[] = [
 ];
 
 function parseRoute(): [string, RouteParams] {
+  const checkPath = window.location.pathname + window.location.hash;
+  console.log(checkPath);
+  if (checkPath.substring(0, 3) !== '/#/') {
+    if (!window.location.pathname || !window.location.hash || window.location.pathname === '/') {
+      console.warn("No pathname found in window location");
+      return [ROUTE_LOGIN, {}];
+    }
+    console.warn("Invalid path format, expected '/#/' prefix");
+    return [DEFAULT, {}];
+  }
   const hash = window.location.hash || '#/';
   const [route] = hash.slice(1).split('?');
   const path = route.startsWith('/') ? route : '/' + route;
