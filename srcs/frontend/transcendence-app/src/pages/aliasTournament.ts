@@ -1,12 +1,12 @@
 import { setupAppLayout } from "../setUpLayout";
 import { getTournamentName } from "@/api/tournament";
 
-export async function renderAliasTournamentPage(tid: number): Promise<void> {
+export async function renderAliasTournamentPage(tournamentId: number): Promise<void> {
   const token = localStorage.getItem("token");
   console.log("Token from localStorage:", token);
   console.log("Token exists:", !!token);
   console.log("Token length:", token?.length);
-  const tournamentName = await getTournamentName(tid);
+  const tournamentName = await getTournamentName(tournamentId);
   console.log("Tournament name:", tournamentName);
 
   const { contentContainer } = setupAppLayout();
@@ -71,7 +71,7 @@ export async function renderAliasTournamentPage(tid: number): Promise<void> {
     }
     try {
       const token = localStorage.getItem("token") ?? "";
-      const ok = await fetch(`/tournaments/${tid}/alias`, {
+      const ok = await fetch(`/tournaments/${tournamentId}/alias`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -85,7 +85,7 @@ export async function renderAliasTournamentPage(tid: number): Promise<void> {
         const err = await ok.json();
         throw new Error(err.message ?? "Failed to save alias");
       }
-      window.location.hash = `#/tournaments/${tid}/lobby`;
+      window.location.hash = `#/tournaments/${tournamentId}/lobby`;
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Unexpected error");

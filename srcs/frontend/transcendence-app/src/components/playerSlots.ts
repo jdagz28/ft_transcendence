@@ -1,6 +1,8 @@
+
 export interface Player {
   id: number;
-  name: string;
+  username: string;
+  alias: string;
   avatarUrl: string;
 }
 
@@ -37,7 +39,7 @@ export function buildPlayerSlot(opts: SlotOptions): {
 
   const caret = document.createElement("div");
   caret.innerHTML = 
-    '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width=2" ' +
+    '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" ' +
     'viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>';
   caret.className = "opacity- 70";
   box.appendChild(caret);
@@ -46,7 +48,7 @@ export function buildPlayerSlot(opts: SlotOptions): {
   const menu = document.createElement("div");
   menu.className = 
     "absolute left-0 top-full mt-1 w-48 rounded-lg bg-white text-gray-900 " +
-    "shadow-lg overflow-y auto max-h-60 z-20 hidden";
+    "shadow-lg overflow-y-auto max-h-60 z-20 hidden";
   box.appendChild(menu);
 
   // render dropdown
@@ -61,7 +63,7 @@ export function buildPlayerSlot(opts: SlotOptions): {
       item.innerHTML = 
         `${statusDot("#10b981")}<img src="${p.avatarUrl}" ` +
         'class="w-6 h-6 rounded-full" alt=""/>' + 
-        `<span class="flex-1 text-left">${p.name}</span>`;
+        `<span class="flex-1 text-left">${p.alias}</span>`;
       item.onclick = e => {
         e.stopPropagation();
         menu.classList.add("hidden");
@@ -97,8 +99,9 @@ export function buildPlayerSlot(opts: SlotOptions): {
       }
     } else {
       const p = state.player;
-      label.textContent = p.name;
+      label.textContent = p.alias;
       caret.style.visibility = "hidden";
+      
       const img = new Image(32, 32);
       img.src = p.avatarUrl;
       img.className = "rounded-full";
@@ -110,4 +113,39 @@ export function buildPlayerSlot(opts: SlotOptions): {
 
   render(opts.state);
   return { el: box, update: render };
+}
+
+export function assignSlots(
+  players: Player[],
+  maxPlayers: number,
+  creatorId: number,
+  invitedIndexes: Record<number, number>
+): Array<Player & { slotIndex: number }> {
+  const taken = new Set<number>();
+  const result: Array<Player & { slotIndex: number }> = [];
+
+  const creator = players.find(p => p.id === creatorId);
+  if (creator) {
+    result.push({ ...creator, slotIndex: 0 });
+    taken.add(0);
+  }
+
+  for (const [pid, idx] of Object.entries(invitedIndexes)) {
+    const player = players.find(p => p.id === Number(pid));
+    if (player && !taken.has(idx) && idx < maxPlayers) {
+      result.push({ ...player, slotIndex: idx });
+      taken.add(idx);
+    }
+  }
+
+  let next = 0;
+  for (const player of players) {
+    if (result.some(p => p.id === player.id)) continue;
+    while (taken.has(next)) next++;
+    if (next < maxPlayers) {
+      result.push({ ...player, slotIndex: next });
+      taken.add(next);
+    }
+  }
+  return result;
 }

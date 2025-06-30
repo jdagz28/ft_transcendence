@@ -16,6 +16,23 @@ export async function getTournamentPlayers(tournamentId: number): Promise<Player
   return (await response.json()) as Player[];
 }
 
+export async function getTournamentCreator(tournamentId: number): Promise<number> {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/tournaments/${tournamentId}`, {
+    method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get tournament creator for ${tournamentId}`);
+  }
+  const result = await response.json();
+  return result.created_by;
+}
+
 export async function getTournamentName(tournamentId: number): Promise<any> {
   const token = localStorage.getItem("token") ?? "";
   const response = await fetch(`/tournaments/${tournamentId}`, {
@@ -102,4 +119,22 @@ export async function invitePlayerToSlot(
   if (!response.ok) {
     throw new Error(`Failed to invite player ${userId} to slot ${slotIndex} in tournament ${tournamentId}`);
   }
+}
+
+export async function isTournamentAdmin(userId: number): Promise<boolean> {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/users/me`, {
+    method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to check admin status for user ${userId}`);
+  }
+
+  const user = await response.json();
+  return user.id === userId;
 }

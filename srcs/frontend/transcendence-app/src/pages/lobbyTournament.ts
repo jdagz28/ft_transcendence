@@ -1,12 +1,13 @@
 import { setupAppLayout } from "../setUpLayout";
-import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
-import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot } from "../api/tournament";
+import { buildPlayerSlot, assignSlots, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
+import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot, getTournamentCreator, isTournamentAdmin} from "../api/tournament";
 
+const reservedSlots: Record<number, number> = {};
 
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
   const { contentContainer } = setupAppLayout();
   contentContainer.className = 
-    "flex-grow flex justify-start gap-8 px-8 py-10 text-white";
+    "flex-grow flex flex-col gap-8 px-8 py-10 text-white";
 
   const tournamentName = await getTournamentName(tournamentId);
   console.log("Tournament name:", tournamentName);
@@ -25,21 +26,29 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   contentContainer.appendChild(main);
 
   const players: Player[]  = await getTournamentPlayers(tournamentId);
-  const { maxPlayers, game_mode } = await getTournamentSettings(tournamentId); 
-  const isAdmin = true; // TODO: replace with real admin check
+  const created_by = await getTournamentCreator(tournamentId);
+  const settings = await getTournamentSettings(tournamentId);
+  const maxPlayers = Number(settings.max_players);
+  const game_mode = settings.game_mode as "public" | "private";
+  
+  const isAdmin = await isTournamentAdmin(created_by);
   const isPublic = game_mode === "public";
 
   // Player Slots
   const sideBar = document.createElement("div");
   sideBar.id = "player-slots";
-  sideBar.className = "flex flex-col gap-4";
+  sideBar.className = "flex flex-col gap-4 flex-grow";
   main.appendChild(sideBar);
 
- for (let i = 0; i < maxPlayers; i++) {
-    const entry = (players as Array<Player & { slotIndex: number }>).find(
-      p => p.slotIndex === i
-    ); 
+  const playersWithSlots = assignSlots(
+    players,
+    maxPlayers,
+    created_by,
+    reservedSlots
+  );
 
+ for (let i = 0; i < maxPlayers; i++) {
+    const entry =  playersWithSlots.find(p => p.slotIndex === i);
     const state: SlotState = entry
       ? { kind: 'filled', player: entry }
       : { kind: 'open' };
@@ -51,8 +60,11 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
          ? (_slotIndex: number) => getAvailablePlayers(tournamentId)
         : undefined,
       onInvite: isAdmin
-        ? (slotIndex: number, userId: number) =>
-            invitePlayerToSlot(tournamentId, slotIndex, userId)
+        ? async (slotIndex: number, userId: number) => {
+            await invitePlayerToSlot(tournamentId, slotIndex, userId);
+            reservedSlots[userId] = slotIndex;
+            await renderTournamentLobby(tournamentId);
+          }
         : undefined,
       onClick: !isAdmin && isPublic && state.kind === 'open'
         ? async () => {
@@ -71,17 +83,20 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   // Admin Buttons
   const btnContainer = document.createElement("div");
-  btnContainer.className = "flex flex-col gap-2 mt-4";
+  btnContainer.className = "mt-auto flex flex-col gap-3 w-48";
   main.appendChild(btnContainer);
+
+  const commonBtn =
+  "w-full text-xl font-semibold py-3 rounded-md transition";
   if (isAdmin) {
     const seedBtn = document.createElement("button");
     seedBtn.textContent = "Seed";
-    seedBtn.className = "px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700";
+    seedBtn.className = `${commonBtn} bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90`;
     btnContainer.appendChild(seedBtn);
   }
   const leaveBtn = document.createElement("button");
   leaveBtn.textContent = "Leave";
-  leaveBtn.className = "px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700";
+  leaveBtn.className =`${commonBtn} bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90`;
   btnContainer.appendChild(leaveBtn);
 
   // Chat Area

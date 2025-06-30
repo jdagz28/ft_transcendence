@@ -107,6 +107,21 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       }
     },
 
+    async getTournamentSettings(request, tournamentId) {
+      try {
+        const { data } = await dbApi.get(`/tournaments/${tournamentId}/settings`, 
+          { headers: internalHeaders(request) },
+        )
+        console.log('Tournament settings retrieved:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'Tournament not found')
+        }
+        throw error
+      }
+    },
+
     async leaveTournament(request, tournamentId, userId) {
       try {
         const { data } = await dbApi.delete(`/tournaments/${tournamentId}/leave`, 

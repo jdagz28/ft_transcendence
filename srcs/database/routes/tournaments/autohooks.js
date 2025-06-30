@@ -245,15 +245,48 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    async getTournamentSettings(tournamentId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM tournament_settings WHERE tournament_id = ?'
+        )
+        const settings = query.get(tournamentId)
+        if (!settings) {
+          throw new Error('Tournament settings not found')
+        }
+        return settings
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament settings')
+      }
+    },
+
     async getTournamentPlayers(tournamentId) {
       try {
         const query = fastify.db.prepare(
-          'SELECT * FROM tournament_players WHERE tournament_id = ?'
+          `SELECT 
+            tournament_players.user_id AS userId,
+            users.username,
+            tournament_aliases.alias AS alias
+          FROM tournament_players
+          JOIN users ON users.id = tournament_players.user_id
+          LEFT JOIN tournament_aliases ON tournament_aliases.tournament_id = tournament_players.tournament_id
+          AND tournament_aliases.user_id = tournament_players.user_id
+          WHERE tournament_players.tournament_id = ?
+        `
         )
-        const players = query.all(tournamentId)
-        if (!players) {
-          throw new Error('Failed to retrieve tournament players')
+        const rows = query.all(tournamentId)
+        if (!rows || rows.length === 0) {
+          throw new Error('No players found for this tournament')
         }
+        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        const players = rows.map(row => ({
+          userId: row.userId,
+          username: row.username,
+          alias: row.alias,
+          avatarUrl: `${baseURL}/users/${row.userId}/avatar`
+        }));
+
         return players
       } catch (err) {
         fastify.log.error(err)

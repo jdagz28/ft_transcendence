@@ -173,6 +173,27 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/tournaments/:tournamentId/settings', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentSettingsHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const settings = await fastify.dbTournaments.getTournamentSettings(tournamentId)
+          if (!settings) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(settings)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+    
     fastify.get('/tournaments/:tournamentId/players', {
       schema: {
         params: fastify.getSchema('schema:tournaments:tournamentID')

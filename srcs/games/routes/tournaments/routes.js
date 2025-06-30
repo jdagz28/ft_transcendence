@@ -108,6 +108,23 @@ module.exports = fp(
       }
     })
    
+    // get tournament settings
+    fastify.get('/tournaments/:tournamentId/settings', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentSettingsHandler (request, reply) {
+        const { tournamentId } = request.params
+        const settings = await fastify.tournamentService.getTournamentSettings(request, tournamentId)
+        if (!settings) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(settings)
+      }
+    })
+
+
     //  get a list of tournaments
     fastify.get('/games/tournaments', {
       onRequest: fastify.authenticate,
