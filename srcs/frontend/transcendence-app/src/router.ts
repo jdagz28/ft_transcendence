@@ -94,6 +94,9 @@ function parseRoute(): [string, RouteParams] {
   const hash = window.location.hash || '#/';
   const [route] = hash.slice(1).split('?');
   const path = route.startsWith('/') ? route : '/' + route;
+  if (path.endsWith('/')) {
+    return [path.slice(0, -1), {}];
+  }
   return [path, {}];
 }
 
