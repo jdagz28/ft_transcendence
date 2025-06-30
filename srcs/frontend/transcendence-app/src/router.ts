@@ -1,7 +1,7 @@
 import { renderGamePage } from "./pages/game";
 import { renderLoginPage } from "./pages/login";
 import { renderRegisterPage } from "./pages/register";
-import { renderPasswordReset } from "./pages/resetPass";
+import { renderLoginMFA } from "./pages/loginMFA";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
@@ -14,7 +14,7 @@ import { whoAmI } from "./setUpLayout";
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
 export const ROUTE_LOGIN                  = "/login";
 export const ROUTE_REGISTER               = "/register";
-export const ROUTE_RESET_PASSWORD         = "/reset";
+export const ROUTE_LOGIN_MFA              = "/login/mfa"; //! login logic -> pass userId; /login/:userId/mfa/verify
 export const ROUTE_MAIN                   = "/main";
 export const ROUTE_LOBBY                  = "/lobby";
 export const DEFAULT                      = "/404";
@@ -55,7 +55,7 @@ function extractParams(match: RegExpExecArray, pattern: string): RouteParams {
 const routes: RouteEntry[] = [
   { pattern: ROUTE_LOGIN,  regex: tokenToRegex(ROUTE_LOGIN),  handler: () => renderLoginPage() },
   { pattern: ROUTE_REGISTER, regex: tokenToRegex(ROUTE_REGISTER), handler: () => renderRegisterPage() },
-  { pattern: ROUTE_RESET_PASSWORD, regex: tokenToRegex(ROUTE_RESET_PASSWORD), handler: () => renderPasswordReset() },
+  { pattern: ROUTE_LOGIN_MFA, regex: tokenToRegex(ROUTE_LOGIN_MFA), handler: () => renderLoginMFA() }, 
   { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
@@ -126,6 +126,7 @@ async function handleRootRedirect() {
     window.location.hash = "#" + ROUTE_LOGIN;
   }
 }
+
 
 export function initRouter() {
   const render = async () => {
