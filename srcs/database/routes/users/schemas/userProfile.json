@@ -2,6 +2,7 @@
   "type": "object",
   "$id": "schema:users:userProfile",
   "required": [
+    "id",
     "username",
     "email",
     "nickname",
@@ -9,6 +10,7 @@
     "avatar"
   ],
   "properties": {
+    "id": { "type": "number" },
     "username": { "type": "string" },
     "email": { "type": "string", "format": "email" },
     "nickname": { "type": "string" },

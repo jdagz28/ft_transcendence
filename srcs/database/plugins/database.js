@@ -40,11 +40,13 @@ async function databaseConnector(fastify) {
       createTourPlayersTable();
       createTournamentGames();
       createTournamentAliasesTable();
+      createTournamentInvitesTable();
       createGamesTable();
       createGamesSettingsTable();
       createGameMatchesTable();
       createGameMatchesScoresTable();
       createGamePlayers();
+      createGameInvitesTable();
       createConversationsTable();
       createConvoMembersTable();
       createMessagesTable();
@@ -254,6 +256,42 @@ async function databaseConnector(fastify) {
         UNIQUE(alias),
         FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
+  function createTournamentInvitesTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS tournament_invites (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        tournament_id  INTEGER NOT NULL,
+        user_id        INTEGER NOT NULL,
+        status         TEXT    NOT NULL
+                        CHECK(status IN ('pending','accepted','rejected'))
+                        DEFAULT 'pending',
+        created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+        FOREIGN KEY(user_id)       REFERENCES users(id)       ON DELETE CASCADE,
+        UNIQUE (tournament_id, user_id)
+      );
+    `);
+  }
+
+  function createGameInvitesTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS game_invites (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        games_id  INTEGER NOT NULL,
+        user_id        INTEGER NOT NULL,
+        status         TEXT    NOT NULL
+                        CHECK(status IN ('pending','accepted','rejected'))
+                        DEFAULT 'pending',
+        created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(games_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY(user_id)       REFERENCES users(id)       ON DELETE CASCADE,
+        UNIQUE (games_id, user_id)
       );
     `);
   }

@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:tournaments:inviteID",
+  "required": [ "tournamentId" ],
+  "properties": {
+    "tournamentId": { "type": "number" }
+  }
+}

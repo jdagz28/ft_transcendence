@@ -48,6 +48,71 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/tournaments/:tournamentId/invite', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID'),
+        body: fastify.getSchema('schema:tournaments:inviteUser')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function inviteUserToTournamentHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const { userId } = request.body
+          const result = await fastify.dbTournaments.inviteUserToTournament(tournamentId, userId)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/tournaments/invites/:userId', {
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentInvitesHandler(request, reply) {
+        try {
+          const { userId } = request.params
+          const invites = await fastify.dbTournaments.getTournamentInvites(userId)
+          if (!invites) {
+            reply.status(404).send({ error: 'No invites found' })
+            return
+          }
+          reply.status(200).send(invites)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.patch('/tournaments/invites/:inviteId/respond', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:inviteID'),
+        body: fastify.getSchema('schema:tournaments:respondToInvite')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function respondToTournamentInviteHandler(request, reply) {
+        try {
+          const { inviteId } = request.params
+          const userId = request.user.id
+          const { tournamentId, response } = request.body
+          const result = await fastify.dbTournaments.respondToTournamentInvite(inviteId, userId, response, tournamentId)
+          if (!result) {
+            reply.status(404).send({ error: 'Invite not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
     fastify.delete('/tournaments/:tournamentId/leave', {
       schema: {
         params: fastify.getSchema('schema:tournaments:tournamentID')
@@ -108,6 +173,27 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/tournaments/:tournamentId/settings', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentSettingsHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const settings = await fastify.dbTournaments.getTournamentSettings(tournamentId)
+          if (!settings) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(settings)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+    
     fastify.get('/tournaments/:tournamentId/players', {
       schema: {
         params: fastify.getSchema('schema:tournaments:tournamentID')

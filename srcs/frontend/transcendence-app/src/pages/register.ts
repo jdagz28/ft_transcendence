@@ -61,18 +61,6 @@ export function renderRegisterPage(): void {
               required
             />
           </div>
-
-          <div class="flex items-center mb-4">
-            <input 
-              type="checkbox" 
-              id="checkbox" 
-              class="mr-2 w-6 h-6 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              required  
-            />
-            <label for="checkbox" class="text-md text-gray-300">
-              I agree to the <a href="/terms" class="text-blue-400 hover:underline">Terms of Service</a>
-            </label>
-          </div>
         
           <button type="submit"
             class="w-full text-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white font-semibold py-3 rounded-md hover:opacity-90 transition">
@@ -119,12 +107,6 @@ export function renderRegisterPage(): void {
         return;
       }
 
-      const checkbox = document.getElementById('checkbox') as HTMLInputElement;
-      if (!checkbox.checked) {
-        alert('You must agree to the Terms of Service.');
-        return;
-      }
-
       try {
         const response = await fetch('/auth/register', {
           method: 'POST',
@@ -137,8 +119,6 @@ export function renderRegisterPage(): void {
           const errorData = await response.json();
           throw new Error(errorData.message || 'User registration failed');
         }
-
-        alert(`Registering ${username}`); //! DELETE
         
         window.location.hash = '#login';
 

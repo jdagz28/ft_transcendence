@@ -1,7 +1,7 @@
 import type { GameStatusUpdate } from '../types/game_api';
 
 export async function getConfig(gameId: number): Promise<any> {
-  const response = await fetch(`https://localhost:4242/games/${gameId}/details`, {
+  const response = await fetch(`/games/${gameId}/details`, {
     method: 'GET',
     credentials: 'include'
   });
