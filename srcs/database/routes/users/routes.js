@@ -149,6 +149,10 @@ module.exports = fp(
           SELECT avatar, mime_type FROM user_avatars WHERE user_id = ?
         `)
         const row = query.get(userId)
+        if (!row) {
+          reply.code(404).send('Avatar not found')
+        }
+
         console.log('Row:', row) //! DELETE
         let avatarBuffer = row?.avatar
         let mimeType = row?.mime_type
