@@ -50,9 +50,8 @@ export function renderNavBar(root: HTMLElement) {
   let data;
   data = whoAmI().then((data) => {
     if (!data.success) {
-      localStorage.setItem('loginredir', window.location.href);
       window.location.hash = ROUTE_LOGIN;
-      return ;
+      return;
     }
     const user = data.data.username;
     root.innerHTML = /*html*/`

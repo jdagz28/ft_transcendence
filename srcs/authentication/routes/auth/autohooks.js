@@ -140,6 +140,42 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         fastify.log.error(`Enable MFA error: ${err.message}`)
         throw new Error('Failed to enable MFA')
       }
+    },
+
+    async getMfaDetails(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/details`,
+          {
+            headers: {
+              Authorization: rawAuth,
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getMfaDetails error: ${err.message}`)
+        throw new Error('Failed to get MFA details')
+      }
+    },
+
+    async setMfaQrCode(userId, qrCode, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/qr`,
+          { qr_code: qrCode },
+          {
+            headers: {
+              Authorization: rawAuth,
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+      } catch (err) {
+        fastify.log.error(`setMfaQrCode error: ${err.message}`)
+        throw new Error('Failed to set MFA QR code')
+      }
     }
   }),
 

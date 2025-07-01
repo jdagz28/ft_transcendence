@@ -1,4 +1,5 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
+import { getMfaDetails } from "../api/mfa";
 
 export async function renderAccountSettingsPage(username: string): Promise<void> {
   const { contentContainer } = setupAppLayout();
@@ -90,8 +91,8 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   mfaHeader.className = "text-2xl font-semibold text-white mb-4";
   mfaSection.appendChild(mfaHeader);
 
-  const mfaEnabled = false; //! API
-  const qrCodeUrl = "";       //! API
+
+  let { mfa_enabled: mfaEnabled, qr_code } = await getMfaDetails(userId);
   let qrImg: HTMLImageElement | null = null;
 
   const toggleLabel = document.createElement("label");
@@ -110,9 +111,9 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   const qrBox = document.createElement("div");
   qrBox.id = "mfa-qr-box";
   qrBox.className = "w-48 h-48 mb-4 border-2 border-gray-700 rounded flex items-center justify-center text-gray-400";
-  if (qrCodeUrl) {
+  if (qr_code) {
     qrImg = document.createElement("img");
-    qrImg.src = qrCodeUrl;
+    qrImg.src = qr_code;
     qrImg.alt = "MFA QR Code";
     qrImg.className = "w-full h-full object-cover rounded";
     qrBox.appendChild(qrImg);
@@ -121,7 +122,11 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
     placeholder.textContent = "No QR Code";
     qrBox.appendChild(placeholder);
   }
+  const note = document.createElement("span");
+  note.textContent = "Scan during initial setup only";
+  note.className = "text-gray-400 text-sm mt-3 mb-4"; 
   qrContainer.appendChild(qrBox);
+  qrContainer.appendChild(note);
 
   const regenerateBtn = document.createElement("button");
   regenerateBtn.id = "regenerate-qr";
@@ -135,46 +140,113 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
 
 
   const toggleInput = document.getElementById("mfa-toggle") as HTMLInputElement;
+  const token = localStorage.getItem("token");
   toggleInput.addEventListener("change", async () => {
     if (toggleInput.checked) {
-      let codeUrl = qrCodeUrl;
-      if (!codeUrl) {
-        const res = await fetch(`/api/user/${userId}/mfa/setup`, { method: "POST" });
-        if (res.ok) {
-          const data = await res.json();
-          codeUrl = data.qrCodeUrl;
-          if (qrImg) {
-            qrImg.src = codeUrl;
-          } else {
-            qrImg = document.createElement("img");
-            qrImg.src = codeUrl;
-            qrImg.alt = "MFA QR Code";
-            qrImg.className = "w-full h-full object-cover rounded";
-            qrBox.innerHTML = "";
-            qrBox.appendChild(qrImg);
-          }
-        } else {
-          console.error("Failed to enable MFA");
-          toggleInput.checked = false;
-          return;
-        }
+      const res = await fetch(`/auth/${userId}/mfa/enable`, { 
+        method: "PUT",
+        headers: { 
+          ...(token && { Authorization: `Bearer ${token}` }) 
+        },
+        credentials: "include"
+        });
+      if (!res.ok) {
+        console.error("Failed to enable MFA");
+        toggleInput.checked = false;
+        return;
       }
+      const data = await res.json();
+      const code = data.qr_code;
+      if (!code)
+        return;
+      qr_code = code;
+      mfaEnabled = true;
+      toggleInput.checked = true;
       regenerateBtn.disabled = false;
+
+      if (qr_code) {
+        qrImg = document.createElement("img");
+        qrImg.src = qr_code;
+        qrImg.alt = "MFA QR Code";
+        qrImg.className = "w-full h-full object-cover rounded";
+        qrBox.innerHTML = "";
+        qrBox.appendChild(qrImg);
+        regenerateBtn.disabled = false;
+      }
     } else {
-      await fetch(`/api/user/${userId}/mfa/disable`, { method: "POST" }).catch(() => console.error("Failed to disable MFA"));
+      const res = await fetch(`/auth/${userId}/mfa/disable`, { 
+        method: "PUT",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        credentials: "include"
+      });
+      if (!res.ok) {
+        console.error("Failed to disable MFA");
+        toggleInput.checked = true; 
+        return;
+      }
+      mfaEnabled = false;
       regenerateBtn.disabled = true;
+      await refreshMfaUI();
     }
   });
 
   regenerateBtn.addEventListener("click", async () => {
-    const res = await fetch(`/api/user/${userId}/mfa/setup`, { method: "POST" });
+    const res = await fetch(`/auth/${userId}/mfa/generate`, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` })
+      },
+      credentials: "include"
+    });
     if (res.ok) {
       const data = await res.json();
-      if (qrImg) qrImg.src = data.qrCodeUrl;
+      const code = data.qr_code;
+      if (!code) {
+        toggleInput.checked = false;
+        return;
+      }
+      qr_code = code;
+      mfaEnabled = true;
+      toggleInput.checked = true;
+      regenerateBtn.disabled = false;
+      if (qrImg) {
+        qrImg.src = qr_code;
+      } else {
+        qrImg = document.createElement("img");
+        qrImg.src = qr_code;
+        qrImg.alt = "MFA QR Code";
+        qrImg.className = "w-full h-full object-cover rounded";
+        qrBox.innerHTML = "";
+        qrBox.appendChild(qrImg);
+      }
+      alert("MFA QR Code regenerated successfully!");
     } else {
-      console.error("Failed to regenerate QR code");
+      mfaEnabled = false;
+      console.error("Failed to enable MFA");
+      toggleInput.checked = false;
+      return;
     }
   });
+  
+  async function refreshMfaUI() {
+    const { mfa_enabled: mfaEnabled, qr_code } = await getMfaDetails(userId);
+    toggleInput.checked = mfaEnabled;
+    regenerateBtn.disabled = !mfaEnabled;
+    qrBox.innerHTML = "";
+    if (qr_code) {
+      qrImg = document.createElement("img");
+      qrImg.src = qr_code;
+      qrImg.alt = "MFA QR Code";
+      qrImg.className = "w-full h-full object-cover rounded";
+      qrBox.appendChild(qrImg);
+    } else {
+      const placeholder = document.createElement("span");
+      placeholder.textContent = "No QR Code";
+      qrBox.appendChild(placeholder);
+    }
+  }
 }
 
 function createIndividualForm({ label, value, inputType, inputName, endpoint }: {
@@ -224,7 +296,14 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
         const fileInput = form.querySelector(`input[name="${inputName}"]`) as HTMLInputElement;
         if (fileInput.files?.length) 
           data.append(inputName, fileInput.files[0]);
-        const res = await fetch(endpoint, { method: "PUT", body: data, credentials: "include" });
+        const res = await fetch(endpoint, { 
+          method: "PUT", 
+          headers: { 
+            ...(token && { Authorization: `Bearer ${token}` }) 
+          },
+          body: data, 
+          credentials: "include" 
+        });
         if (!res.ok) 
           throw new Error(await res.text());
       } else {

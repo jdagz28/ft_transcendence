@@ -39,8 +39,8 @@ module.exports = fp(
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
           console.error('Failed to create user:', err) //! DELETE
-          const status = err.statusCode || 500;
-          reply.status(status).send({ error: err.message });
+          const status = err.statusCode || 500
+          reply.status(status).send({ error: err.message })
         }
       }
     })
@@ -119,11 +119,11 @@ module.exports = fp(
     }
 
     async function OAuthRedirect(reply, token, username, provider) {
-      const front = process.env.FRONTEND_BASE;
+      const front = process.env.FRONTEND_BASE
       const dest = `${front}/#/main?${new URLSearchParams({
-                 token, user: username, provider }).toString()}`;
-      console.log('Redirecting to:', dest); //! DELETE
-      return reply.redirect(dest);
+                 token, user: username, provider }).toString()}`
+      console.log('Redirecting to:', dest) //! DELETE
+      return reply.redirect(dest)
     }
 
     fastify.get('/auth/42', {
@@ -184,8 +184,8 @@ module.exports = fp(
                 username: existingEmail.username,
               }
             }
-            const token = await request.generateToken();
-            return OAuthRedirect(reply, token, username, "42");
+            const token = await request.generateToken()
+            return OAuthRedirect(reply, token, username, "42")
           }
           
           //! TEMPORARY PASSWORD
@@ -202,9 +202,9 @@ module.exports = fp(
             err.statusCode = 500
             throw err
           }
-          request.user = { id: newUserId, username };
-          const token = await request.generateToken();
-          return OAuthRedirect(reply, token, username, "42");
+          request.user = { id: newUserId, username }
+          const token = await request.generateToken()
+          return OAuthRedirect(reply, token, username, "42")
         } catch (err) {
         console.error('Error during 42 authentication:', err) //! DELETE
         reply.status(err.statusCode || 500).send({ error: err.message })
@@ -275,8 +275,8 @@ module.exports = fp(
                 username: existingEmail.username,
               }
             }
-            const token = await request.generateToken();
-            return OAuthRedirect(reply, token, username, "Google");
+            const token = await request.generateToken()
+            return OAuthRedirect(reply, token, username, "Google")
           }
           
           //! TEMPORARY PASSWORD
@@ -294,9 +294,9 @@ module.exports = fp(
             throw err
           }
 
-          request.user = { id: newUserId, username };
-          const token = await request.generateToken();
-          return OAuthRedirect(reply, token, username, "Google");
+          request.user = { id: newUserId, username }
+          const token = await request.generateToken()
+          return OAuthRedirect(reply, token, username, "Google")
         } catch (err) {
         console.error('Error during Google authentication:', err) //! DELETE
         reply.status(err.statusCode || 500).send({ error: err.message })
@@ -360,15 +360,13 @@ module.exports = fp(
           const secret = speakeasy.generateSecret({
             name: `ft_transcendence (${username})`
           })
-          await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request);
+          await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request)
           const QRCode = await fastify.generateQRCode(secret)
           if (!QRCode) {
             throw new Error('Failed to generate QR code')
           }
-          return reply.send({
-            otpauth_url: secret.otpauth_url,
-            qr_code: QRCode
-          })
+          fastify.usersDataSource.setMfaQrCode(userId, QRCode, request)
+          return reply.send({ qr_code: QRCode })
         } catch (err) {
           fastify.log.error(`Auth: failed to generate mfa token for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
@@ -381,7 +379,7 @@ module.exports = fp(
       handler: async function disableMFAhandler(request, reply) {
         const userId = request.user.id
         try {
-          await fastify.usersDataSource.disableMfa(userId, request);
+          await fastify.usersDataSource.disableMfa(userId, request)
           return reply.send({ success: true, message: 'MFA disabled successfully' })
         } catch (err) {
           fastify.log.error(`Auth: failed to disable mfa for user ${userId}: ${err.message}`)
@@ -395,8 +393,23 @@ module.exports = fp(
       handler: async function enableMFAhandler(request, reply) {
         const userId = request.user.id
         try {
-          await fastify.usersDataSource.enableMfa(userId, request);
-          return reply.send({ success: true, message: 'MFA enabled successfully' })
+          const check = await fastify.usersDataSource.getMfaDetails(userId, request)
+          if (!check.qr_code) {
+            const username = request.user.username
+            const secret = speakeasy.generateSecret({
+              name: `ft_transcendence (${username})`
+            })
+            await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request)
+            const QRCode = await fastify.generateQRCode(secret)
+            if (!QRCode) {
+              throw new Error('Failed to generate QR code')
+            }
+            await fastify.usersDataSource.setMfaQrCode(userId, QRCode, request)
+            await fastify.usersDataSource.enableMfa(userId, request)
+            return reply.send({ qr_code: QRCode })
+          }
+          await fastify.usersDataSource.enableMfa(userId, request)
+          return reply.send({ qr_code: "" })
         } catch (err) {
           fastify.log.error(`Auth: failed to enable mfa for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
@@ -448,6 +461,22 @@ module.exports = fp(
       }
     })
     
+    fastify.get('/auth/:userId/mfa/details', {
+      onRequest: fastify.authenticate,
+      handler: async function getMfaDetailsHandler(request, reply) {
+        const userId = request.params.userId
+        try {
+          const mfaDetails = await fastify.usersDataSource.getMfaDetails(userId, request)
+          if (!mfaDetails) {
+            return reply.status(404).send({ mfa_enabled: false, qr_code: null })
+          }
+          return reply.send(mfaDetails)
+        } catch (err) {
+          fastify.log.error(`Auth: failed to get mfa details for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to get mfa details' })
+        }
+      }
+    })
 
   }, {
     name: 'auth-routes',
