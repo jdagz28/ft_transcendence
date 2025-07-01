@@ -96,6 +96,7 @@ async function databaseConnector(fastify) {
         mfa_secret TEXT NOT NULL,
         mfa_token TEXT,
         mfa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        qr_code TEXT,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
