@@ -872,6 +872,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve available players')
       }
+    }
   })
 }, {
   name: 'tournamentAutoHooks',

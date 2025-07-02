@@ -63,7 +63,7 @@ export function buildPlayerSlot(opts: SlotOptions): {
       item.innerHTML = 
         `${statusDot("#10b981")}<img src="${p.avatarUrl}" ` +
         'class="w-6 h-6 rounded-full" alt=""/>' + 
-        `<span class="flex-1 text-left">${p.alias}</span>`;
+        `<span class="flex-1 text-left">${p.username}</span>`;
       item.onclick = e => {
         e.stopPropagation();
         menu.classList.add("hidden");
@@ -99,7 +99,7 @@ export function buildPlayerSlot(opts: SlotOptions): {
       }
     } else {
       const p = state.player;
-      label.textContent = p.alias;
+      label.textContent = p.username;
       label.className = "text-2xl font-bold";
       caret.style.visibility = "hidden";
       

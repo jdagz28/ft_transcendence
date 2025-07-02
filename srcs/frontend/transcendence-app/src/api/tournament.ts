@@ -85,24 +85,11 @@ export async function getAvailablePlayers(tournamentId: number): Promise<any> {
   if (!tournamentRes.ok) {
     throw new Error(`Couldn’t load tournament ${tournamentId}`);
   }
-  const { created_by: adminId } = await tournamentRes.json();
+  const availablePlayers: Player[] = await tournamentRes.json();
 
-  const currentPlayers = await getTournamentPlayers(tournamentId);
-  const occupiedIds = new Set(currentPlayers.map(p => p.id));
-
-  const usersRes = await fetch(`/users`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
-    credentials: "include",
-  });
-  if (!usersRes.ok) {
-    throw new Error(`Couldn’t load user list`);
-  }
-  const allUsers: Player[] = await usersRes.json();
-
-  return allUsers.filter(u => u.id !== adminId && !occupiedIds.has(u.id));
+  console.log("Available players:", availablePlayers);
+  
+  return availablePlayers;
 }
 
 export async function invitePlayerToSlot(
