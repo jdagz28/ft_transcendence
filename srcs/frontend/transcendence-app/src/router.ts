@@ -5,6 +5,7 @@ import { renderLoginMFA } from "./pages/loginMFA";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
+import { renderTournamentPage } from "./pages/tournament";
 import { renderCreateTournamentPage } from "./pages/createTournament";
 import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderTournamentLobby } from "./pages/lobbyTournament";
@@ -20,6 +21,7 @@ export const ROUTE_MAIN                   = "/main";
 export const ROUTE_LOBBY                  = "/lobby";
 export const DEFAULT                      = "/404";
 export const ROUTE_CHAT                   = "/chat";
+export const ROUTE_TOURNAMENTS            = "/tournaments";
 export const ROUTE_TOURNAMENT_CREATE      = "/tournaments/create";
 export const ROUTE_TOURNAMENT_ALIAS       = "/tournaments/:tournamentId/alias";
 export const ROUTE_TOURNAMENT_LOBBY       = "/tournaments/:tournamentId/lobby";
@@ -61,6 +63,7 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
+  { pattern: ROUTE_TOURNAMENTS, regex: tokenToRegex(ROUTE_TOURNAMENTS), handler: () => renderTournamentPage() },
   { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
 
   // dynamic
