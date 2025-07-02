@@ -387,6 +387,37 @@ module.exports = fp(
       }
     })
 
+    fastify.put('/users/:userId/mfa/qr', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function setMfaQrCodeHandler(request, reply) {
+        const userId = request.user.id
+        try {
+          const { qr_code } = request.body
+          const QRCode = await fastify.dbUsers.setMfaQrCode(userId, qr_code)
+          return reply.send({ success: true, qr_code: QRCode })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA QR code: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA QR code' })
+        }
+      }
+    }
+    )
+
+    fastify.get('/users/:userId/mfa/details', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getMfaDetailsHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Fetching MFA details for user ID:', userId) //! DELETE
+          const mfaDetails = await fastify.dbUsers.getMfaDetails(userId)
+          return reply.send(mfaDetails)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA details: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA details' })
+        }
+      }
+    })
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']

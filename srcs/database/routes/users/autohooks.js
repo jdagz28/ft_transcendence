@@ -449,6 +449,54 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`enableMfa error: ${err.message}`)
         throw new Error('Enable MFA failed')
       }
+    },
+
+    async setMfaQrCode(userId, qrCode) {
+      try {
+        const check = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
+        `)
+        const user = check.get(userId)
+        let result;
+        if (!user) {
+          const query = fastify.db.prepare(`
+            INSERT INTO user_mfa (user_id, qr_code) VALUES (?, ?)
+          `)
+          result = query.run(userId, qrCode)
+        } else {
+          const query = fastify.db.prepare(`
+            UPDATE user_mfa SET qr_code = ? WHERE user_id = ?
+          `)
+          result = query.run(qrCode, userId)
+        }
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA QR code for user ${userId}`)
+          throw new Error('Set MFA QR code failed')
+        }
+        return qrCode
+      } catch (err) {
+        fastify.log.error(`setMfaQrCode error: ${err.message}`)
+        throw new Error('Set MFA QR code failed')
+      }
+    },
+
+    async getMfaDetails(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          return { mfa_enabled: false, qr_code: null }
+        }
+        return { 
+          mfa_enabled: row.mfa_enabled,
+          qr_code: row.qr_code
+        }
+      } catch (err) {
+        fastify.log.error(`getMfaDetails error: ${err.message}`)
+        throw new Error('Get MFA details failed')
+      }
     }
   })
 }, {

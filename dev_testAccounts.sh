@@ -11,6 +11,7 @@ declare -a USERS=(
   "testcortiz:cortiz@test.com"
   "testdopeyrat:dopeyrat@test.com"
   "user:user@test.com"
+  "testmfa:mfa@test.com"
 )
 
 #################

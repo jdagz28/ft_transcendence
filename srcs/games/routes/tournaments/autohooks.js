@@ -54,6 +54,74 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       }
     },
 
+    async inviteUserToTournament(request, tournamentId, userId) {
+      try {
+        const { data } = await dbApi.post(`/tournaments/${tournamentId}/invite`, 
+          { userId },
+          { headers: internalHeaders(request) },
+        )
+        console.log('User invited to tournament:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'Tournament not found')
+        }
+        if (error.response?.status === 409) {
+          throw fastify.httpErrors.conflict(error.response.data?.error || 'User already invited')
+        }
+        throw error
+      }
+    },
+
+    async getTournamentInvites(request, userId) {
+      try {
+        const { data } = await dbApi.get(`/tournaments/invites/${userId}`, 
+          { headers: internalHeaders(request) },
+        )
+        console.log('Tournament invites retrieved:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'No invites found')
+        }
+        throw error
+      }
+    },  
+
+    async respondToTournamentInvite(request, tournamentId, response, inviteId) {
+      try {
+        const { data } = await dbApi.patch(`/tournaments/invites/${inviteId}/response`, 
+          { response, tournamentId },
+          { headers: internalHeaders(request) },
+        )
+        console.log('Tournament invite response:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'Tournament not found')
+        }
+        if (error.response?.status === 409) {
+          throw fastify.httpErrors.conflict(error.response.data?.error || 'Invite already responded')
+        }
+        throw error
+      }
+    },
+
+    async getTournamentSettings(request, tournamentId) {
+      try {
+        const { data } = await dbApi.get(`/tournaments/${tournamentId}/settings`, 
+          { headers: internalHeaders(request) },
+        )
+        console.log('Tournament settings retrieved:', data) //! DELETE
+        return data
+      } catch (error) {
+        if (error.response?.status === 404) {
+          throw fastify.httpErrors.notFound(error.response.data?.error || 'Tournament not found')
+        }
+        throw error
+      }
+    },
+
     async leaveTournament(request, tournamentId, userId) {
       try {
         const { data } = await dbApi.delete(`/tournaments/${tournamentId}/leave`, 

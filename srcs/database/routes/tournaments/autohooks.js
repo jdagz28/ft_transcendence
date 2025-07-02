@@ -68,6 +68,11 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (!checkTourSettings) {
           throw new Error('Tournament settings not found')
         }
+
+        if (checkTourSettings.game_mode === 'private' && tournament.created_by !== userId) {
+          return { error: 'Tournament is private'}
+        }
+
         const totalPlayers = fastify.db.prepare(
           'SELECT COUNT (*) FROM tournament_players WHERE tournament_id = ?'
         )
@@ -95,6 +100,88 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to join tournament')
+      }
+    },
+
+    async inviteUserToTournament(tournamentId, userId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+        
+        const query = fastify.db.prepare(
+          'INSERT INTO tournament_invites (tournament_id, user_id, status) VALUES (?, ?, ?)'
+        )
+        const result = query.run(tournamentId, userId, 'pending');
+        if (result.changes === 0) {
+          throw new Error('Failed to add entry for tournament invite');
+        }
+
+        return { message: 'User invited to tournament successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to invite user to tournament')
+      }
+    },
+
+    async getTournamentInvites(tournamentId, user) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+
+        const query = fastify.db.prepare(
+          'SELECT * FROM tournament_invites WHERE tournament_id = ? AND user_id = ?'
+        )
+        const invites = query.all(tournamentId, user)
+        if (!invites || invites.length === 0) {
+          return { message: 'No invites found for this tournament' }
+        }
+        return invites
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament invites')
+      }
+    },
+
+    async respondToTournamentInvite(inviteId, userId, response, tournamentId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournament_invites WHERE id = ? AND user_id = ?'
+        )
+        const checkInvite = check.get(inviteId, userId)
+        if (!checkInvite) {
+          throw new Error('Invite not found or user not authorized')
+        }
+        if (checkInvite.tournament_id !== tournamentId) {
+          throw new Error('Invite does not belong to this tournament')
+        }
+
+        const updateQuery = fastify.db.prepare(
+          'UPDATE tournament_invites SET status = ? WHERE id = ?'
+        )
+        const result = updateQuery.run(response, inviteId)
+        if (result.changes === 0) {
+          throw new Error('Failed to update invite response')
+        }
+
+        if (response === 'accepted') {
+          const joinResult = await fastify.dbTournaments.joinTournament(tournamentId, userId)
+          return joinResult
+        }
+
+        return { message: 'Invite response updated successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to respond to tournament invite')
       }
     },
 
@@ -158,15 +245,48 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    async getTournamentSettings(tournamentId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM tournament_settings WHERE tournament_id = ?'
+        )
+        const settings = query.get(tournamentId)
+        if (!settings) {
+          throw new Error('Tournament settings not found')
+        }
+        return settings
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament settings')
+      }
+    },
+
     async getTournamentPlayers(tournamentId) {
       try {
         const query = fastify.db.prepare(
-          'SELECT * FROM tournament_players WHERE tournament_id = ?'
+          `SELECT 
+            tournament_players.user_id AS userId,
+            users.username,
+            tournament_aliases.alias AS alias
+          FROM tournament_players
+          JOIN users ON users.id = tournament_players.user_id
+          LEFT JOIN tournament_aliases ON tournament_aliases.tournament_id = tournament_players.tournament_id
+          AND tournament_aliases.user_id = tournament_players.user_id
+          WHERE tournament_players.tournament_id = ?
+        `
         )
-        const players = query.all(tournamentId)
-        if (!players) {
-          throw new Error('Failed to retrieve tournament players')
+        const rows = query.all(tournamentId)
+        if (!rows || rows.length === 0) {
+          throw new Error('No players found for this tournament')
         }
+        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        const players = rows.map(row => ({
+          userId: row.userId,
+          username: row.username,
+          alias: row.alias,
+          avatarUrl: `${baseURL}/users/${row.userId}/avatar`
+        }));
+
         return players
       } catch (err) {
         fastify.log.error(err)

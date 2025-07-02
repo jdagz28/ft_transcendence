@@ -77,14 +77,14 @@ module.exports = fp(
     })
 
     fastify.get('/users/:userId/avatar', {
-      onRequest: [fastify.authenticate],
+      // onRequest: [fastify.authenticate],
       handler: async function avatarHandler (request, reply) {
         const userId = request.params.userId
         try {
           const { data, headers } = await dbApi.get(`/users/${encodeURIComponent(userId)}/avatar`, 
           {
-            responseType: 'arraybuffer',
-            headers: internalHeaders(request),
+            responseType: 'arraybuffer'
+            // headers: internalHeaders(request),
           })
           return reply
           .type(headers['content-type'])
@@ -266,91 +266,6 @@ module.exports = fp(
     })
 
 
-    /*
-    // Blocked users
-    fastify.get('/:username/blocked', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User game History
-    fastify.get('/:username/games', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User Stats
-    fastify.get('/:username/stats', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-
-    // User block user
-    fastify.post('/me/blockUser', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User unblock user
-    fastify.delete('/me/unblockUser', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-    */
-
-/*
-    // User generate MFA
-    fastify.post('/me/settings/generateMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User disable MFA
-    fastify.delete('/me/settings/disableMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-    
-    // User enable MFA
-    fastify.put('/me/settings/enableMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-  */
-
-    /**
-    // User Profile Account Settings / security
-    // email, (change email)
-    // password, (change password)
-    // has_mfa, 
-    // last password change, 
-    // mfa token (or generate)
-    fastify.get('/me/settings', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    
-    */
   }, {
     name: 'userRoutes',
     dependencies: [ 'userAutoHooks']

@@ -1,34 +1,71 @@
 import { ROUTE_MAIN } from "../router"
+import { whoAmI } from "../setUpLayout";
+
+function extractOAuthParams(): {
+  token: string | null;
+  user: string | null;
+  provider: string | null;
+} {
+
+  const sessionToken = sessionStorage.getItem('oauth_token');
+  const sessionUser = sessionStorage.getItem('oauth_user');
+  const sessionProvider = sessionStorage.getItem('oauth_provider');
+  
+  if (sessionToken && sessionUser) {
+    sessionStorage.removeItem('oauth_token');
+    sessionStorage.removeItem('oauth_user');
+    sessionStorage.removeItem('oauth_provider');
+    
+    return {
+      token: sessionToken,
+      user: sessionUser,
+      provider: sessionProvider
+    };
+  }
+  
+  const params = new URLSearchParams(location.search);
+  let token = params.get('token');
+  let user = params.get('user');
+  let provider = params.get('provider');
+
+  if (!token && location.hash.includes('?')) {
+    const [, q] = location.hash.split('?');
+    const hash = new URLSearchParams(q);
+    token = hash.get('token');
+    user = hash.get('user');
+    provider = hash.get('provider');
+  }
+  
+  return { token, user, provider };
+}
+
 
 export function renderLoginPage(): void {
-  const root = document.getElementById("app");
+  whoAmI().then(auth => {
+    if (auth.success) {
+      window.location.hash = ROUTE_MAIN.replace("#", "");
+      return;
+    }
+  });
 
+  const root = document.getElementById("app");
   if (!root) return;
 
   localStorage.setItem('loginredir', "");
-  const urlParams = new URLSearchParams(window.location.search);
-  const authSuccess = urlParams.get('auth');
-  const username = urlParams.get('username');
-  const provider = urlParams.get('provider');
+  const { token, user, provider } = extractOAuthParams();
+  console.log('OAuth params found:', { token, user, provider });
   
-  if (authSuccess === 'success' && username) {
-    let providerName;
+  if (token && token !== 'null' && user && user !== 'null') {
+    console.log('Valid OAuth success, storing token and redirecting');
+    localStorage.setItem('token', token);
     
-    switch (provider) {
-      case 'google':
-        providerName = 'Google';
-        break;
-      case '42':
-        providerName = '42 Intra';
-        break;
-      default:
-        providerName = provider;
-    }
-    
-    alert(`Logged in as ${username}${providerName ? ` via ${providerName}` : ''}`); //! DELETE
-    window.history.replaceState({}, document.title, window.location.pathname);
+    const redir = localStorage.getItem('loginredir') ?? '';
+    localStorage.setItem('loginredir', '');
+    window.location.hash = redir;
+
     return;
   }
+
   root.innerHTML = /*html*/ `
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] selection:bg-blue-400 selection:text-white relative z-10">
       <div class="bg-[#0d2551] p-8 rounded-xl shadow-xl/20 w-full max-w-md text-white backdrop-blur-sm bg-opacity-90">
@@ -62,7 +99,7 @@ export function renderLoginPage(): void {
         <div id="loginError" class="text-red-400 text-sm mt-3 hidden text-center"></div>
 
         <div class="text-md text-center mt-6 text-gray-400">
-          Don’t have an account? <a href="#register" class="text-orange-400 hover:underline">Register</a>
+          Don’t have an account? <a href="#/register" class="text-orange-400 hover:underline">Register</a>
         </div>
       </div>
     </div>
@@ -75,7 +112,6 @@ export function renderLoginPage(): void {
       const password = (document.getElementById('password') as HTMLInputElement).value;
 
       if (!username || !password) {
-        // alert('Username and password are required.');
         return;
       }
 
@@ -92,16 +128,17 @@ export function renderLoginPage(): void {
           throw new Error(errorData.message || 'Invalid credentials');
         }
 
-		const data = await response.json();
-		localStorage.setItem('token', data.token);
-		const redir = localStorage.getItem('loginredir') ?? "";
-		if (redir !== "") {
-			localStorage.setItem('loginredir', "");
-			window.location.replace(window.location.origin + redir);
-		}
-		else
-        	window.location.replace(window.location.origin + ROUTE_MAIN);
-
+        const data = await response.json();
+        if (!data.token && data.mfaRequired) {
+          const userId = data.userId;
+          window.location.hash = `#/login/${userId}/mfa/verify`;
+        }
+        else {
+          localStorage.setItem('token', data.token);
+          const redir = localStorage.getItem('loginredir') || "/main";
+          localStorage.setItem('loginredir', "");
+          window.location.hash = redir;
+        }
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
         if (errorDiv && err instanceof Error) {
@@ -110,7 +147,6 @@ export function renderLoginPage(): void {
         }
       }
     });
-
 
     document.querySelector('.google-btn')!.addEventListener('click', () => {
       window.location.href = '/auth/google';
