@@ -1,4 +1,4 @@
-import { setupAppLayout } from "../setUpLayout";
+import { setupAppLayout} from "../setUpLayout";
 import { buildPlayerSlot, assignSlots, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot, getTournamentCreator, isTournamentAdmin} from "../api/tournament";
 
@@ -26,6 +26,21 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   contentContainer.appendChild(main);
 
   const players: Player[]  = await getTournamentPlayers(tournamentId);
+  console.log("Players in tournament:", players);
+
+  // const userId = await whoAmI();
+  // let authorized = false;
+  // for (const player of players) {
+  //   if (player.userId === userId.data.id) {
+  //     authorized = true;
+  //     break;
+  //   }
+  // }
+  // if (!authorized) {
+  //   window.location.hash = "#/"; 
+  //   return;
+  // }
+
   const created_by = await getTournamentCreator(tournamentId);
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);
@@ -104,6 +119,15 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   chatBox.className = "flex-1 basis-2/3 max-w-2/3 bg-[#1a3a5a] rounded-lg p-4 h-250 overflow-y-auto shadow-lg";
   main.appendChild(chatBox);
 
-  
 
+   const ws = new WebSocket(
+    `wss://${location.host}/tournaments/${tournamentId}/ws`
+  );
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    console.log('WebSocket message received:', msg);
+    if (msg.type === 'player-joined' || msg.type === 'player-left') {
+      renderTournamentLobby(tournamentId);
+    }
+  }
 }

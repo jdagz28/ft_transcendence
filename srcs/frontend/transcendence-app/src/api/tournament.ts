@@ -13,7 +13,10 @@ export async function getTournamentPlayers(tournamentId: number): Promise<Player
   if (!response.ok) {
     throw new Error(`Failed to fetch tournament players for ${tournamentId}`);
   }
-  return (await response.json()) as Player[];
+  const result = await response.json();
+  console.log("tournament players:", result);
+
+  return result as Player[];
 }
 
 export async function getTournamentCreator(tournamentId: number): Promise<number> {

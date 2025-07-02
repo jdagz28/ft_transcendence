@@ -281,7 +281,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         }
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         const players = rows.map(row => ({
-          userId: row.userId,
+          id: row.userId,
           username: row.username,
           alias: row.alias,
           avatarUrl: `${baseURL}/users/${row.userId}/avatar`

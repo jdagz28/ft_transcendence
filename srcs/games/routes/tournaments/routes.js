@@ -2,7 +2,6 @@
 
 const fp = require('fastify-plugin')
 
-
 module.exports = fp(
   async function tournamentRoutes (fastify, opts) {
     // create a tournament
@@ -33,6 +32,12 @@ module.exports = fp(
         if (result.status == 'full') {
           return reply.code(409).send({ error: 'Tournament is full' })
         }
+
+        fastify.tournamentBroadcast(tournamentId, {
+          type: 'player-joined',
+          player: userId
+        });
+
         return reply.send(result)
       }
     })
@@ -104,6 +109,12 @@ module.exports = fp(
         if (!result) {
           return reply.code(404).send({ error: 'Tournament not found' })
         }
+        
+        fastify.tournamentBroadcast(tournamentId, {
+          type: 'player-joined',
+          player: userId
+        });
+
         return reply.send(result)
       }
     })
@@ -309,9 +320,8 @@ module.exports = fp(
         return reply.code(200).send(summary)
       }
     })
-
   }, {
     name: 'tournamentRoutes',
-    dependencies: [ 'tournamentAutoHooks']
+    dependencies: [ 'tournamentAutoHooks', 'wsBroadcast']
   }
 )
