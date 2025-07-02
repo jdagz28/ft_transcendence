@@ -74,7 +74,8 @@ export async function getTournamentSettings(tournamentId: number): Promise<any> 
 export async function getAvailablePlayers(tournamentId: number): Promise<any> {
   const token = localStorage.getItem("token") ?? "";
 
-  const tournamentRes = await fetch(`/tournaments/${tournamentId}`, {
+  const tournamentRes = await fetch(`/tournaments/${tournamentId}/available`, {
+    method: 'GET',
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),

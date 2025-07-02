@@ -111,7 +111,6 @@ export function buildPlayerSlot(opts: SlotOptions): {
   };
 
   document.addEventListener("click", () => menu.classList.add("hidden"));
-
   render(opts.state);
   return { el: box, update: render };
 }

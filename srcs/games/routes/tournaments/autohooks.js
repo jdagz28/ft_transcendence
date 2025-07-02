@@ -240,6 +240,14 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       )
       console.log('Tournament summary retrieved:', data) //! DELETE
       return data
+    },
+
+    async getAvailablePlayers(request, tournamentId) {
+      const { data } = await dbApi.get(`/tournaments/${tournamentId}/available`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Available players retrieved:', data) //! DELETE
+      return data
     }
   })
 }, {

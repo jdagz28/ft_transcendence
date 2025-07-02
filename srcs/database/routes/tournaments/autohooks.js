@@ -854,7 +854,24 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament summary')  
       }
-    }
+    },
+
+    async getAvailablePlayers(tournamentId) {
+      try {
+        const allUsers = fastify.db.prepare(
+          'SELECT id, username FROM users WHERE id NOT IN (SELECT user_id FROM tournament_players WHERE tournament_id = ?)'
+        )
+        const availablePlayers = allUsers.all(tournamentId).map(u => ({
+          id: u.id,
+          username: u.username,
+          alias: null,
+          avatarUrl: `https://${process.env.SERVER_NAME}:${process.env.SERVER_PORT}/users/${u.id}/avatar`
+        }))
+        return availablePlayers
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve available players')
+      }
   })
 }, {
   name: 'tournamentAutoHooks',

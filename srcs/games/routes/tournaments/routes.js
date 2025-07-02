@@ -320,6 +320,22 @@ module.exports = fp(
         return reply.code(200).send(summary)
       }
     })
+
+    fastify.get('/tournaments/:tournamentId/available', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getAvailablePlayersHandler(request, reply) {
+        const { tournamentId } = request.params
+        const availablePlayers = await fastify.tournamentService.getAvailablePlayers(request, tournamentId)
+        if (!availablePlayers) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(availablePlayers)
+      }
+    })
+
   }, {
     name: 'tournamentRoutes',
     dependencies: [ 'tournamentAutoHooks', 'wsBroadcast']
