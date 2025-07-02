@@ -1,6 +1,7 @@
 import { setupAppLayout} from "../setUpLayout";
 import { buildPlayerSlot, assignSlots, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
-import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot, getTournamentCreator, isTournamentAdmin} from "../api/tournament";
+import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
+  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getPlayerById } from "../api/tournament";
 
 const reservedSlots: Record<number, number> = {};
 
@@ -62,11 +63,21 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     reservedSlots
   );
 
- for (let i = 0; i < maxPlayers; i++) {
+  const pendingInvitations: Record<number, { userId: number, slotIndex: number, invitedBy: number }> = {};
+  for (let i = 0; i < maxPlayers; i++) {
     const entry =  playersWithSlots.find(p => p.slotIndex === i);
-    const state: SlotState = entry
-      ? { kind: 'filled', player: entry }
-      : { kind: 'open' };
+    const pendingInvite = Object.values(pendingInvitations).find(p => p.slotIndex === i);
+
+    let state: SlotState;
+    if (entry) {
+      state = { kind: "filled", player: entry };
+    } else if (pendingInvite) {
+      const invitedPlayer = await getPlayerById(pendingInvite.userId);
+      state = { kind: 'pending', player: invitedPlayer};
+    } else {
+      state = { kind: "open" };
+    }
+
 
     const slotOpts: SlotOptions = {
       slotIndex: i,
@@ -77,7 +88,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       onInvite: isAdmin
         ? async (slotIndex: number, userId: number) => {
             await invitePlayerToSlot(tournamentId, slotIndex, userId);
-            reservedSlots[userId] = slotIndex;
+            pendingInvitations[userId] = { userId, slotIndex, invitedBy: created_by };
             await renderTournamentLobby(tournamentId);
           }
         : undefined,

@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:users:getUserById",
+  "required": ["userId"],
+  "properties": {
+    "userId": { "type": "string" }
+  }
+}

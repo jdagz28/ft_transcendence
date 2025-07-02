@@ -86,8 +86,6 @@ export async function getAvailablePlayers(tournamentId: number): Promise<any> {
     throw new Error(`Couldn’t load tournament ${tournamentId}`);
   }
   const availablePlayers: Player[] = await tournamentRes.json();
-
-  console.log("Available players:", availablePlayers);
   
   return availablePlayers;
 }
@@ -98,7 +96,7 @@ export async function invitePlayerToSlot(
   userId: number
 ): Promise<void> {
   const token = localStorage.getItem("token") ?? "";
-  const response = await fetch(`/tournaments/${tournamentId}/players`, {
+  const response = await fetch(`/tournaments/${tournamentId}/invite`, {
     method: 'POST',
     headers: {
       "Content-Type": "application/json",
@@ -128,4 +126,20 @@ export async function isTournamentAdmin(userId: number): Promise<boolean> {
 
   const user = await response.json();
   return user.id === userId;
+}
+
+export async function getPlayerById(userId: number): Promise<Player> {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/users/id/${userId}`, {
+    method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get player by ID ${userId}`);
+  }
+  return await response.json() as Player;
 }

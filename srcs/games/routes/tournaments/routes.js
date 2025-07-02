@@ -53,8 +53,14 @@ module.exports = fp(
         const { tournamentId } = request.params
         const { userId } = request.body
         const inviter = request.user.id
-        const admin = fastify.tournamentService.getTournamentById(request, tournamentId)
-        if (!admin || admin.creatorId !== inviter) {
+        const tournament = await fastify.tournamentService.getTournamentById(request, tournamentId)
+        if (!tournament) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        fastify.log.info(tournament) //! DELETE
+        const admin = tournament.created_by
+
+        if (!admin || admin != inviter) {
           return reply.code(403).send({ error: 'You are not authorized to invite users to this tournament' })
         }
         const result = await fastify.tournamentService.inviteUserToTournament(request, tournamentId, userId)

@@ -6,7 +6,7 @@ export interface Player {
   avatarUrl: string;
 }
 
-export type SlotState = | {kind: "open" } | { kind: "filled"; player: Player }
+export type SlotState = | {kind: "open" } | { kind: "filled"; player: Player } | { kind: "pending"; player: Player };
 
 
 export interface SlotOptions {
@@ -78,6 +78,7 @@ export function buildPlayerSlot(opts: SlotOptions): {
     box.onclick = null;
     menu.classList.add("hidden");
     content.querySelectorAll("img").forEach(n => n.remove());
+    content.querySelectorAll(".pending-indicator").forEach(n => n.remove());
 
     if (state.kind === "open") {
       label.textContent = "open";
@@ -97,6 +98,26 @@ export function buildPlayerSlot(opts: SlotOptions): {
           if (list.length) showMenu(list); 
         };
       }
+    } else if (state.kind === "pending") {
+      const p = state.player;
+      const displayName = p.alias || p.username;
+      label.textContent = displayName;
+      label.className = "text-xl font-semibold text-yellow-400";
+      caret.style.visibility = "hidden";
+
+
+      const pendingIndicator = document.createElement("span");
+      pendingIndicator.textContent = "(invited)";
+      pendingIndicator.className = "pending-indicator text-sm text-yellow-300 ml-2";
+      content.appendChild(pendingIndicator);
+
+      const img = new Image(48, 48);
+      img.src = p.avatarUrl;
+      img.className = "rounded-full opacity-60"; 
+      content.prepend(img);
+
+
+      box.className = box.className.replace("bg-[#0d2551]", "bg-yellow-900/30 border border-yellow-600/50");
     } else {
       const p = state.player;
       label.textContent = p.username;
