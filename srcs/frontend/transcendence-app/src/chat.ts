@@ -124,7 +124,26 @@ export function renderChat(): void {
           <button class="join-btn bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
         </div>
       `;
-      divGroup.querySelector('.join-btn')?.addEventListener('click', () => {
+      divGroup.querySelector('.join-btn')?.addEventListener('click', async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert("Vous devez être connecté pour rejoindre un groupe.");
+          return;
+        }
+
+        const res = await fetch('/chat/join/group', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ groupId: group.id }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          alert(json.error || "Impossible de rejoindre le groupe");
+          return;
+        }
         openSidebarChat(group.id, group.name);
       });
       groupsList.appendChild(divGroup);
