@@ -29,4 +29,5 @@ export function renderTournamentPage() {
   createBtn.addEventListener("click", () => {
     window.location.hash = "#/tournaments/create";
   });
+  
 }

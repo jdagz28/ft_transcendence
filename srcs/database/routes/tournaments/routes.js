@@ -13,7 +13,7 @@ module.exports = fp(
         try {
           const userId = request.user.id
           const { name, maxPlayers, gameMode, gameType } = request.body
-          const tournament = await fastify.dbTournaments.createTournament(userId, name, maxPlayers, gameMode, gameType)
+          const tournament = await fastify.dbTournaments.createTournament(request, userId, name, maxPlayers, gameMode, gameType)
           if (!tournament) {
             reply.status(400).send({ error: 'Failed to create tournament' })
             return
@@ -35,7 +35,7 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const userId = request.user.id
-          const result = await fastify.dbTournaments.joinTournament(tournamentId, userId)
+          const result = await fastify.dbTournaments.joinTournament(request, tournamentId, userId)
           if (!result) {
             reply.status(404).send({ error: 'Tournament not found' })
             return

@@ -179,6 +179,7 @@ async function databaseConnector(fastify) {
         started DATETIME DEFAULT NULL,
         ended DATETIME DEFAULT NULL,
         winner_id INTEGER DEFAULT NULL,
+        chat_room_id INTEGER,
         name TEXT NOT NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL

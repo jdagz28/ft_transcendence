@@ -2,12 +2,27 @@
 
 const fp = require('fastify-plugin')
 const schemas = require('./schemas/loader')
+const axios = require('axios')
 
 module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
+  const chatApi = axios.create({
+    baseURL: `http://chat:${process.env.CHAT_PORT}`,
+    timeout: 2_000
+  });
+
+  function bearer (request) {
+    const authHeader = request.headers['authorization'];
+    const token = authHeader && authHeader.replace(/^Bearer\s+/i, '');
+    if (!token) {
+      throw fastify.httpErrors.unauthorized('Missing JWT')
+    }
+    return token;
+  }
+
   fastify.register(schemas)
 
   fastify.decorate('dbTournaments', {
-    async createTournament(userId, name, maxPlayers, gameMode, gameType) {
+    async createTournament(request, userId, name, maxPlayers, gameMode, gameType) {
       try {
         fastify.db.exec('BEGIN')
 
@@ -38,7 +53,17 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           throw new Error('Failed to add user to tournament players')
         }
         console.log('Tournament Players created with ID:', tourPlayersResult.lastInsertRowid) //! DELETE
-        fastify.db.exec('COMMIT')        
+        fastify.db.exec('COMMIT')       
+        
+        const { data: room } = await chatApi.post('/chat/create/group', 
+          { name: `Tournament ${tournamentId}`, type: 'private' },
+          { headers: { Authorization: `Bearer ${bearer(request)}` } }
+        )
+
+        console.log('Chat room created with ID:', room.conversationId) //! DELETE
+        fastify.db.prepare(`
+          UPDATE tournaments SET chat_room_id = ? WHERE id = ?
+        `).run(room.conversationId, tournamentId)
 
         return tournamentId
       } catch (err) {
@@ -48,7 +73,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
-    async joinTournament(tournamentId, userId) {
+    async joinTournament(request, tournamentId, userId) {
       try {
         const check = fastify.db.prepare(
           'SELECT * FROM tournaments WHERE id = ?'
@@ -93,6 +118,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         ).get(tournamentId, userId, 'accepted')
         let tourPlayersQuery
         let slotIndex
+        fastify.db.exec('BEGIN')
         if (isInvited) {
           slotIndex = isInvited.slot_index
           tourPlayersQuery = fastify.db.prepare(
@@ -111,9 +137,25 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (tourPlayersResult.changes === 0) {
           throw new Error('Failed to add user to tournament players')
         }
-
+        const tourChat = fastify.db.prepare(
+          'SELECT chat_room_id FROM tournaments WHERE id = ?'
+        ).get(tournamentId)
+        console.log('Tournament Id', tournamentId, 'joined by user', userId) //! DELETE
+        if (tourChat) {
+          console.log('Joining chat room with ID:', tourChat.chat_room_id) //! DELETE
+          const res = await chatApi.post('/chat/join/group', 
+            { groupId: tourChat.chat_room_id },
+            { headers: { Authorization: `Bearer ${bearer(request)}` }})
+          if (res.status !== 200) {
+            throw new Error('Failed to join chat room')
+          }
+        }  
+        fastify.db.exec('COMMIT')
+        console.log('Joined chat room successfully') //! DELETE
         return { message: 'Joined tournament successfully' }
       } catch (err) {
+        if (fastify.db.inTransaction)
+          fastify.db.exec('ROLLBACK')
         fastify.log.error(err)
         throw new Error('Failed to join tournament')
       }
