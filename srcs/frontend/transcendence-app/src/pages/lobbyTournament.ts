@@ -127,11 +127,35 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   // Chat Area
   const chatBox = document.createElement("div");
-  chatBox.className = "flex-1 basis-2/3 max-w-2/3 bg-[#1a3a5a] rounded-lg p-4 h-250 overflow-y-auto shadow-lg";
+  chatBox.className =
+    "flex-1 basis-2/3 max-w-2/3 bg-[#1a3a5a] rounded-lg p-4 h-250 flex flex-col shadow-lg";
   main.appendChild(chatBox);
 
+  const messagesList = document.createElement("div");
+  messagesList.className = "flex-1 overflow-y-auto mb-4 space-y-2";
+  chatBox.appendChild(messagesList);
 
-   const ws = new WebSocket(
+  const form = document.createElement("form");
+  form.className = "flex justify-end";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Type a message…";
+  input.className = 
+    "flex-grow rounded-l-md px-3 py-2 text-white bg-[#162e4f] placeholder-gray-400 focus:outline-none"
+  form.appendChild(input);
+
+
+  const sendBtn = document.createElement("button");
+  sendBtn.type = "submit";
+  sendBtn.textContent = "Send";
+  sendBtn.className = 
+    "bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 rounded-r-md ";
+  form.appendChild(sendBtn);
+
+  chatBox.appendChild(form);
+
+  const ws = new WebSocket(
     `wss://${location.host}/tournaments/${tournamentId}/ws`
   );
   ws.onmessage = (event) => {
