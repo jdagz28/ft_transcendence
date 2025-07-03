@@ -31,9 +31,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         console.log('Tournament Settings created with ID:', tourSettingsResult.lastInsertRowid) //! DELETE
 
         const tourPlayersQuery = fastify.db.prepare(
-          'INSERT INTO tournament_players (tournament_id, user_id) VALUES (?, ?)'
+          'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
         )
-        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId)
+        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId, 0)
         if (tourPlayersResult.changes === 0) {
           throw new Error('Failed to add user to tournament players')
         }
@@ -88,10 +88,26 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           return { error: 'User already joined the tournament' }
         }
 
-        const tourPlayersQuery = fastify.db.prepare(
-          'INSERT INTO tournament_players (tournament_id, user_id) VALUES (?, ?)'
-        )
-        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId)
+        const isInvited = fastify.db.prepare(
+          'SELECT * FROM tournament_invites WHERE tournament_id = ? AND user_id = ? AND status = ?'
+        ).get(tournamentId, userId, 'accepted')
+        let tourPlayersQuery
+        let slotIndex
+        if (isInvited) {
+          slotIndex = isInvited.slot_index
+          tourPlayersQuery = fastify.db.prepare(
+            'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
+          )
+        } else {
+          slotIndex = fastify.db.prepare(
+            'SELECT MAX(slot_index) AS last_slot FROM tournament_players WHERE tournament_id = ?'
+          ).get(tournamentId).last_slot || 0
+          tourPlayersQuery = fastify.db.prepare(
+            'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
+          )
+          slotIndex += 1
+        }
+        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId, slotIndex)
         if (tourPlayersResult.changes === 0) {
           throw new Error('Failed to add user to tournament players')
         }
@@ -103,7 +119,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
-    async inviteUserToTournament(tournamentId, userId) {
+    async inviteUserToTournament(tournamentId, userId, slotIndex) {
       try {
         const check = fastify.db.prepare(
           'SELECT * FROM tournaments WHERE id = ?'
@@ -113,12 +129,23 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           throw new Error('Tournament not found')
         }
         
-        const query = fastify.db.prepare(
-          'INSERT INTO tournament_invites (tournament_id, user_id, status) VALUES (?, ?, ?)'
-        )
-        const result = query.run(tournamentId, userId, 'pending');
+        const row = fastify.db.prepare(`
+          SELECT 1 FROM tournament_players
+          WHERE tournament_id = ? AND user_id = ?
+        `).get(tournamentId, userId);
+        if (row) throw new Error('User already in tournament');
+
+        const result = fastify.db.prepare(`
+          INSERT INTO tournament_invites
+                (tournament_id, user_id, slot_index, status)
+          VALUES (?, ?, ?, 'pending')
+          ON CONFLICT(tournament_id, user_id) DO UPDATE
+                SET slot_index  = excluded.slot_index,
+                    status      = 'pending',
+                    updated_at  = CURRENT_TIMESTAMP
+        `).run(tournamentId, userId, slotIndex);
         if (result.changes === 0) {
-          throw new Error('Failed to add entry for tournament invite');
+          throw new Error('Failed to invite user to tournament')
         }
 
         return { message: 'User invited to tournament successfully' }
@@ -263,31 +290,39 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
 
     async getTournamentPlayers(tournamentId) {
       try {
-        const query = fastify.db.prepare(
+        const accepted = fastify.db.prepare(
           `SELECT 
-            tournament_players.user_id AS userId,
+            tournament_players.user_id AS id,
             users.username,
-            tournament_aliases.alias AS alias
+            tournament_aliases.alias AS alias,
+            tournament_players.slot_index AS slotIndex,
+            'accepted' AS status
           FROM tournament_players
           JOIN users ON users.id = tournament_players.user_id
           LEFT JOIN tournament_aliases ON tournament_aliases.tournament_id = tournament_players.tournament_id
           AND tournament_aliases.user_id = tournament_players.user_id
           WHERE tournament_players.tournament_id = ?
-        `
-        )
-        const rows = query.all(tournamentId)
-        if (!rows || rows.length === 0) {
+        `).all(tournamentId)
+        const pending = fastify.db.prepare(`
+        SELECT user_id AS id,
+              username,
+              NULL AS alias,
+              slot_index AS slotIndex,
+              'pending' AS status
+          FROM tournament_invites
+          JOIN users ON users.id = user_id
+          WHERE tournament_id = ?
+            AND status = 'pending'
+        `).all(tournamentId);
+
+        if (!accepted || accepted.length === 0) {
           throw new Error('No players found for this tournament')
         }
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
-        const players = rows.map(row => ({
-          id: row.userId,
-          username: row.username,
-          alias: row.alias,
-          avatarUrl: `${baseURL}/users/${row.userId}/avatar`
+        return [...accepted, ...pending].map(p => ({
+          ...p,
+          avatarUrl: `${baseURL}/users/${p.id}/avatar`
         }));
-
-        return players
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament players')

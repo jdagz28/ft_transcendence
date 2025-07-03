@@ -1,9 +1,7 @@
 import { setupAppLayout} from "../setUpLayout";
-import { buildPlayerSlot, assignSlots, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
+import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
-  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getPlayerById } from "../api/tournament";
-
-const reservedSlots: Record<number, number> = {};
+  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
 
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
   const { contentContainer } = setupAppLayout();
@@ -56,56 +54,58 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   sideBar.className = "flex flex-col gap-4 w-64";
   main.appendChild(sideBar);
 
-  const playersWithSlots = assignSlots(
-    players,
-    maxPlayers,
-    created_by,
-    reservedSlots
-  );
-
-  const pendingInvitations: Record<number, { userId: number, slotIndex: number, invitedBy: number }> = {};
   for (let i = 0; i < maxPlayers; i++) {
-    const entry =  playersWithSlots.find(p => p.slotIndex === i);
-    const pendingInvite = Object.values(pendingInvitations).find(p => p.slotIndex === i);
-
+    const playerForSlot = players.find(u => u.slotIndex === i);
     let state: SlotState;
-    if (entry) {
-      state = { kind: "filled", player: entry };
-    } else if (pendingInvite) {
-      const invitedPlayer = await getPlayerById(pendingInvite.userId);
-      state = { kind: 'pending', player: invitedPlayer};
-    } else {
+
+    if (!playerForSlot) {
       state = { kind: "open" };
+    } else if (playerForSlot.status === "pending") {
+      state = { kind: "pending", player: playerForSlot };
+    } else { 
+      state = { kind: "filled", player: playerForSlot };
     }
 
+    let fetchCandidates: SlotOptions["fetchCandidates"];
+    if (isAdmin) {
+      fetchCandidates = () => getAvailablePlayers(tournamentId);
+    }
 
-    const slotOpts: SlotOptions = {
+    let onInvite: SlotOptions["onInvite"];
+    if (isAdmin) {
+      onInvite = async (slotIndex: number, userId: number) => {
+        try {
+          await invitePlayerToSlot(tournamentId, slotIndex, userId);
+          await renderTournamentLobby(tournamentId);
+        } catch (err) {
+          console.error(err);
+          alert((err as Error).message ?? 'Could not invite player');
+        }
+      };
+    }
+
+    let onClick: SlotOptions["onClick"];
+    if (!isAdmin && isPublic && state.kind === "open") {
+      onClick = async () => {
+        await fetch(`/tournaments/${tournamentId}/join`, {
+          method: "PATCH",
+          credentials: "include"
+        });
+        await renderTournamentLobby(tournamentId);
+      };
+    }
+
+    const slotElement = buildPlayerSlot({
       slotIndex: i,
       state,
-      fetchCandidates: isAdmin
-         ? (_slotIndex: number) => getAvailablePlayers(tournamentId)
-        : undefined,
-      onInvite: isAdmin
-        ? async (slotIndex: number, userId: number) => {
-            await invitePlayerToSlot(tournamentId, slotIndex, userId);
-            pendingInvitations[userId] = { userId, slotIndex, invitedBy: created_by };
-            await renderTournamentLobby(tournamentId);
-          }
-        : undefined,
-      onClick: !isAdmin && isPublic && state.kind === 'open'
-        ? async () => {
-            await fetch(`/tournaments/${tournamentId}/join`, {
-              method: 'PATCH',
-              credentials: 'include'
-            });
-            await renderTournamentLobby(tournamentId);
-          }
-        : undefined
-    };
+      fetchCandidates,
+      onInvite,
+      onClick
+    });
 
-    const slotComponent = buildPlayerSlot(slotOpts);
-    sideBar.appendChild(slotComponent.el);
+    sideBar.appendChild(slotElement.el);
   }
+
 
   // Admin Buttons
   const btnContainer = document.createElement("div");

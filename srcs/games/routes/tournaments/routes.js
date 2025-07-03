@@ -51,7 +51,7 @@ module.exports = fp(
       onRequest: fastify.authenticate,
       handler: async function inviteUserToTournamentHandler (request, reply) {
         const { tournamentId } = request.params
-        const { userId } = request.body
+        const { userId, slotIndex } = request.body
         const inviter = request.user.id
         const tournament = await fastify.tournamentService.getTournamentById(request, tournamentId)
         if (!tournament) {
@@ -63,7 +63,7 @@ module.exports = fp(
         if (!admin || admin != inviter) {
           return reply.code(403).send({ error: 'You are not authorized to invite users to this tournament' })
         }
-        const result = await fastify.tournamentService.inviteUserToTournament(request, tournamentId, userId)
+        const result = await fastify.tournamentService.inviteUserToTournament(request, tournamentId, userId, slotIndex)
         if (!result) {
           return reply.code(404).send({ error: 'Tournament not found' })
         }

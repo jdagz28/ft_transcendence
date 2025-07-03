@@ -211,11 +211,13 @@ async function databaseConnector(fastify) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tournament_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
+        slot_index INTEGER NOT NULL,
         score INTEGER DEFAULT 0,
         eliminated BOOLEAN NOT NULL DEFAULT 0,
         FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE (tournament_id, user_id)
+        UNIQUE (tournament_id, slot_index)
       );
       CREATE INDEX IF NOT EXISTS idx_tour_players_tournament_id
         ON tournament_players(tournament_id);
@@ -267,6 +269,7 @@ async function databaseConnector(fastify) {
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
         tournament_id  INTEGER NOT NULL,
         user_id        INTEGER NOT NULL,
+        slot_index     INTEGER NOT NULL,
         status         TEXT    NOT NULL
                         CHECK(status IN ('pending','accepted','rejected'))
                         DEFAULT 'pending',

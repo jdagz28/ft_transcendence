@@ -54,10 +54,10 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       }
     },
 
-    async inviteUserToTournament(request, tournamentId, userId) {
+    async inviteUserToTournament(request, tournamentId, userId, slotIndex) {
       try {
         const { data } = await dbApi.post(`/tournaments/${tournamentId}/invite`, 
-          { userId },
+          { userId, slotIndex },
           { headers: internalHeaders(request) },
         )
         console.log('User invited to tournament:', data) //! DELETE

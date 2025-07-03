@@ -4,6 +4,8 @@ export interface Player {
   username: string;
   alias: string;
   avatarUrl: string;
+  slotIndex?: number;
+  status?: "accepted" | "pending";
 }
 
 export type SlotState = | {kind: "open" } | { kind: "filled"; player: Player } | { kind: "pending"; player: Player };
@@ -15,6 +17,7 @@ export interface SlotOptions {
   fetchCandidates?: (slotIndex: number) => Promise<Player[]>;
   onInvite?: (slotIndex: number, userId: number) => void;
   onClick?: () => void;
+  invitedPlayerIds?: Set<number>; 
 }
 
 function statusDot(color: string) {
@@ -52,23 +55,30 @@ export function buildPlayerSlot(opts: SlotOptions): {
   box.appendChild(menu);
 
   // render dropdown
-  const showMenu = (players: Player[]) => {
+  const showMenu = (players: Player[], invitedPlayerIds: Set<number> = new Set())  => {
     if (!players.length) return;
     menu.innerHTML = "";
     players.forEach(p => {
       const item = document.createElement("button");
       item.type = "button";
+      const isInvited = invitedPlayerIds.has(p.id);
       item.className = 
         "w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100";
+      const statusColor = isInvited ? "#fbbf24" : "#10b981"; 
+      const displayText = isInvited ? `${p.username} (invited)` : p.username;
+      
       item.innerHTML = 
-        `${statusDot("#10b981")}<img src="${p.avatarUrl}" ` +
+        `${statusDot(statusColor)}<img src="${p.avatarUrl}" ` +
         'class="w-6 h-6 rounded-full" alt=""/>' + 
-        `<span class="flex-1 text-left">${p.username}</span>`;
-      item.onclick = e => {
-        e.stopPropagation();
-        menu.classList.add("hidden");
-        opts.onInvite?.(opts.slotIndex, p.id);
-      };
+        `<span class="flex-1 text-left">${displayText}</span>`;
+      
+      if (!isInvited) {
+        item.onclick = e => {
+          e.stopPropagation();
+          menu.classList.add("hidden");
+          opts.onInvite?.(opts.slotIndex, p.id);
+        };
+      }
       menu.appendChild(item);     
     });
     menu.classList.remove("hidden");
@@ -95,7 +105,8 @@ export function buildPlayerSlot(opts: SlotOptions): {
         box.onclick = async (e) => {
           e.stopPropagation();
           const list = await opts.fetchCandidates!(opts.slotIndex);
-          if (list.length) showMenu(list); 
+          if (list.length)
+            showMenu(list);
         };
       }
     } else if (state.kind === "pending") {

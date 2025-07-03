@@ -86,6 +86,8 @@ export async function getAvailablePlayers(tournamentId: number): Promise<any> {
     throw new Error(`Couldn’t load tournament ${tournamentId}`);
   }
   const availablePlayers: Player[] = await tournamentRes.json();
+
+  console.log("Available players:", availablePlayers);
   
   return availablePlayers;
 }
@@ -103,7 +105,7 @@ export async function invitePlayerToSlot(
       ...(token && { Authorization: `Bearer ${token}` })
     },
     credentials: 'include',
-    body: JSON.stringify({ userId })
+    body: JSON.stringify({ userId, slotIndex })
   });
   if (!response.ok) {
     throw new Error(`Failed to invite player ${userId} to slot ${slotIndex} in tournament ${tournamentId}`);
