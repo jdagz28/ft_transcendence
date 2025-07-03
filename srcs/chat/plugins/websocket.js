@@ -27,7 +27,11 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
 
   fastify.get('/chat', {websocket: true}, async (socket, req) => {
 
-    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
+    // const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
+    const url = require('url');
+    const parsedUrl = url.parse(req.url, true);
+    const token = parsedUrl.query.token;
+    console.log("token received: token")
     if (!token) {
       socket.close(4001, 'Unauthorized: Missing token')
       return
@@ -43,9 +47,15 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
       const userId = Number(data.user.id);
       socket.send(`User: ${userId} successfuly connected`)
 
+      socket.isAlive = true;
+      socket.on('pong', () => {
+        socket.isAlive = true;
+      });
+
       socket.on('message', async message => {
         try {
           var parsed = JSON.parse(message.toString())
+          console.log('Message reçu:', parsed); // REMOVE LOG
         } catch {
           console.error('Error parsing JSON:', message.toString())
           socket.send('Need to send a valid JSON object')
@@ -54,12 +64,14 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
 
         let result = await fastify.chat.checkFields(parsed);
         if (result.valid === false) {
+          console.log('checkFields failed:', result.reason);// REMOVE LOG
           socket.send(`${result.reason}`)
           return
         }
 
         switch (parsed.action) {
           case 'join':
+            console.log("in case JOIN") //REMOVE THIS LOG
             result = await fastify.chat.joinChat(parsed, userId);//CHANGE PARAM 
             if (result.valid) {
               addSocketToRoom(parsed.room, socket)
@@ -102,3 +114,16 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
 
   })
 })
+
+setInterval(() => {
+  for (const room of roomSockets.values()) {
+    for (const sock of room) {
+      if (sock.isAlive === false) {
+        sock.terminate();
+      } else {
+        sock.isAlive = false;
+        try { sock.ping(); } catch {}
+      }
+    }
+  }
+}, 30000);
