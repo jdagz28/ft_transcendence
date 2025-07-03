@@ -16,6 +16,19 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return false;
     },
 
+    async groupExist(groupId) {
+      const groupQuery = fastify.db.prepare(`
+        SELECT id FROM conversations
+        WHERE id = ? AND type = 'group'
+        LIMIT 1
+      `);
+      const group = groupQuery.get(groupId);
+      if (group && group.id) {
+        return true;
+      }
+      return false;
+    },
+
     async createDirectMessage(userIdA, userIdB) {
       try {
         if (userIdA === userIdB) {
@@ -249,13 +262,15 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       throw new Error('User cannot join this group');
     },
 
-    async createGroup(userId, name, groupType) {
+    async createGroup(userId, name, groupType, isGame) {
       try {
+        const isGameValue = isGame ? 1 : 0;
+
         const insertGroup = fastify.db.prepare(`
-          INSERT INTO conversations (is_group, name, type, group_type, message_id)
-          VALUES (?,?,'group',?,NULL)
+          INSERT INTO conversations (is_group, name, type, group_type, is_game, message_id)
+          VALUES (?, ?, 'group', ?, ?, NULL)
         `)
-        const result = insertGroup.run(1, name, groupType)
+        const result = insertGroup.run(1, name, groupType, isGameValue)
         const conversationId = result.lastInsertRowid
 
         const insertMember = fastify.db.prepare(`
@@ -476,7 +491,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         throw new Error(`User ${userId} does not exist`)
       }
 
-      // Groupes où l'utilisateur est membre (non banni/kick)
       const memberGroupsQuery = fastify.db.prepare(`
         SELECT c.id, c.name, c.group_type
         FROM conversations c
@@ -488,7 +502,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const memberGroups = memberGroupsQuery.all(userId);
 
-      // Groupes publics où il n'est PAS membre
       const publicGroupsQuery = fastify.db.prepare(`
         SELECT c.id, c.name, c.group_type
         FROM conversations c
@@ -500,10 +513,47 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const publicGroups = publicGroupsQuery.all(userId);
 
-      // Fusionner les deux listes
       const allGroups = [...memberGroups, ...publicGroups];
 
       return allGroups;
+    },
+
+    async getGroupHistory(groupId, userId) {
+      if (!(await this.groupExist(groupId))) {
+        throw new Error('Group not found');
+      }
+
+      const groupTypeRow = fastify.db.prepare(`
+        SELECT group_type FROM conversations
+        WHERE id = ? AND type = 'group'
+        LIMIT 1
+      `).get(groupId);
+
+      if (groupTypeRow.group_type === 'private') {
+        const memberQuery = fastify.db.prepare(`
+          SELECT banned_at, kicked_at FROM convo_members
+          WHERE conversation_id = ? AND user_id = ?
+          LIMIT 1
+        `);
+        const member = memberQuery.get(groupId, userId);
+        if (!member) {
+          throw new Error('User is not a member of this private group');
+        }
+        if (member.banned_at !== null) {
+          throw new Error('User is banned from this group');
+        }
+      }
+      
+      const messagesQuery = fastify.db.prepare(`
+        SELECT m.id, m.sender_id, u.username, m.content, m.created
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = ?
+        ORDER BY m.created ASC
+      `);
+      const messages = messagesQuery.all(groupId);
+
+      return messages;
     }
     
   })

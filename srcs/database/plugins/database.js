@@ -53,6 +53,16 @@ async function databaseConnector(fastify) {
       createGroupInvitationsTable();
       db.exec('COMMIT');
       fastify.log.info("Created tables successfully.");
+
+      const generalGroup = db.prepare(`
+        SELECT id FROM conversations WHERE name = ? AND type = 'group'
+      `).get('Main');
+      if (!generalGroup) {
+        db.prepare(`
+          INSERT INTO conversations (name, type, group_type, is_group, created, updated)
+          VALUES (?, 'group', 'public', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).run('Main');
+      }
     } catch (error) {
       fastify.log.error('Error creating tables:', error);
     }

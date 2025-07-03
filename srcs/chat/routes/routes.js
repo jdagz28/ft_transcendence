@@ -79,7 +79,7 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       return
 
     const userId = data.user.id
-    const { name, type } = request.body
+    const { name, type, is_game } = request.body
 
     if (typeof type != "string" || !["public", "private"].includes(type))
       return reply.status(500).send({error: "invalid 'type'"})
@@ -87,11 +87,14 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     if (name !== null && typeof name !== "string")
       return reply.status(500).send({error: "Invalid 'name'"})
 
+    const isGameValue = typeof is_game === "boolean" ? is_game : false;
+
     try {
       const result = await axios.post(`http://database:${process.env.DB_PORT}/chat/create/group`, {
         userId: userId,
         name: name,
-        type: type
+        type: type,
+        isGame: isGameValue
       })
       reply.send(result.data)
     } catch (err) {
@@ -196,6 +199,26 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     try {
       const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/mychats/${userId}`)
       reply.send(response.data)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.response.data.error}`})
+    }
+  }),
+
+  fastify.get('/chat/group/:id/history', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const groupId = Number(request.params.id);
+
+    if (!Number.isInteger(groupId) || groupId <= 0) {
+      return reply.status(400).send({ error: "Invalid group id" });
+    }
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/group/${groupId}/history/${userId}`)
+      reply.send(response.data);
     } catch (err) {
       return reply.status(500).send({error: `${err.response.data.error}`})
     }
