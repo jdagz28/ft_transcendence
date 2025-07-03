@@ -258,6 +258,22 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 		optionsModal.classList.remove('flex');
 		if (numPlay.value !== playerCount) {
 			playerCount = numPlay.value;
+			if (playerCount !== "4") {
+				user3.connected = false;
+				user3.userID = "-1";
+				user3.token = "";
+				user3.username = "Waiting...";
+				user4.connected = false;
+				user4.userID = "-1";
+				user4.token = "";
+				user4.username = "Waiting...";
+			}
+			if (playerCount === "1" || playerCount === "Training") {
+				user2.connected = false;
+				user2.userID = "-1";
+				user2.token = "";
+				user2.username = "Waiting...";
+			}
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
 			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
 		}
@@ -269,10 +285,24 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 			optionsModal.classList.remove('flex');
 			if (numPlay.value !== playerCount) {
 			playerCount = numPlay.value;
+			if (playerCount !== "4") {
+				user3.connected = false;
+				user3.userID = "-1";
+				user3.token = "";
+				user3.username = "Waiting...";
+				user4.connected = false;
+				user4.userID = "-1";
+				user4.token = "";
+				user4.username = "Waiting...";
+			}
+			if (playerCount === "1" || playerCount === "Training") {
+				user2.connected = false;
+				user2.userID = "-1";
+				user2.token = "";
+				user2.username = "Waiting...";
+			}
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
 			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
-			if (scTW != boG)
-				 alert(boG);
 		}
     	}
     });
@@ -458,6 +488,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 	const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 
 	startBtn.addEventListener('click', () => {
+		if (scTW != boG)
+			return ;
 		//start game <--------------------------- IMPLEMENT!
 	});
 }
