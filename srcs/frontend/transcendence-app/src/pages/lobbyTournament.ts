@@ -1,4 +1,4 @@
-import { setupAppLayout} from "../setUpLayout";
+import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
   invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getTournamentChatRoom } from "../api/tournament";
@@ -27,7 +27,15 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   const players: Player[]  = await getTournamentPlayers(tournamentId);
   console.log("Players in tournament:", players);
 
-  // const userId = await whoAmI();
+  const userData = await whoAmI();
+  console.log("Current user data:", userData); //! DELETE
+  if (!userData.success) {
+    console.error("Failed to get user data:", userData.error);
+    window.location.hash = "#/";
+    return;
+  }
+  const userId = userData.data.id;
+  
   // let authorized = false;
   // for (const player of players) {
   //   if (player.userId === userId.data.id) {
@@ -170,38 +178,99 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
 
   const token = localStorage.getItem("token");
-  void token;
-  const roomId  = await getTournamentChatRoom(tournamentId); 
+  const roomId  = Number(await getTournamentChatRoom(tournamentId)); 
+  console.log("Chat room ID:", roomId); //!Delete
   const wsChat = new WebSocket(
-    `wss://${location.host}/chat`
+    `wss://${location.host}/chat?token=${token}`
   );
 
+  let roomJoined = false;
   wsChat.addEventListener("open", () => {
-    wsChat.send(JSON.stringify({ action: "join", room: roomId, scope: "group" }));
     console.log("WebSocket connection opened for chat");
+    console.log("WebSocket readyState:", wsChat.readyState);
+    console.log("Joining chat room:", roomId);
+    wsChat.send(JSON.stringify({ action: "join", room: roomId, scope: "group" }));
   });
 
   wsChat.addEventListener("message", (event) => {
+    console.log("Received WebSocket message:", event.data);
     try {
-      const data = JSON.parse(event.data.toString());
-      if (typeof data === "object" && "message" in data && "from" in data) {
-        appendMessage(data);
+      const rawMessage = event.data;
+      if (typeof rawMessage === 'string') {
+        if (rawMessage === 'Room joined') {
+          roomJoined = true;
+          console.log("Successfully joined room");
+          return;
+        }
+        if (rawMessage.includes('You must join the room')) {
+          console.log("Error: Must join room first");
+          return;
+        }
+        if (rawMessage.includes('User:') && rawMessage.includes('connected')) {
+          console.log("WebSocket connected");
+          return;
+        }
+        try {
+          const data = JSON.parse(rawMessage);
+          if (typeof data === "object" && "message" in data && "from" in data) {
+            appendMessage(data);
+          }
+        } catch {
+          console.log("Received plain text message:", rawMessage);
+        }
       }
-    } catch {
-      console.error("Failed to parse message:", event.data);
+    } catch (err) {
+      console.error("Error processing WebSocket message:", err);
+      console.error("Raw message data:", event.data);
     }
+  });
+
+  wsChat.addEventListener("close", () => {
+    console.log("WebSocket connection closed for chat");
+    setTimeout(() => {
+      renderTournamentLobby(tournamentId);
+    }, 1000);
   });
 
   wsChat.addEventListener("error", (event) =>
     console.error("chat socket error:", event)
   );
 
+  
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!roomJoined) {
+      console.log("Not joined to chat room yet");
+      alert("Chat connection not established. Please wait.");
+      return;
+    }
+
     const text = input.value.trim();
-    if (!text || wsChat.readyState !== WebSocket.OPEN) return;
-    wsChat.send(JSON.stringify({ action: "send", room: roomId, message: text }));
+    if (!text) {
+      console.log("Empty message, not sending");
+      return;
+    }
+    if (wsChat.readyState !== WebSocket.OPEN) {
+      console.log("WebSocket not connected");
+      alert("Chat connection lost. Please refresh the page.");
+      return;
+    }
+
+    appendMessage({ from: userId, message: text });
+    wsChat.send(JSON.stringify({ action: "send", room: roomId, scope: "group", message: text }));
     input.value = "";
+  });
+
+  sendBtn.addEventListener("click", () => {
+    form.requestSubmit();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
   });
 
 

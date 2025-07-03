@@ -972,7 +972,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (!chatRoom || !chatRoom.chat_room_id) {
           throw new Error('Chat room not found for this tournament')
         }
-        return { chatRoomId: chatRoom }
+        return { chatRoomId: chatRoom.chat_room_id }
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament chat')
