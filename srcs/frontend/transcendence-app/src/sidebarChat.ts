@@ -1,8 +1,26 @@
-export function openSidebarChat(groupId: number, groupName: string) {
+let currentWs: WebSocket | null = null;
+
+export async function openSidebarChat(groupId: number, groupName: string) {
   const sidebar = document.getElementById('sidebar-chat');
   if (!sidebar) return;
 
   const token = localStorage.getItem('token') || '';
+
+  let currentUser = '';
+  try {
+    const res = await fetch('/users/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const user = await res.json();
+      currentUser = user.username;
+    }
+  } catch {}
+
+  if (currentWs) {
+    currentWs.close();
+    currentWs = null;
+  }
 
   fetch(`/chat/group/${groupId}/history`, {
     headers: {
@@ -15,7 +33,14 @@ export function openSidebarChat(groupId: number, groupName: string) {
       if (!messagesDiv) return;
       if (Array.isArray(history)) {
         history.forEach(msg => {
-          messagesDiv.innerHTML += `<div class="text-white mb-2"><b>${msg.username}:</b> ${msg.content}</div>`;
+          const isMe = msg.username === currentUser;
+          messagesDiv.innerHTML += `
+            <div class="mb-2 flex ${isMe ? 'justify-end' : 'justify-start'}">
+              <div class="${isMe ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
+                <b>${isMe ? 'Moi' : msg.username}:</b> ${msg.content}
+              </div>
+            </div>
+          `;
         });
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       } else if (history.error) {
@@ -28,56 +53,68 @@ export function openSidebarChat(groupId: number, groupName: string) {
         messagesDiv.innerHTML += `<div class="text-red-400 mb-2">Erreur lors du chargement de l'historique.</div>`;
     });
 
-  // const ws = new WebSocket(`ws://${window.location.host}/chat`);
-  const ws = new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`);
+  sidebar.innerHTML = `
+    <div class="
+      fixed bottom-4 right-4 z-50
+      w-[90vw] max-w-[320px] md:w-[320px] md:max-w-[350px]
+      min-h-[400px] max-h-[40vh]
+      bg-[#1a2740] shadow-2xl rounded-xl flex flex-col border border-gray-700
+    ">
+      <div class="px-4 py-2 border-b border-gray-700 flex justify-between items-center rounded-t-xl">
+        <span class="text-lg font-bold text-white truncate">Chat: ${groupName}</span>
+        <button id="closeSidebarChat" class="text-white text-xl hover:text-red-400">✖</button>
+      </div>
+      <div id="sidebar-chat-messages" class="flex-1 overflow-y-auto px-4 py-2"></div>
+      <form id="sidebar-chat-form" class="px-4 py-2 flex gap-2 border-t border-gray-700">
+        <input type="text" id="sidebar-chat-input" class="flex-1 rounded p-2 bg-[#f8f8e7] text-[#11294d] placeholder-gray-500" placeholder="Message..." />
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded transition-colors">Send</button>
+      </form>
+    </div>
+  `;
 
-  ws.onopen = () => {
+  // const ws = new WebSocket(`ws://${window.location.host}/chat`);
+  currentWs = new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`);
+
+  currentWs.onopen = () => {
     setTimeout(() => {
-      ws.send(JSON.stringify({
-        action: 'join',
-        scope: 'group',
-        room: groupId
-      }));
+      if (currentWs) {
+        currentWs.send(JSON.stringify({
+          action: 'join',
+          scope: 'group',
+          room: groupId
+        }));
+      }
     }, 100);
   };
 
-  ws.onmessage = (event) => {
+  currentWs.onmessage = (event) => {
     const messagesDiv = document.getElementById('sidebar-chat-messages');
     if (!messagesDiv) return;
     try {
       const data = JSON.parse(event.data);
       if (data.message && data.from) {
-        messagesDiv.innerHTML += `<div class="text-white mb-2"><b>${data.from}:</b> ${data.message}</div>`;
+        const isMe = data.from === currentUser;
+        messagesDiv.innerHTML += `
+          <div class="mb-2 flex ${isMe ? 'justify-end' : 'justify-start'}">
+            <div class="${isMe ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
+              <b>${data.from}:</b> ${data.message}
+            </div>
+          </div>
+        `;
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       }
     } catch {
-      console.log("error")
-      // messagesDiv.innerHTML += `<div class="text-gray-400 mb-2">${event.data}</div>`;
+      console.log("error in catching message data", event.data);
     }
   };
 
-  ws.onclose = () => {};
-
-  sidebar.innerHTML = `
-  <div class="
-    fixed bottom-4 right-4 z-50
-    w-[90vw] max-w-[320px] md:w-[320px] md:max-w-[350px]
-    min-h-[400px] max-h-[40vh]
-    bg-[#1a2740] shadow-2xl rounded-xl flex flex-col border border-gray-700
-  ">
-    <div class="px-4 py-2 border-b border-gray-700 flex justify-between items-center rounded-t-xl">
-      <span class="text-lg font-bold text-white truncate">Chat: ${groupName}</span>
-      <button id="closeSidebarChat" class="text-white text-xl hover:text-red-400">✖</button>
-    </div>
-    <div id="sidebar-chat-messages" class="flex-1 overflow-y-auto px-4 py-2"></div>
-    <form id="sidebar-chat-form" class="px-4 py-2 flex gap-2 border-t border-gray-700">
-      <input type="text" id="sidebar-chat-input" class="flex-1 rounded p-2 bg-[#f8f8e7] text-[#11294d] placeholder-gray-500" placeholder="Message..." />
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded transition-colors">Send</button>
-    </form>
-  </div>
-`;
+  currentWs.onclose = () => {};
 
   document.getElementById('closeSidebarChat')?.addEventListener('click', () => {
+    if (currentWs) {
+      currentWs.close();
+      currentWs = null;
+    }
     sidebar.innerHTML = `
       <button id="openSidebarChatMini"
         class="fixed bottom-8 right-8 z-50 bg-[#1a2740] text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center text-3xl hover:bg-[#22325a] transition-colors"
@@ -93,8 +130,8 @@ export function openSidebarChat(groupId: number, groupName: string) {
   document.getElementById('sidebar-chat-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
-    if (input && input.value.trim() !== '') {
-      ws.send(JSON.stringify({
+    if (input && input.value.trim() !== '' && currentWs) {
+      currentWs.send(JSON.stringify({
         action: 'send',
         scope: 'group',
         room: groupId,
@@ -103,7 +140,13 @@ export function openSidebarChat(groupId: number, groupName: string) {
 
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (messagesDiv) {
-        messagesDiv.innerHTML += `<div class="text-white mb-2 text-right"><b>Moi:</b> ${input.value}</div>`;
+        messagesDiv.innerHTML += `
+          <div class="mb-2 flex justify-end">
+            <div class="bg-blue-600 text-white rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
+              <b>Moi:</b> ${input.value}
+            </div>
+          </div>
+        `;
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       }
 

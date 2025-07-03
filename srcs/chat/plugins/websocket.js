@@ -44,7 +44,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
         return
       }
       const userId = Number(data.user.id);
-      socket.send(`User: ${userId} successfuly connected`)
+      socket.send(JSON.stringify({ type: 'info', message: `User: ${userId} successfully connected` }));
 
       socket.isAlive = true;
       socket.on('pong', () => {
@@ -74,7 +74,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
             result = await fastify.chat.joinChat(parsed, userId);//CHANGE PARAM 
             if (result.valid) {
               addSocketToRoom(parsed.room, socket)
-              socket.send('Room joined')
+              socket.send(JSON.stringify({ type: 'info', message: 'Room joined' }));
             } else {
               socket.send(result.reason)
             }
@@ -100,10 +100,13 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
       })
 
       socket.on('close', (code, reason) => {
+        console.log("INSIDE THE CLOSE EVENT!!!!!!") // REMOVE THIS LOG
         if (socket.roomId && roomSockets.has(socket.roomId)) {
           roomSockets.get(socket.roomId).delete(socket);
+          console.log(`Socket removed from room ${socket.roomId}`); // REMOVE THIS LOG
           if (roomSockets.get(socket.roomId).size === 0) {
             roomSockets.delete(socket.roomId);
+            console.log(`Room ${socket.roomId} deleted as it is empty`); // REMOVE THIS LOG
           }
         }
         console.log(`Client disconnected. IP: ${req.ip}, Code: ${code}, Reason: ${reason.toString()}`)
