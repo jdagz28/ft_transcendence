@@ -291,7 +291,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const groupQuery = fastify.db.prepare(`
-        SELECT id, group_type FROM conversations
+        SELECT id, group_type, is_game FROM conversations
         WHERE id = ? AND type = 'group'
         LIMIT 1
       `);
@@ -320,6 +320,15 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         `);
         insertMember.run(groupId, userId);
         return { joined: true, groupId, via: 'public' };
+      }
+
+      if (group.group_type === 'private' && group.is_game === 1) {
+        const insertMember = fastify.db.prepare(`
+          INSERT INTO convo_members (conversation_id, user_id, role)
+          VALUES (?, ?, 'member')
+        `);
+        insertMember.run(groupId, userId);
+        return { joined: true, groupId, via: 'private_game' };
       }
 
       const invitationQuery = fastify.db.prepare(`

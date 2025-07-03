@@ -31,7 +31,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
     const url = require('url');
     const parsedUrl = url.parse(req.url, true);
     const token = parsedUrl.query.token;
-    console.log("token received: token")
+    console.log("token received: token") // REMOVE THIS LOG
     if (!token) {
       socket.close(4001, 'Unauthorized: Missing token')
       return
@@ -80,11 +80,13 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
             }
             break;
           case 'send':
+            console.log("in case SEND") //REMOVE THIS LOG
               if (!socket.roomId || socket.roomId !== parsed.room) {
                 socket.send('You must join the room before sending messages');
                 break;
               }
             result = await fastify.chat.sendMessage(parsed, userId);
+            console.log('Result sendMessage:', result); // REMOVE THIS LOG
             if (result.valid === true) {
               broadcastToRoom(parsed.room, JSON.stringify({
                 from: userId,
