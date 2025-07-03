@@ -2,19 +2,6 @@ import type { RouteParams } from "../router";
 import type { userData } from "../setUpLayout";
 import { setupAppLayout } from "../setUpLayout";
 
-/*interface CreateGameLobby {
-  mode:
-    | "training"
-    | "single-player"
-    | "local-multiplayer"
-    | "online-multiplayer";
-  maxPlayers: number;
-  priv: boolean;
-  invitedPlayers: string[];
-  loggedInPlayers: string[];
-  gameId: string;
-}*/
-
 type user = {
 	username: string;
 	userID: string;
@@ -23,31 +10,19 @@ type user = {
 	connected: boolean;
 };
 
-// async function checkLobbyAccess(lobbyId: string) {
-//   try {
-// 	const token = localStorage.getItem("token") ?? "";
-//     const response = await fetch(`/games/${lobbyId}/join`, {
-//       method: 'PATCH',
-//       credentials: 'include',
-//       headers: { 'Content-Type': 'application/json',
-// 		'Authorization': `Bearer ${token}`,
-// 	   },
-//     });
-
-//     if (!response.ok) {
-//       const error = await response.json();
-//       console.error('Access check failed:', error);
-//       return false;
-//     }
-//     return true;
-//   } catch (err) {
-//     console.error('Fetch error:', err);
-//     return false;
-//   }
-// }
-
 function renderLobbyError(root: HTMLDivElement) {
-	root.innerHTML = 'ERROR LOADING PAGE'
+	root.innerHTML = "";
+	root.className =
+    "flex flex-col items-center justify-center flex-grow text-white";
+
+  root.innerHTML = `
+    <h1 class="text-6xl md:text-8xl font-extrabold tracking-wider">
+      ERROR&nbsp;403
+    </h1>
+    <p class="mt-4 text-2xl md:text-3xl opacity-80">
+      Invalid&nbsp;Pemission
+    </p>
+  `;
 }
 
 function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string) {
@@ -126,7 +101,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
 	<button id="dis2" class="absolute left-1/2 top-full mt-6 hidden -translate-x-1/2 bg-red-500  hover:bg-red-400  text-white text-sm font-semibold px-4 py-1 rounded shadow transition duration-200">
           		Disconnect
         	</button>
-        	<button id="con3" class="absolute left-1/2 top-full mt-6 -translate-x-1/2 bg-white  hover:bg-gray-100  text-gray-800 text-sm font-semibold px-6.25 py-1 rounded shadow transition duration-200">
+        	<button id="con2" class="absolute left-1/2 top-full mt-6 -translate-x-1/2 bg-white  hover:bg-gray-100  text-gray-800 text-sm font-semibold px-6.25 py-1 rounded shadow transition duration-200">
           		Connect
         	</button>
   </div>
@@ -218,8 +193,8 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
         <h2 class="mb-8 text-4xl font-bold text-white">LOGIN</h2>
       </div>
       <form id="loginForm" class="space-y-5">
-        <input type="text" id="username" placeholder="Username" class="w-full rounded-md border border-transparent bg-[#081a37] px-4 py-2 placeholder-gray-400 focus:ring-2 focus:ring-sky-400 focus:outline-none" />
-        <input type="password" id="password" placeholder="Password" class="w-full rounded-md border border-transparent bg-[#081a37] px-4 py-2 placeholder-gray-400 focus:ring-2 focus:ring-sky-400 focus:outline-none" />
+        <input type="text" id="username" placeholder="Username" class="w-full text-white rounded-md border border-transparent bg-[#081a37] px-4 py-2 placeholder-gray-400 focus:ring-2 focus:ring-sky-400 focus:outline-none" />
+        <input type="password" id="password" placeholder="Password" class="w-full text-white rounded-md border border-transparent bg-[#081a37] px-4 py-2 placeholder-gray-400 focus:ring-2 focus:ring-sky-400 focus:outline-none" />
         <button type="submit" class="w-full rounded-md bg-gradient-to-r from-orange-500 to-orange-400 py-3 text-xl font-semibold text-white transition hover:opacity-90">Login</button>
       </form>
 	<div id="loginError" class="text-red-400 text-sm mt-3 hidden text-center"></div>
@@ -265,7 +240,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     }
 }
 
-function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string) {
+function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string, game: string) {
 	const optionsBtn = document.getElementById('optionsBtn') as HTMLButtonElement;
     const optionsModal = document.getElementById('optionsModal') as HTMLDivElement;
     const closeOptions = document.getElementById('closeOptions') as HTMLButtonElement;
@@ -284,7 +259,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 		if (numPlay.value !== playerCount) {
 			playerCount = numPlay.value;
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-			setUpEventListeners(root, user1, user2, user3, user4, playerCount);
+			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
 		}
     });
 
@@ -295,7 +270,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 			if (numPlay.value !== playerCount) {
 			playerCount = numPlay.value;
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-			setUpEventListeners(root, user1, user2, user3, user4, playerCount);
+			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
 			if (scTW != boG)
 				 alert(boG);
 		}
@@ -328,7 +303,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 			user2.username = "Waiting...";
 			user2.token = "";
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-			setUpEventListeners(root, user1, user2, user3, user4, playerCount);
+			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
 		});
 		if (user2.connected) {
 			con2.classList.add('hidden');
@@ -352,7 +327,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 			user3.username = "Waiting...";
 			user3.token = "";
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-			setUpEventListeners(root, user1, user2, user3, user4, playerCount);
+			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
 		});
 		if (user3.connected) {
 			con3.classList.add('hidden');
@@ -369,6 +344,11 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 		closeLogin.addEventListener('click', () => {
 	    	loginModal.classList.remove('flex');
 			loginModal.classList.add('hidden');
+			const errorDiv = document.getElementById('loginError');
+			if (errorDiv) {
+				errorDiv.textContent = "";
+          		errorDiv.classList.add('hidden');
+			}
 	    });
 		dis4.addEventListener('click', () => {
 			user4.connected = false;
@@ -376,7 +356,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 			user4.username = "Waiting...";
 			user4.token = "";
 			renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-			setUpEventListeners(root, user1, user2, user3, user4, playerCount);
+			setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
 		});
 		if (user4.connected) {
 			con4.classList.add('hidden');
@@ -413,6 +393,21 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
           window.location.hash = `#/login/${userId}/mfa/verify`;
         }
         else {*/
+
+		const perm = await fetch(`/games/${game}/join`, {
+      		method: 'PATCH',
+      		credentials: 'include',
+      		headers: { 'Content-Type': 'application/json',
+			'Authorization': `Bearer ${data.token}`,
+	   		},
+    	});
+
+		if (!perm.ok) {
+      		const error = await perm.json();
+			throw new Error(error.message || 'Invalid Permissions');
+		}
+
+
           let temp:user = {username: "", userID: "", pfp: new Blob, token: data.token, connected: true};
 		  const getUser = await fetch('/users/me', {
 	  	  method: 'get',
@@ -443,8 +438,13 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 			user3 = temp;
 		  else if (userlog === 4)
 			user4 = temp;
+		 	const errorDiv = document.getElementById('loginError');
+			if (errorDiv) {
+				errorDiv.textContent = "";
+          		errorDiv.classList.add('hidden');
+			}
 		  renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-		  setUpEventListeners(root, user1, user2, user3, user4, playerCount);
+		  setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
         //}
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
@@ -458,7 +458,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 	const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 
 	startBtn.addEventListener('click', () => {
-		//start game
+		//start game <--------------------------- IMPLEMENT!
 	});
 }
 
@@ -483,6 +483,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     	hasAccess = true;
 	if (!hasAccess) {
 		renderLobbyError(root.contentContainer);
+		return ;
 	}
 	const pfp = await fetch(localStorage.getItem("userPFP") ?? "", {
 		method: 'get',
@@ -499,6 +500,5 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 	let playerCount = "1";
 
 	renderLobbyHTML(root.contentContainer, user1, user2, user3, user4, playerCount);
-	setUpEventListeners(root.contentContainer, user1, user2, user3, user4, playerCount)
-	//invite button and leave
+	setUpEventListeners(root.contentContainer, user1, user2, user3, user4, playerCount, game)
 }
