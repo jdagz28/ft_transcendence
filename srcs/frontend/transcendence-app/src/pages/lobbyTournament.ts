@@ -1,7 +1,7 @@
 import { setupAppLayout} from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
-  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
+  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getTournamentChatRoom } from "../api/tournament";
 
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
   const { contentContainer } = setupAppLayout();
@@ -121,7 +121,11 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     btnContainer.appendChild(seedBtn);
   }
   const leaveBtn = document.createElement("button");
-  leaveBtn.textContent = "Leave";
+  if (isAdmin) {
+    leaveBtn.textContent = "Delete";
+  } else {
+    leaveBtn.textContent = "Leave";
+  }
   leaveBtn.className =`${commonBtn} bg-gradient-to-r from-red-400 to-red-400 hover:opacity-90`;
   btnContainer.appendChild(leaveBtn);
 
@@ -154,6 +158,52 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   form.appendChild(sendBtn);
 
   chatBox.appendChild(form);
+
+  function appendMessage(msg: { from: number; message: string }) {
+    const el = document.createElement("div");
+    el.className = "text-sm";
+    const player = players.find((p) => p.id === msg.from);
+    const name = player?.alias || player?.username || `#${msg.from}`;
+    el.innerHTML = `<strong>${name}</strong>: ${msg.message}`;
+    messagesList.appendChild(el);
+    messagesList.scrollTop = messagesList.scrollHeight;
+  }
+
+  const token = localStorage.getItem("token");
+  void token;
+  const roomId  = await getTournamentChatRoom(tournamentId); 
+  const wsChat = new WebSocket(
+    `wss://${location.host}/chat`
+  );
+
+  wsChat.addEventListener("open", () => {
+    wsChat.send(JSON.stringify({ action: "join", room: roomId, scope: "group" }));
+    console.log("WebSocket connection opened for chat");
+  });
+
+  wsChat.addEventListener("message", (event) => {
+    try {
+      const data = JSON.parse(event.data.toString());
+      if (typeof data === "object" && "message" in data && "from" in data) {
+        appendMessage(data);
+      }
+    } catch {
+      console.error("Failed to parse message:", event.data);
+    }
+  });
+
+  wsChat.addEventListener("error", (event) =>
+    console.error("chat socket error:", event)
+  );
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text || wsChat.readyState !== WebSocket.OPEN) return;
+    wsChat.send(JSON.stringify({ action: "send", room: roomId, message: text }));
+    input.value = "";
+  });
+
 
   const ws = new WebSocket(
     `wss://${location.host}/tournaments/${tournamentId}/ws`

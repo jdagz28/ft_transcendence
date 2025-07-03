@@ -342,6 +342,21 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/tournaments/:tournamentId/chat', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentChatHandler(request, reply) {
+        const { tournamentId } = request.params
+        const chat = await fastify.tournamentService.getTournamentChat(request, tournamentId)
+        if (!chat) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(chat)
+      }
+    })
+
   }, {
     name: 'tournamentRoutes',
     dependencies: [ 'tournamentAutoHooks', 'wsBroadcast']

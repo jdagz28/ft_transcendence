@@ -248,6 +248,14 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       )
       console.log('Available players retrieved:', data) //! DELETE
       return data
+    },
+
+    async getTournamentChat(request, tournamentId) {
+      const { data } = await dbApi.get(`/tournaments/${tournamentId}/chat`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament chat retrieved:', data) //! DELETE
+      return data
     }
   })
 }, {

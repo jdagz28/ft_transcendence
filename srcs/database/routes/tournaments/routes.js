@@ -441,6 +441,27 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.get('/tournaments/:tournamentId/chat', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentChatHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const chat = await fastify.dbTournaments.getTournamentChat(tournamentId)
+          if (!chat) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          return reply.status(200).send(chat)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
   },
   {
     name: 'tournamentRoutes',

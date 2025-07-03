@@ -145,3 +145,21 @@ export async function getPlayerById(userId: number): Promise<Player> {
   }
   return await response.json() as Player;
 }
+
+export async function getTournamentChatRoom(tournamentId: number): Promise<number> {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/tournaments/${tournamentId}/chat`, {
+    method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get chat room for tournament ${tournamentId}`);
+  }
+  const result = await response.json();
+  console.log("Tournament chat room:", result.chatRoomId); //!Delete
+  return Number(result.chatRoomId);
+}

@@ -949,6 +949,34 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve available players')
       }
+    },
+
+    async getTournamentChat(tournamentId) {
+      try {
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ?'
+        )
+        const checkTournament = check.get(tournamentId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found')
+        }
+        const checkPlayer = fastify.db.prepare(
+          'SELECT * FROM tournament_players WHERE tournament_id = ?'
+        ).get(tournamentId)
+        if (!checkPlayer) {
+          throw new Error('Player not authorized to access this tournament chat')
+        }
+        const chatRoom = fastify.db.prepare(
+          'SELECT chat_room_id FROM tournaments WHERE id = ?'
+        ).get(tournamentId)
+        if (!chatRoom || !chatRoom.chat_room_id) {
+          throw new Error('Chat room not found for this tournament')
+        }
+        return { chatRoomId: chatRoom }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament chat')
+      }
     }
   })
 }, {
