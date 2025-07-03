@@ -35,18 +35,17 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     return;
   }
   const userId = userData.data.id;
-  
-  // let authorized = false;
-  // for (const player of players) {
-  //   if (player.userId === userId.data.id) {
-  //     authorized = true;
-  //     break;
-  //   }
-  // }
-  // if (!authorized) {
-  //   window.location.hash = "#/"; 
-  //   return;
-  // }
+  let authorized = false;
+  for (const player of players) {
+    if (player.id === userId) {
+      authorized = true;
+      break;
+    }
+  }
+  if (!authorized) {
+    window.location.hash = "/403"; 
+    return;
+  }
 
   const created_by = await getTournamentCreator(tournamentId);
   const settings = await getTournamentSettings(tournamentId);

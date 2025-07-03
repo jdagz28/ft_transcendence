@@ -20,10 +20,6 @@ export interface SlotOptions {
   invitedPlayerIds?: Set<number>; 
 }
 
-function statusDot(color: string) {
-  return `<span class="inline-block w-2 h-2 rounded-full mr-2" style="background:${color}"></span>`;
-}
-
 export function buildPlayerSlot(opts: SlotOptions): {
   el: HTMLDivElement;
   update: (state: SlotState) => void;
@@ -35,9 +31,15 @@ export function buildPlayerSlot(opts: SlotOptions): {
 
   const content = document.createElement("div");
   content.className = "flex items-center gap-3";
-  const label = document.createElement("span");
+  const nameStack = document.createElement("div");
+  nameStack.className = "flex flex-col leading-tight";
+  const label    = document.createElement("span");
   label.className = "font-semibold capitalize";
-  content.appendChild(label);
+  const sublabel = document.createElement("span");
+  sublabel.className =
+    "text-xs font-light text-gray-300 -mt-0.5"; 
+  nameStack.append(label, sublabel);
+  content.appendChild(nameStack);
   box.appendChild(content);
 
   const caret = document.createElement("div");
@@ -64,11 +66,10 @@ export function buildPlayerSlot(opts: SlotOptions): {
       const isInvited = invitedPlayerIds.has(p.id);
       item.className = 
         "w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100";
-      const statusColor = isInvited ? "#fbbf24" : "#10b981"; 
       const displayText = isInvited ? `${p.username} (invited)` : p.username;
       
       item.innerHTML = 
-        `${statusDot(statusColor)}<img src="${p.avatarUrl}" ` +
+        `<img src="${p.avatarUrl}" ` +
         'class="w-6 h-6 rounded-full" alt=""/>' + 
         `<span class="flex-1 text-left">${displayText}</span>`;
       
@@ -131,8 +132,9 @@ export function buildPlayerSlot(opts: SlotOptions): {
       box.className = box.className.replace("bg-[#0d2551]", "bg-yellow-900/30 border border-yellow-600/50");
     } else {
       const p = state.player;
-      label.textContent = p.username;
+      label.textContent = p.alias;
       label.className = "text-2xl font-bold";
+      sublabel.textContent = p.username;
       caret.style.visibility = "hidden";
       
       const img = new Image(48, 48);
