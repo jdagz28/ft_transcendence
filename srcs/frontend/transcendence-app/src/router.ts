@@ -58,7 +58,7 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_LOGIN,  regex: tokenToRegex(ROUTE_LOGIN),  handler: () => renderLoginPage() },
   { pattern: ROUTE_REGISTER, regex: tokenToRegex(ROUTE_REGISTER), handler: () => renderRegisterPage() },
   { pattern: ROUTE_LOGIN_MFA, regex: tokenToRegex(ROUTE_LOGIN_MFA), handler: ({ userId }) => renderLoginMFA(Number(userId)) }, 
-  { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
+  { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: () => renderMainPage() },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
   { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
