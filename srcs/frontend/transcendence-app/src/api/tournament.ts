@@ -163,3 +163,19 @@ export async function getTournamentChatRoom(tournamentId: number): Promise<numbe
   console.log("Tournament chat room:", result.chatRoomId); //!Delete
   return Number(result.chatRoomId);
 }
+
+export async function getTournamentBrackets(tournamentId: number): Promise<any> {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/tournaments/${tournamentId}/brackets`, {
+    method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get brackets for tournament ${tournamentId}`);
+  }
+  return await response.json();
+}

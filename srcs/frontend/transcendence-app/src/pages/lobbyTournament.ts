@@ -2,6 +2,8 @@ import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
   invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getTournamentChatRoom } from "../api/tournament";
+  
+  
 import { ROUTE_MAIN } from "@/router";
 
 interface ChatMessage {
@@ -236,8 +238,9 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
         if (!response.ok) {
           throw new Error("Failed to seed tournament");
         }
-        alert("Tournament seeded successfully!");
+        // alert("Tournament seeded successfully!");
         // window.location.hash = `#/tournaments/${tournamentId}`;
+        window.location.hash = `#/tournaments/${tournamentId}/bracket`;
       } catch (err) {
         console.error(err);
         alert((err as Error).message ?? 'Could not seed tournament');
