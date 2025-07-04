@@ -4,8 +4,87 @@ import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvai
   invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getTournamentChatRoom } from "../api/tournament";
 import { ROUTE_MAIN } from "@/router";
 
+interface ChatMessage {
+  from: number;
+  message: string;
+  username?: string;
+}
+
+
+let lobbyWs: WebSocket | null = null;
+let lobbyRoomJoined = false;
+
+
+async function connectLobbyChat(
+  roomId: number,
+  token: string,
+  onMessage: (msg: ChatMessage ) => void
+) {
+  if (lobbyWs) return;
+
+  lobbyWs = new WebSocket(
+    `wss://${location.host}/chat?token=${encodeURIComponent(token)}`
+  );
+
+  lobbyWs.addEventListener("open", () => {
+    console.log("WebSocket connection opened for lobby chat");
+    setTimeout(() => {
+      if (lobbyWs) {
+        console.log("Joining chat room:", roomId);
+        lobbyWs.send(JSON.stringify({
+          action: 'join',
+          scope: 'group',
+          room: roomId
+        }));
+      }
+    }, 500);
+  });
+   
+
+  lobbyWs.addEventListener("message", function bannerListener(ev) {
+    if (typeof ev.data === "string" && ev.data === "Room joined") {
+      lobbyRoomJoined = true;
+      lobbyWs!.removeEventListener("message", bannerListener);
+      fetch(`/chat/group/${roomId}/history`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include"
+      })
+      .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+      .then((previousMessages: any[]) => {
+        previousMessages.forEach((msg: any) => {
+          onMessage({
+            from: msg.sender_id,
+            message: msg.content,
+            username: msg.username
+          });
+        });
+      })
+
+      .catch(err => console.error("Failed to fetch previous chat messages:", err));
+      return;
+    }
+    try {
+      const data = JSON.parse(ev.data as string);
+      if (data.message && data.from) onMessage(data);
+    } catch {}
+  });
+
+
+  lobbyWs.addEventListener("close", () => {
+    lobbyWs = null;
+    lobbyRoomJoined = false;
+  });
+}
+
+
+
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token") || "" ;
+  if (!token) {
+    console.error("No token found, redirecting to login");
+    window.location.hash = "#/login";
+  }
   const { contentContainer } = setupAppLayout();
   contentContainer.className = 
     "flex-grow flex flex-col gap-8 px-8 py-10 text-white";
@@ -234,81 +313,26 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   chatBox.appendChild(form);
 
-  function appendMessage(msg: { from: number; message: string }) {
+  function appendMessage(msg: ChatMessage) {
     const el = document.createElement("div");
     el.className = "text-sm";
     const player = players.find((p) => p.id === msg.from);
-    const name = player?.alias || player?.username || `#${msg.from}`;
+    const name = player?.alias || player?.username || msg.username || `#${msg.from}`;
     el.innerHTML = `<strong>${name}</strong>: ${msg.message}`;
     messagesList.appendChild(el);
     messagesList.scrollTop = messagesList.scrollHeight;
   }
 
+
   const roomId  = Number(await getTournamentChatRoom(tournamentId)); 
-  console.log("Chat room ID:", roomId); //!Delete
-  const wsChat = new WebSocket(
-    `wss://${location.host}/chat?token=${token}`
-  );
-
-  let roomJoined = false;
-  wsChat.addEventListener("open", () => {
-    console.log("WebSocket connection opened for chat");
-    console.log("WebSocket readyState:", wsChat.readyState);
-    console.log("Joining chat room:", roomId);
-    wsChat.send(JSON.stringify({ action: "join", room: roomId, scope: "group" }));
-  });
-
-  wsChat.addEventListener("message", (event) => {
-    console.log("Received WebSocket message:", event.data);
-    try {
-      const rawMessage = event.data;
-      if (typeof rawMessage === 'string') {
-        if (rawMessage === 'Room joined') {
-          roomJoined = true;
-          console.log("Successfully joined room");
-          return;
-        }
-        if (rawMessage.includes('You must join the room')) {
-          console.log("Error: Must join room first");
-          return;
-        }
-        if (rawMessage.includes('User:') && rawMessage.includes('connected')) {
-          console.log("WebSocket connected");
-          return;
-        }
-        try {
-          const data = JSON.parse(rawMessage);
-          if (typeof data === "object" && "message" in data && "from" in data) {
-            appendMessage(data);
-          }
-        } catch {
-          console.log("Received plain text message:", rawMessage);
-        }
-      }
-    } catch (err) {
-      console.error("Error processing WebSocket message:", err);
-      console.error("Raw message data:", event.data);
-    }
-  });
-
-  wsChat.addEventListener("close", () => {
-    console.log("WebSocket connection closed for chat");
-    setTimeout(() => {
-      renderTournamentLobby(tournamentId);
-    }, 1000);
-  });
-
-  wsChat.addEventListener("error", (event) =>
-    console.error("chat socket error:", event)
-  );
-
+  console.log("Connecting to chat room:", roomId);
+  connectLobbyChat(roomId, token, appendMessage);
   
-
+  
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!roomJoined) {
-      console.log("Not joined to chat room yet");
-      alert("Chat connection not established. Please wait.");
+     if (!lobbyRoomJoined || !lobbyWs || lobbyWs.readyState !== WebSocket.OPEN) {
+      alert("Chat connection not ready");
       return;
     }
 
@@ -317,14 +341,8 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       console.log("Empty message, not sending");
       return;
     }
-    if (wsChat.readyState !== WebSocket.OPEN) {
-      console.log("WebSocket not connected");
-      alert("Chat connection lost. Please refresh the page.");
-      return;
-    }
-
-    appendMessage({ from: userId, message: text });
-    wsChat.send(JSON.stringify({ action: "send", room: roomId, scope: "group", message: text }));
+    // appendMessage({ from: userId, message: text });s
+    lobbyWs.send(JSON.stringify({ action: "send", room: roomId, scope: "group", message: text }));
     input.value = "";
   });
 
@@ -338,7 +356,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       form.requestSubmit();
     }
   });
-
 
   const ws = new WebSocket(
     `wss://${location.host}/tournaments/${tournamentId}/ws`

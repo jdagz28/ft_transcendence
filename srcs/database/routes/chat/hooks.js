@@ -537,12 +537,12 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const groupTypeRow = fastify.db.prepare(`
-        SELECT group_type FROM conversations
+        SELECT group_type, is_game FROM conversations
         WHERE id = ? AND type = 'group'
         LIMIT 1
       `).get(groupId);
 
-      if (groupTypeRow.group_type === 'private') {
+      if (groupTypeRow.group_type === 'private' && groupTypeRow.is_game === 0) {
         const memberQuery = fastify.db.prepare(`
           SELECT banned_at, kicked_at FROM convo_members
           WHERE conversation_id = ? AND user_id = ?

@@ -56,7 +56,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         fastify.db.exec('COMMIT')       
         
         const { data: room } = await chatApi.post('/chat/create/group', 
-          { name: `Tournament ${tournamentId}`, type: 'private' },
+          { name: `Tournament ${tournamentId}`, type: 'private', is_game: true },
           { headers: { Authorization: `Bearer ${bearer(request)}` } }
         )
 
