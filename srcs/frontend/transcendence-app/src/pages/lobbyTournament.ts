@@ -2,8 +2,10 @@ import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
   invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getTournamentChatRoom } from "../api/tournament";
+import { ROUTE_MAIN } from "@/router";
 
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
+  const token = localStorage.getItem("token");
   const { contentContainer } = setupAppLayout();
   contentContainer.className = 
     "flex-grow flex flex-col gap-8 px-8 py-10 text-white";
@@ -102,17 +104,33 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       };
     }
 
+    let onAddAi: SlotOptions["onAddAi"];
+    if (isAdmin && state.kind === "open") {
+      onAddAi = async (slotIndex: number) => {
+        await fetch(`/tournaments/${tournamentId}/ai`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          credentials: "include",
+          body: JSON.stringify({ slotIndex: Number(slotIndex)  })
+        });
+        await renderTournamentLobby(tournamentId);
+      };
+    }
+
     const slotElement = buildPlayerSlot({
       slotIndex: i,
       state,
       fetchCandidates,
       onInvite,
-      onClick
+      onClick,
+      onAddAi
     });
 
     sideBar.appendChild(slotElement.el);
   }
-
 
   // Admin Buttons
   const btnContainer = document.createElement("div");
@@ -126,6 +144,26 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     seedBtn.textContent = "Seed";
     seedBtn.className = `${commonBtn} bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90`;
     btnContainer.appendChild(seedBtn);
+
+    seedBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch(`/tournaments/${tournamentId}/start`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          credentials: "include"
+        });
+        if (!response.ok) {
+          throw new Error("Failed to seed tournament");
+        }
+        alert("Tournament seeded successfully!");
+        // window.location.hash = `#/tournaments/${tournamentId}`;
+      } catch (err) {
+        console.error(err);
+        alert((err as Error).message ?? 'Could not seed tournament');
+      }
+    });
   }
   const leaveBtn = document.createElement("button");
   if (isAdmin) {
@@ -135,6 +173,36 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   leaveBtn.className =`${commonBtn} bg-gradient-to-r from-red-400 to-red-400 hover:opacity-90`;
   btnContainer.appendChild(leaveBtn);
+
+  leaveBtn.addEventListener("click", async () => {
+    try {
+      let response
+      if (isAdmin) {
+        response = await fetch(`/tournaments/${tournamentId}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          credentials: "include"
+        });
+      } else {
+        response = await fetch(`/tournaments/${tournamentId}/leave`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          credentials: "include"
+        });
+      }
+      if (!response.ok) {
+        throw new Error("Failed to leave tournament");
+      }
+      window.location.hash = ROUTE_MAIN;
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message ?? 'Could not leave tournament');
+    }
+  });
 
   // Chat Area
   const chatBox = document.createElement("div");
@@ -176,7 +244,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     messagesList.scrollTop = messagesList.scrollHeight;
   }
 
-  const token = localStorage.getItem("token");
   const roomId  = Number(await getTournamentChatRoom(tournamentId)); 
   console.log("Chat room ID:", roomId); //!Delete
   const wsChat = new WebSocket(

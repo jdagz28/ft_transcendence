@@ -256,6 +256,18 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       )
       console.log('Tournament chat retrieved:', data) //! DELETE
       return data
+    },
+
+    async createTournamentAI(request, tournamentId, slotIndex) {
+      const userId = request.user.id
+      fastify.log.info(`Creating AI for tournament ${tournamentId} at slot ${slotIndex} for user ${userId}`) //! DELETE
+      fastify.log.info(`types: ${typeof tournamentId}, ${typeof slotIndex}, ${typeof userId}`) //! DELETE
+      const { data } = await dbApi.patch(`/tournaments/${tournamentId}/ai`, 
+        { slotIndex },
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament AI created:', data) //! DELETE
+      return data
     }
   })
 }, {

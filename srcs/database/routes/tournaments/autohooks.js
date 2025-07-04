@@ -977,6 +977,33 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament chat')
       }
+    },
+
+    async createTournamentAI(tournamentId, userId, slotIndex) {
+      try {
+        fastify.log.debug('Creating tournament AI configuration for tournamentId:', tournamentId, 'userId:', userId, 'slotIndex:', slotIndex)
+        fastify.db.exec('BEGIN')
+        const check = fastify.db.prepare(
+          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
+        )
+        const checkTournament = check.get(tournamentId, userId)
+        if (!checkTournament) {
+          throw new Error('Tournament not found or user not authorized')
+        }
+        const tourPlayersQuery = fastify.db.prepare(
+          'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
+        )
+        const tourPlayersResult = tourPlayersQuery.run(tournamentId, fastify.aiUserId, slotIndex)
+        if (tourPlayersResult.changes === 0) {
+          throw new Error('Failed to add user to tournament players')
+        }
+        fastify.db.exec('COMMIT')
+        return { message: 'Tournament AI configuration created successfully' }
+      } catch (err) {
+        fastify.db.exec('ROLLBACK')
+        fastify.log.error(err)
+        throw new Error('Failed to create tournament AI configuration')
+      }
     }
   })
 }, {

@@ -357,6 +357,23 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/tournaments/:tournamentId/ai', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID'),
+        body: fastify.getSchema('schema:tournaments:createTournamentAI')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentAIHandler(request, reply) {
+        const { tournamentId } = request.params
+        const { slotIndex }  = request.body
+        const result = await fastify.tournamentService.createTournamentAI(request, tournamentId, slotIndex)
+        if (!result) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(201).send(result)
+      }
+    })
+
   }, {
     name: 'tournamentRoutes',
     dependencies: [ 'tournamentAutoHooks', 'wsBroadcast']

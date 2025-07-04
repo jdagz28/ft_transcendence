@@ -462,6 +462,30 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.patch('/tournaments/:tournamentId/ai', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentAIHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const { slotIndex } = request.body
+          const userId = request.user.id
+          const result = await fastify.dbTournaments.createTournamentAI(tournamentId, userId, slotIndex)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'tournamentRoutes',

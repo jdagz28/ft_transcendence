@@ -17,6 +17,7 @@ export interface SlotOptions {
   fetchCandidates?: (slotIndex: number) => Promise<Player[]>;
   onInvite?: (slotIndex: number, userId: number) => void;
   onClick?: () => void;
+  onAddAi?: (slotIndex: number, userId: number) => Promise<void>;
   invitedPlayerIds?: Set<number>; 
 }
 
@@ -77,7 +78,11 @@ export function buildPlayerSlot(opts: SlotOptions): {
         item.onclick = e => {
           e.stopPropagation();
           menu.classList.add("hidden");
-          opts.onInvite?.(opts.slotIndex, p.id);
+          if (p.id === 1 || p.username === "AiOpponent") {
+            opts.onAddAi?.(opts.slotIndex, p.id);
+          } else {
+            opts.onInvite?.(opts.slotIndex, p.id);
+          }
         };
       }
       menu.appendChild(item);     
@@ -127,7 +132,6 @@ export function buildPlayerSlot(opts: SlotOptions): {
       img.src = p.avatarUrl;
       img.className = "rounded-full opacity-60"; 
       content.prepend(img);
-
 
       box.className = box.className.replace("bg-[#0d2551]", "bg-yellow-900/30 border border-yellow-600/50");
     } else {
