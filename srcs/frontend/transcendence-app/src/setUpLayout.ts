@@ -64,7 +64,7 @@ export function renderNavBar(root: HTMLElement) {
           <a href="#">Games</a>
           <a href="#">Tournament</a>
           <a href="#">Leaderboard</a>
-          <a href="#">Chat</a>
+          <a href="/chat">Chat</a>
         </div>
         <div class="flex items-center gap-6">
           <span class="text-xl">${user} 🔔</span>
