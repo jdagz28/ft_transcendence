@@ -25,7 +25,8 @@ module.exports = fp(
       handler: async function joinTournamentHandler (request, reply) {
         const { tournamentId } = request.params
         const userId = request.user.id
-        const result = await fastify.tournamentService.joinTournament(request, tournamentId, userId)
+        const { slotIndex } = request.body || {}
+        const result = await fastify.tournamentService.joinTournament(request, tournamentId, userId, slotIndex)
         if (!result) {
           return reply.code(404).send({ error: 'Tournament not found' })
         }

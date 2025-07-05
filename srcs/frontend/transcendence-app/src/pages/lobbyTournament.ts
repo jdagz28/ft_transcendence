@@ -86,6 +86,128 @@ async function connectLobbyChat(
   
 }
 
+let cachedAuthFlow: (() => Promise<string>) | null = null;
+function ensureAuthModals(): () => Promise<string> {
+  if (cachedAuthFlow) return cachedAuthFlow;
+
+  const inputHTML =
+    '<input maxlength="1" class="w-12 h-12 bg-[#081a37] text-white text-center text-xl rounded" />';
+  const sixInputs = Array(6).fill(inputHTML).join("");
+
+  if (!document.getElementById("local-login-modal")) {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div id="local-login-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40">
+        <div class="relative w-96 rounded-lg bg-[#0f2a4e] border-4 border-white p-8">
+          <button id="local-login-close" class="absolute top-3 right-3 text-2xl font-bold text-gray-300">&times;</button>
+          <div class="flex flex-col items-center">
+            <img src="/icons8-rocket.svg" class="w-24 h-24 mb-6"/>
+            <h2 class="text-3xl font-bold text-white mb-6">LOGIN</h2>
+          </div>
+          <form id="local-login-form" class="space-y-5">
+            <input id="local-username" class="w-full bg-[#081a37] text-white rounded px-4 py-2 placeholder-gray-400" placeholder="Username"/>
+            <input id="local-password" type="password" class="w-full bg-[#081a37] text-white rounded px-4 py-2 placeholder-gray-400" placeholder="Password"/>
+            <button class="w-full bg-gradient-to-r from-orange-500 to-orange-400 py-3 rounded font-semibold text-xl text-white">Login</button>
+            <div id="local-login-error" class="text-red-400 text-sm text-center hidden"></div>
+          </form>
+        </div>
+      </div>
+
+      <div id="local-mfa-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40">
+        <div class="relative w-96 rounded-lg bg-[#0f2a4e] border-4 border-white p-8">
+          <button id="local-mfa-close" class="absolute top-3 right-3 text-2xl font-bold text-gray-300">&times;</button>
+          <h2 class="text-center text-3xl font-bold text-white mb-6">Enter 2FA Code</h2>
+          <div id="code-box" class="flex justify-center space-x-2 mb-6">
+            ${sixInputs}
+          </div>
+          <button id="local-mfa-verify" class="w-full bg-gradient-to-r from-orange-500 to-orange-400 py-3 rounded font-semibold text-xl text-white">Verify</button>
+          <div id="local-mfa-error" class="text-red-400 text-sm text-center hidden mt-3"></div>
+        </div>
+      </div>
+      `
+    );
+  }
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const loginModal = $("local-login-modal");
+  const mfaModal = $("local-mfa-modal");
+
+  cachedAuthFlow = () =>
+    new Promise<string>((resolve, reject) => {
+      loginModal.classList.remove("hidden");
+
+      $("local-login-close").onclick = () => {
+        loginModal.classList.add("hidden");
+        reject("cancel");
+      };
+
+      $("local-login-form").onsubmit = async (e) => {
+        e.preventDefault();
+        const user = ($("local-username") as HTMLInputElement).value.trim();
+        const pass = ($("local-password") as HTMLInputElement).value;
+
+        if (!user || !pass) return;
+
+        try {
+          const r = await fetch("/auth/authenticate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ username: user, password: pass })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.message ?? "login failed");
+
+          if (data.mfaRequired) {
+            loginModal.classList.add("hidden");
+            mfaModal.classList.remove("hidden");
+
+            const inputs = Array.from(
+              $("code-box").querySelectorAll("input") as NodeListOf<HTMLInputElement>
+            );
+            inputs[0].focus();
+
+            $("local-mfa-close").onclick = () => {
+              mfaModal.classList.add("hidden");
+              reject("cancel");
+            };
+
+            $("local-mfa-verify").onclick = async () => {
+              const code = inputs.map((i) => i.value).join("");
+              if (code.length !== 6) return;
+
+              const vr = await fetch(`/auth/${data.userId}/mfa/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ token: code })
+              });
+              const vData = await vr.json();
+              if (!vr.ok) {
+                $("local-mfa-error").textContent =
+                  vData.message ?? "wrong code";
+                $("local-mfa-error").classList.remove("hidden");
+                return;
+              }
+              mfaModal.classList.add("hidden");
+              resolve(vData.token);
+            };
+
+            return;
+          }
+
+          loginModal.classList.add("hidden");
+          resolve(data.token);
+        } catch (err: any) {
+          $("local-login-error").textContent = err.message ?? "error";
+          $("local-login-error").classList.remove("hidden");
+        }
+      };
+    });
+
+  return cachedAuthFlow;
+}
 
 
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
@@ -140,10 +262,10 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   const created_by = await getTournamentCreator(tournamentId);
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);
-  const game_mode = settings.game_mode as "public" | "private";
+  // const game_mode = settings.game_mode as "public" | "private";
   
   const isAdmin = await isTournamentAdmin(created_by);
-  const isPublic = game_mode === "public";
+  // const isPublic = game_mode === "public";
 
   // Player Slots
   const sideBar = document.createElement("div");
@@ -181,14 +303,25 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       };
     }
 
-    let onClick: SlotOptions["onClick"];
-    if (!isAdmin && isPublic && state.kind === "open") {
-      onClick = async () => {
-        await fetch(`/tournaments/${tournamentId}/join`, {
-          method: "PATCH",
-          credentials: "include"
-        });
-        await renderTournamentLobby(tournamentId);
+    let onLocalConnect: SlotOptions["onLocalConnect"];
+    if (state.kind === "open") {
+      const authFlow = ensureAuthModals(); 
+
+      onLocalConnect = async (slotIndex: number) => {
+        try {
+          const token = await authFlow(); 
+          const response = await fetch(`/tournaments/${tournamentId}/join`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Authorization": `Bearer ${token}` ,
+                      "Content-Type": "application/json"},
+            body: JSON.stringify({ slotIndex })
+          });
+          if (!response.ok) throw new Error("could not join");ss
+          await renderTournamentLobby(tournamentId);  
+        } catch (err) {
+          if (err !== "cancel") console.error(err);
+        }
       };
     }
 
@@ -213,8 +346,8 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       state,
       fetchCandidates,
       onInvite,
-      onClick,
-      onAddAi
+      onAddAi,
+      onLocalConnect
     });
 
     sideBar.appendChild(slotElement.el);

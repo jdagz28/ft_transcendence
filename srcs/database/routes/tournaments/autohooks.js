@@ -73,7 +73,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
-    async joinTournament(request, tournamentId, userId) {
+    async joinTournament(request, tournamentId, userId, slotIndex) {
       try {
         const check = fastify.db.prepare(
           'SELECT * FROM tournaments WHERE id = ?'
@@ -116,24 +116,17 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         const isInvited = fastify.db.prepare(
           'SELECT * FROM tournament_invites WHERE tournament_id = ? AND user_id = ? AND status = ?'
         ).get(tournamentId, userId, 'accepted')
-        let tourPlayersQuery
-        let slotIndex
         fastify.db.exec('BEGIN')
+        let slot;
         if (isInvited) {
-          slotIndex = isInvited.slot_index
-          tourPlayersQuery = fastify.db.prepare(
-            'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
-          )
+          slot = isInvited.slot_index
         } else {
-          slotIndex = fastify.db.prepare(
-            'SELECT MAX(slot_index) AS last_slot FROM tournament_players WHERE tournament_id = ?'
-          ).get(tournamentId).last_slot || 0
-          tourPlayersQuery = fastify.db.prepare(
-            'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
-          )
-          slotIndex += 1
+          slot = slotIndex
         }
-        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId, slotIndex)
+        const tourPlayersQuery = fastify.db.prepare(
+            'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'
+        )
+        const tourPlayersResult = tourPlayersQuery.run(tournamentId, userId, slot)
         if (tourPlayersResult.changes === 0) {
           throw new Error('Failed to add user to tournament players')
         }
@@ -172,12 +165,12 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         }
         
         const row = fastify.db.prepare(`
-          SELECT 1 FROM tournament_players
+          SELECT 1 FROM tournament_playersslotIndexs
           WHERE tournament_id = ? AND user_id = ?
         `).get(tournamentId, userId);
         if (row) throw new Error('User already in tournament');
 
-        const result = fastify.db.prepare(`
+        const result = fastify.db.prepare(`s
           INSERT INTO tournament_invites
                 (tournament_id, user_id, slot_index, status)
           VALUES (?, ?, ?, 'pending')

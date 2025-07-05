@@ -38,10 +38,10 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       return data
     },
 
-    async joinTournament(request, tournamentId, userId) {
+    async joinTournament(request, tournamentId, userId, slotIndex) {
       try {
         const { data } = await dbApi.patch(`/tournaments/${tournamentId}/join`, 
-          { userId },
+          { userId, slotIndex },
           { headers: internalHeaders(request) },
         )
         console.log('Joined tournament:', data) //! DELETE

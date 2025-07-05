@@ -16,8 +16,8 @@ export interface SlotOptions {
   state: SlotState;
   fetchCandidates?: (slotIndex: number) => Promise<Player[]>;
   onInvite?: (slotIndex: number, userId: number) => void;
-  onClick?: () => void;
   onAddAi?: (slotIndex: number, userId: number) => Promise<void>;
+  onLocalConnect?: (slotIndex: number) => void;
   invitedPlayerIds?: Set<number>; 
 }
 
@@ -97,22 +97,24 @@ export function buildPlayerSlot(opts: SlotOptions): {
     content.querySelectorAll(".pending-indicator").forEach(n => n.remove());
 
     if (state.kind === "open") {
-      label.textContent = "open";
-      caret.style.visibility = "visible";
+      const loginEnabled = Boolean(opts.onLocalConnect);
+      label.textContent  = loginEnabled ? "login" : "open";
 
-      // fetch and show users
-      if (opts.onClick) {
-        // Handle onClick if provided
+      const dropdownEnabled = Boolean(opts.fetchCandidates);
+      caret.style.visibility = dropdownEnabled ? "visible" : "hidden";
+      caret.style.cursor     = dropdownEnabled ? "pointer" : "default";
+      
+      if (loginEnabled) {
         box.onclick = (e) => {
           e.stopPropagation();
-          opts.onClick!();
+          opts.onLocalConnect!(opts.slotIndex);
         };
-      } else if (opts.fetchCandidates) {
-        box.onclick = async (e) => {
+      }
+      if (dropdownEnabled) {
+        caret.onclick = async (e) => {
           e.stopPropagation();
           const list = await opts.fetchCandidates!(opts.slotIndex);
-          if (list.length)
-            showMenu(list);
+          if (list.length) showMenu(list);
         };
       }
     } else if (state.kind === "pending") {
