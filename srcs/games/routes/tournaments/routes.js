@@ -144,7 +144,7 @@ module.exports = fp(
 
 
     //  get a list of tournaments
-    fastify.get('/games/tournaments', {
+    fastify.get('/tournaments', {
       onRequest: fastify.authenticate,
       handler: async function getTournamentHandler (request, reply) {
         const tournaments = await fastify.tournamentService.getTournaments(request)

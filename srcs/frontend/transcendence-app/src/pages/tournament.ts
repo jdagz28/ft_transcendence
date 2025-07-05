@@ -30,4 +30,30 @@ export function renderTournamentPage() {
     window.location.hash = "#/tournaments/create";
   });
   
+  const tableWrapper = document.createElement("div");
+  tableWrapper.className = "overflow-x-auto";
+  const table = document.createElement("table");
+  table.className = "min-w-full divide-y divide-gray-700 text-sm";
+  tableWrapper.appendChild(table);
+  contentContainer.appendChild(tableWrapper);
+
+  // Table head
+  table.innerHTML = `
+    <thead>
+      <tr class="text-left uppercase tracking-wider text-gray-400">
+        <th class="px-4 py-2 font-medium">Tournament</th>
+        <th class="px-4 py-2 font-medium">Mode</th>
+        <th class="px-4 py-2 font-medium">Created By</th>
+        <th class="px-4 py-2 font-medium">Created</th>
+        <th class="px-4 py-2 font-medium">Finished</th>
+        <th class="px-4 py-2 font-medium">Max</th>
+        <th class="px-4 py-2 font-medium">Open</th>
+        <th class="px-4 py-2 font-medium">Players</th>
+        <th class="px-4 py-2 font-medium"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800"></tbody>`;
+
+  // const tbody = table.querySelector("tbody");
+
 }
