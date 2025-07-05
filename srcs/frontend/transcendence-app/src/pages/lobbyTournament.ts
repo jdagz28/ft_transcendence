@@ -262,12 +262,9 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   const created_by = await getTournamentCreator(tournamentId);
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);
-  // const game_mode = settings.game_mode as "public" | "private";
   
   const isAdmin = await isTournamentAdmin(created_by);
-  // const isPublic = game_mode === "public";
 
-  // Player Slots
   const sideBar = document.createElement("div");
   sideBar.id = "player-slots";
   sideBar.className = "flex flex-col gap-4 w-64";
@@ -317,7 +314,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
                       "Content-Type": "application/json"},
             body: JSON.stringify({ slotIndex })
           });
-          if (!response.ok) throw new Error("could not join");ss
+          if (!response.ok) throw new Error("could not join");
           await renderTournamentLobby(tournamentId);  
         } catch (err) {
           if (err !== "cancel") console.error(err);
@@ -378,8 +375,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
         if (!response.ok) {
           throw new Error("Failed to seed tournament");
         }
-        // alert("Tournament seeded successfully!");
-        // window.location.hash = `#/tournaments/${tournamentId}`;
         window.location.hash = `#/tournaments/${tournamentId}/bracket`;
       } catch (err) {
         console.error(err);
