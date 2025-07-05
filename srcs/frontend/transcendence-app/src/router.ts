@@ -20,7 +20,7 @@ export const ROUTE_LOGIN                  = "/login";
 export const ROUTE_REGISTER               = "/register";
 export const ROUTE_LOGIN_MFA              = "/login/:userId/mfa/verify";
 export const ROUTE_MAIN                   = "/main";
-export const ROUTE_LOBBY                  = "/lobby";
+export const ROUTE_LOBBY                  = "/lobby/:gameId";
 export const DEFAULT                      = "/404";
 export const ROUTE_CHAT                   = "/chat";
 export const ROUTE_TOURNAMENTS            = "/tournaments";
@@ -63,7 +63,7 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_LOGIN,  regex: tokenToRegex(ROUTE_LOGIN),  handler: () => renderLoginPage() },
   { pattern: ROUTE_REGISTER, regex: tokenToRegex(ROUTE_REGISTER), handler: () => renderRegisterPage() },
   { pattern: ROUTE_LOGIN_MFA, regex: tokenToRegex(ROUTE_LOGIN_MFA), handler: ({ userId }) => renderLoginMFA(Number(userId)) }, 
-  { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: p => renderMainPage(p) },
+  { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: () => renderMainPage() },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
   { pattern: ROUTE_TOURNAMENTS, regex: tokenToRegex(ROUTE_TOURNAMENTS), handler: () => renderTournamentPage() },
