@@ -277,14 +277,62 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
 
     async getTournaments() {
       try {
-        const query = fastify.db.prepare(
-          'SELECT * FROM tournaments'
-        )
-        const tournaments = query.all()
-        if (!tournaments) {
-          throw new Error('Failed to retrieve tournaments')
+        const rows = fastify.db.prepare(`
+          SELECT
+            tournaments.id,
+            tournaments.name,
+            tournaments.status,
+            tournaments.created AS createdRaw,
+            tournaments.ended AS endedRaw,
+            users.id AS creatorById,
+            users.username AS creatorUsername,
+            tournament_settings.game_mode AS gameMode,
+            tournament_settings.max_players AS maxPlayers
+          FROM tournaments
+          JOIN users ON users.id = tournaments.created_by
+          JOIN tournament_settings ON tournament_settings.tournament_id = tournaments.id
+          ORDER BY tournaments.created DESC
+        `).all()
+        if (!rows || rows.length === 0) {
+          return []
         }
-        return tournaments
+
+        const playerRows = fastify.db.prepare(`
+          SELECT
+            tournament_players.tournament_id AS tournamentId,
+            users.id AS playerId,
+            users.username AS playerUsername
+          FROM tournament_players
+          JOIN users ON users.id = tournament_players.user_id
+        `).all();
+
+        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        const players = playerRows.reduce((acc, row) => {
+          (acc[row.tournamentId] ||= []).push({
+            id: row.playerId,
+            username: row.playerUsername,
+            avatarUrl: `${baseURL}/users/${row.playerId}/avatar`
+          })
+          return acc
+        }, {})
+        
+        return rows.map(tournament => ({
+          id: tournament.id,
+          name: tournament.name,
+          status: tournament.status,
+          created: new Date(tournament.createdRaw).toISOString(),
+          ended: tournament.endedRaw ? new Date(tournament.endedRaw).toISOString() : null,
+          created_by: {
+            id: tournament.creatorById,
+            username: tournament.creatorUsername,
+            avatarUrl: `${baseURL}/users/${tournament.creatorById}/avatar`
+          },
+          settings: {
+            gameMode: tournament.gameMode,
+            maxPlayers: tournament.maxPlayers
+          },
+          players: players[tournament.id] || []
+        }));
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournaments')
