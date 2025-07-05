@@ -1,6 +1,6 @@
 import { ROUTE_LOGIN } from "./router"
 
-type userData = {
+export type userData = {
   id: number;
 	username: string;
 	email:string;
@@ -11,7 +11,7 @@ type userData = {
 };
 
 type loggedIn =
-	| { success: true; data: userData; pfp: Blob}
+	| { success: true; data: userData; pfp: Blob; pfpString: string}
 	| { success: false; error: any};
 
 export async function whoAmI(): Promise<loggedIn>{
@@ -39,7 +39,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	  },
 	});
 	const rawpfp:Blob = await pfp.blob();
-	return { success: true, data: json, pfp: rawpfp};
+	return { success: true, data: json, pfp: rawpfp, pfpString: json.avatar.url };
   } catch (err) {
 	console.error('Fetch error:', err);
 	return { success: false, error: err};
@@ -54,6 +54,8 @@ export function renderNavBar(root: HTMLElement) {
       return;
     }
     const user = data.data.username;
+	localStorage.setItem("userName", data.data.username);
+	localStorage.setItem("userID", data.data.id.toString());
     root.innerHTML = /*html*/`
     <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-sm font-semibold text-white">
         <div class="flex items-center gap-6">
@@ -86,6 +88,7 @@ export function renderNavBar(root: HTMLElement) {
     const userAvatar = document.getElementById('avatar');
     if (userAvatar) {
       const img = document.createElement('img');
+	  localStorage.setItem("userPFP", data.pfpString);
       img.src = URL.createObjectURL(data.pfp);
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
