@@ -55,17 +55,47 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   col3.className = "flex flex-col justify-center relative";
   wrapper.appendChild(col3);
 
-
   function getPlayerById(id: number): Player | undefined {
     return players.find(p => p.id === id);
   }
 
+  function isPlayable(slots: any[], idx: number): boolean {
+    if (idx === 0) return true;
+
+    return slots[idx - 1].status === "finished";
+  }
 
   const round1Slots = slots.brackets?.[0]?.slots ?? [];
-
   round1Slots.forEach((slot: any, idx: number) => {
     const container = document.createElement("div");
     container.className = "flex flex-col items-center";
+
+    const header = document.createElement("div");
+    header.className = "mb-2 flex items-center gap-2";
+    header.innerText = `Match ${slot.slot + 1}`;
+
+    if (slot.status === "pending" && isPlayable(round1Slots, idx)) {
+      const gameId = slot.gameId;
+      const playBtn = document.createElement("button");
+      playBtn.className =
+        "px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-sm";
+      playBtn.textContent = "Play";
+      playBtn.onclick = async () => {
+        playBtn.disabled = true;
+        window.location.hash = `#tournament/${gameId}`
+      };
+      header.appendChild(playBtn);
+    } else if (slot.status === "finished") {
+      const scoreSpan = document.createElement("span");
+      scoreSpan.className = "text-xs font-mono";
+      const p1 = slot.players[0];
+      const p2 = slot.players[1];
+      scoreSpan.textContent =
+        `${p1.playerAlias ?? p1.playerId} ${slot.score[p1.playerId]} – ` +
+        `${slot.score[p2.playerId]} ${p2.playerAlias ?? p2.playerId}`;
+      header.appendChild(scoreSpan);
+    }
+    container.appendChild(header);
 
     slot.players.forEach((p: any, pIdx: number) => {
       const player = getPlayerById(p.playerId);
