@@ -1,0 +1,6 @@
+{
+  "type": "object",
+  "$id": "schema:tournaments:createTournamentAI",
+  "required": [ "slotIndex" ],
+  "properties": { "slotIndex": { "type": "integer", "minimum": 0, "maximum": 3 } }
+}

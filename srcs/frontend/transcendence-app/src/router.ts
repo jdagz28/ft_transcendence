@@ -5,12 +5,15 @@ import { renderLoginMFA } from "./pages/loginMFA";
 import { renderMainPage } from "./pages/mainPage";
 import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
+import { renderTournamentPage } from "./pages/tournament";
 import { renderCreateTournamentPage } from "./pages/createTournament";
 import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderTournamentLobby } from "./pages/lobbyTournament";
+import { renderTournamentBracket } from "./pages/bracketsTournament";
 import { renderChat } from "./chat";
 import { whoAmI } from "./setUpLayout";
 import { renderAccountSettingsPage } from "./pages/accountSettings";
+import { renderError403 } from "./pages/403";
 
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
 export const ROUTE_LOGIN                  = "/login";
@@ -20,11 +23,13 @@ export const ROUTE_MAIN                   = "/main";
 export const ROUTE_LOBBY                  = "/lobby/:gameId";
 export const DEFAULT                      = "/404";
 export const ROUTE_CHAT                   = "/chat";
+export const ROUTE_TOURNAMENTS            = "/tournaments";
 export const ROUTE_TOURNAMENT_CREATE      = "/tournaments/create";
 export const ROUTE_TOURNAMENT_ALIAS       = "/tournaments/:tournamentId/alias";
 export const ROUTE_TOURNAMENT_LOBBY       = "/tournaments/:tournamentId/lobby";
+export const ROUTE_TOURNAMENT_BRACKET     = "/tournaments/:tournamentId/bracket";
 export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
-
+export const ERROR_403                    = "/403";
 
 
 export type RouteParams = Record<string, string | undefined>;
@@ -61,7 +66,10 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_MAIN, regex: tokenToRegex(ROUTE_MAIN), handler: () => renderMainPage() },
  
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
+  { pattern: ROUTE_TOURNAMENTS, regex: tokenToRegex(ROUTE_TOURNAMENTS), handler: () => renderTournamentPage() },
   { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
+
+  { pattern: ERROR_403, regex: tokenToRegex(ERROR_403), handler: () => renderError403() },
 
   // dynamic
   { pattern: ROUTE_ACCOUNT_SETTINGS,
@@ -79,6 +87,10 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_TOURNAMENT_LOBBY,
     regex: tokenToRegex(ROUTE_TOURNAMENT_LOBBY),
     handler: ({ tournamentId }) => renderTournamentLobby(Number(tournamentId)) },
+  
+  { pattern: ROUTE_TOURNAMENT_BRACKET,
+    regex: tokenToRegex(ROUTE_TOURNAMENT_BRACKET),
+    handler: ({ tournamentId }) => renderTournamentBracket(Number(tournamentId)) },
 
   { pattern: ROUTE_CHAT, regex: tokenToRegex(ROUTE_CHAT), handler: () => renderChat() },
 

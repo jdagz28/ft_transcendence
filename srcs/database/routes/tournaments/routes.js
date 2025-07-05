@@ -13,7 +13,7 @@ module.exports = fp(
         try {
           const userId = request.user.id
           const { name, maxPlayers, gameMode, gameType } = request.body
-          const tournament = await fastify.dbTournaments.createTournament(userId, name, maxPlayers, gameMode, gameType)
+          const tournament = await fastify.dbTournaments.createTournament(request, userId, name, maxPlayers, gameMode, gameType)
           if (!tournament) {
             reply.status(400).send({ error: 'Failed to create tournament' })
             return
@@ -35,7 +35,8 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const userId = request.user.id
-          const result = await fastify.dbTournaments.joinTournament(tournamentId, userId)
+          const { slotIndex } = request.body
+          const result = await fastify.dbTournaments.joinTournament(request, tournamentId, userId, slotIndex)
           if (!result) {
             reply.status(404).send({ error: 'Tournament not found' })
             return
@@ -57,8 +58,8 @@ module.exports = fp(
       handler: async function inviteUserToTournamentHandler(request, reply) {
         try {
           const { tournamentId } = request.params
-          const { userId } = request.body
-          const result = await fastify.dbTournaments.inviteUserToTournament(tournamentId, userId)
+          const { userId, slotIndex } = request.body
+          const result = await fastify.dbTournaments.inviteUserToTournament(tournamentId, userId, slotIndex)
           if (!result) {
             reply.status(404).send({ error: 'Tournament not found' })
             return
@@ -420,6 +421,72 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.get('/tournaments/:tournamentId/available', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getAvailablePlayersHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const availablePlayers = await fastify.dbTournaments.getAvailablePlayers(tournamentId)
+          if (!availablePlayers) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(availablePlayers)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/tournaments/:tournamentId/chat', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentChatHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const chat = await fastify.dbTournaments.getTournamentChat(tournamentId)
+          if (!chat) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          return reply.status(200).send(chat)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.patch('/tournaments/:tournamentId/ai', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentAIHandler(request, reply) {
+        try {
+          const { tournamentId } = request.params
+          const { slotIndex } = request.body
+          const userId = request.user.id
+          const result = await fastify.dbTournaments.createTournamentAI(tournamentId, userId, slotIndex)
+          if (!result) {
+            reply.status(404).send({ error: 'Tournament not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'tournamentRoutes',

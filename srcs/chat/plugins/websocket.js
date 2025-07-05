@@ -36,6 +36,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
       socket.close(4001, 'Unauthorized: Missing token')
       return
     }
+    fastify.log.info(`New WebSocket connection from ${req.ip} with token: ${token}`)
 
     try {
       const { data } = await authApi.get('/auth/verify', { params: { token } })

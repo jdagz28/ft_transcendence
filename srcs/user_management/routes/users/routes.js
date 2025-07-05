@@ -265,6 +265,22 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/id/:userId', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserById'),
+        response: {
+          200: fastify.getSchema('schema:users:userProfile')
+        }
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getUserByIdHandler (request, reply) {
+        const user = await fastify.usersDataSource.getUserById(request, request.params.userId)
+        if (!user) {
+          return reply.code(404).send({ error: 'User not found' })
+        }
+        return reply.send(user)
+      }
+    })
 
   }, {
     name: 'userRoutes',

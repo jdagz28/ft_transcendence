@@ -225,7 +225,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const convoQuery = fastify.db.prepare(`
-        SELECT id, type, group_type FROM conversations
+        SELECT id, type, group_type, is_game FROM conversations
         WHERE id = ?
         LIMIT 1
       `);
@@ -257,6 +257,10 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
       if (convo.group_type === 'public') {
         return { Permission: true, reason: 'Can join public group', Chat: `${roomId}` };
+      }
+
+      if (convo.group_type === 'private' && convo.is_game === 1) {
+        return { Permission: true, reason: 'Can join private game group', Chat: `${roomId}` };
       }
 
       throw new Error('User cannot join this group');
@@ -533,12 +537,12 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const groupTypeRow = fastify.db.prepare(`
-        SELECT group_type FROM conversations
+        SELECT group_type, is_game FROM conversations
         WHERE id = ? AND type = 'group'
         LIMIT 1
       `).get(groupId);
 
-      if (groupTypeRow.group_type === 'private') {
+      if (groupTypeRow.group_type === 'private' && groupTypeRow.is_game === 0) {
         const memberQuery = fastify.db.prepare(`
           SELECT banned_at, kicked_at FROM convo_members
           WHERE conversation_id = ? AND user_id = ?

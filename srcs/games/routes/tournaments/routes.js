@@ -2,7 +2,6 @@
 
 const fp = require('fastify-plugin')
 
-
 module.exports = fp(
   async function tournamentRoutes (fastify, opts) {
     // create a tournament
@@ -26,13 +25,20 @@ module.exports = fp(
       handler: async function joinTournamentHandler (request, reply) {
         const { tournamentId } = request.params
         const userId = request.user.id
-        const result = await fastify.tournamentService.joinTournament(request, tournamentId, userId)
+        const { slotIndex } = request.body || {}
+        const result = await fastify.tournamentService.joinTournament(request, tournamentId, userId, slotIndex)
         if (!result) {
           return reply.code(404).send({ error: 'Tournament not found' })
         }
         if (result.status == 'full') {
           return reply.code(409).send({ error: 'Tournament is full' })
         }
+
+        fastify.tournamentBroadcast(tournamentId, {
+          type: 'player-joined',
+          player: userId
+        });
+
         return reply.send(result)
       }
     })
@@ -46,13 +52,19 @@ module.exports = fp(
       onRequest: fastify.authenticate,
       handler: async function inviteUserToTournamentHandler (request, reply) {
         const { tournamentId } = request.params
-        const { userId } = request.body
+        const { userId, slotIndex } = request.body
         const inviter = request.user.id
-        const admin = fastify.tournamentService.getTournamentById(request, tournamentId)
-        if (!admin || admin.creatorId !== inviter) {
+        const tournament = await fastify.tournamentService.getTournamentById(request, tournamentId)
+        if (!tournament) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        fastify.log.info(tournament) //! DELETE
+        const admin = tournament.created_by
+
+        if (!admin || admin != inviter) {
           return reply.code(403).send({ error: 'You are not authorized to invite users to this tournament' })
         }
-        const result = await fastify.tournamentService.inviteUserToTournament(request, tournamentId, userId)
+        const result = await fastify.tournamentService.inviteUserToTournament(request, tournamentId, userId, slotIndex)
         if (!result) {
           return reply.code(404).send({ error: 'Tournament not found' })
         }
@@ -104,6 +116,12 @@ module.exports = fp(
         if (!result) {
           return reply.code(404).send({ error: 'Tournament not found' })
         }
+        
+        fastify.tournamentBroadcast(tournamentId, {
+          type: 'player-joined',
+          player: userId
+        });
+
         return reply.send(result)
       }
     })
@@ -310,8 +328,55 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/tournaments/:tournamentId/available', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getAvailablePlayersHandler(request, reply) {
+        const { tournamentId } = request.params
+        const availablePlayers = await fastify.tournamentService.getAvailablePlayers(request, tournamentId)
+        if (!availablePlayers) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(availablePlayers)
+      }
+    })
+
+    fastify.get('/tournaments/:tournamentId/chat', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentChatHandler(request, reply) {
+        const { tournamentId } = request.params
+        const chat = await fastify.tournamentService.getTournamentChat(request, tournamentId)
+        if (!chat) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(200).send(chat)
+      }
+    })
+
+    fastify.patch('/tournaments/:tournamentId/ai', {
+      schema: {
+        params: fastify.getSchema('schema:tournaments:tournamentID'),
+        body: fastify.getSchema('schema:tournaments:createTournamentAI')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function createTournamentAIHandler(request, reply) {
+        const { tournamentId } = request.params
+        const { slotIndex }  = request.body
+        const result = await fastify.tournamentService.createTournamentAI(request, tournamentId, slotIndex)
+        if (!result) {
+          return reply.code(404).send({ error: 'Tournament not found' })
+        }
+        return reply.code(201).send(result)
+      }
+    })
+
   }, {
     name: 'tournamentRoutes',
-    dependencies: [ 'tournamentAutoHooks']
+    dependencies: [ 'tournamentAutoHooks', 'wsBroadcast']
   }
 )

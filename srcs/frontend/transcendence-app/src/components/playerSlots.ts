@@ -4,9 +4,11 @@ export interface Player {
   username: string;
   alias: string;
   avatarUrl: string;
+  slotIndex?: number;
+  status?: "accepted" | "pending";
 }
 
-export type SlotState = | {kind: "open" } | { kind: "filled"; player: Player }
+export type SlotState = | {kind: "open" } | { kind: "filled"; player: Player } | { kind: "pending"; player: Player };
 
 
 export interface SlotOptions {
@@ -14,11 +16,9 @@ export interface SlotOptions {
   state: SlotState;
   fetchCandidates?: (slotIndex: number) => Promise<Player[]>;
   onInvite?: (slotIndex: number, userId: number) => void;
-  onClick?: () => void;
-}
-
-function statusDot(color: string) {
-  return `<span class="inline-block w-2 h-2 rounded-full mr-2" style="background:${color}"></span>`;
+  onAddAi?: (slotIndex: number, userId: number) => Promise<void>;
+  onLocalConnect?: (slotIndex: number) => void;
+  invitedPlayerIds?: Set<number>; 
 }
 
 export function buildPlayerSlot(opts: SlotOptions): {
@@ -32,9 +32,15 @@ export function buildPlayerSlot(opts: SlotOptions): {
 
   const content = document.createElement("div");
   content.className = "flex items-center gap-3";
-  const label = document.createElement("span");
+  const nameStack = document.createElement("div");
+  nameStack.className = "flex flex-col leading-tight";
+  const label    = document.createElement("span");
   label.className = "font-semibold capitalize";
-  content.appendChild(label);
+  const sublabel = document.createElement("span");
+  sublabel.className =
+    "text-xs font-light text-gray-300 -mt-0.5"; 
+  nameStack.append(label, sublabel);
+  content.appendChild(nameStack);
   box.appendChild(content);
 
   const caret = document.createElement("div");
@@ -52,23 +58,33 @@ export function buildPlayerSlot(opts: SlotOptions): {
   box.appendChild(menu);
 
   // render dropdown
-  const showMenu = (players: Player[]) => {
+  const showMenu = (players: Player[], invitedPlayerIds: Set<number> = new Set())  => {
     if (!players.length) return;
     menu.innerHTML = "";
     players.forEach(p => {
       const item = document.createElement("button");
       item.type = "button";
+      const isInvited = invitedPlayerIds.has(p.id);
       item.className = 
         "w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100";
+      const displayText = isInvited ? `${p.username} (invited)` : p.username;
+      
       item.innerHTML = 
-        `${statusDot("#10b981")}<img src="${p.avatarUrl}" ` +
+        `<img src="${p.avatarUrl}" ` +
         'class="w-6 h-6 rounded-full" alt=""/>' + 
-        `<span class="flex-1 text-left">${p.alias}</span>`;
-      item.onclick = e => {
-        e.stopPropagation();
-        menu.classList.add("hidden");
-        opts.onInvite?.(opts.slotIndex, p.id);
-      };
+        `<span class="flex-1 text-left">${displayText}</span>`;
+      
+      if (!isInvited) {
+        item.onclick = e => {
+          e.stopPropagation();
+          menu.classList.add("hidden");
+          if (p.id === 1 || p.username === "AiOpponent") {
+            opts.onAddAi?.(opts.slotIndex, p.id);
+          } else {
+            opts.onInvite?.(opts.slotIndex, p.id);
+          }
+        };
+      }
       menu.appendChild(item);     
     });
     menu.classList.remove("hidden");
@@ -78,29 +94,53 @@ export function buildPlayerSlot(opts: SlotOptions): {
     box.onclick = null;
     menu.classList.add("hidden");
     content.querySelectorAll("img").forEach(n => n.remove());
+    content.querySelectorAll(".pending-indicator").forEach(n => n.remove());
 
     if (state.kind === "open") {
-      label.textContent = "open";
-      caret.style.visibility = "visible";
+      const loginEnabled = Boolean(opts.onLocalConnect);
+      label.textContent  = loginEnabled ? "login" : "open";
 
-      // fetch and show users
-      if (opts.onClick) {
-        // Handle onClick if provided
+      const dropdownEnabled = Boolean(opts.fetchCandidates);
+      caret.style.visibility = dropdownEnabled ? "visible" : "hidden";
+      caret.style.cursor     = dropdownEnabled ? "pointer" : "default";
+      
+      if (loginEnabled) {
         box.onclick = (e) => {
           e.stopPropagation();
-          opts.onClick!();
-        };
-      } else if (opts.fetchCandidates) {
-        box.onclick = async (e) => {
-          e.stopPropagation();
-          const list = await opts.fetchCandidates!(opts.slotIndex);
-          if (list.length) showMenu(list); 
+          opts.onLocalConnect!(opts.slotIndex);
         };
       }
+      if (dropdownEnabled) {
+        caret.onclick = async (e) => {
+          e.stopPropagation();
+          const list = await opts.fetchCandidates!(opts.slotIndex);
+          if (list.length) showMenu(list);
+        };
+      }
+    } else if (state.kind === "pending") {
+      const p = state.player;
+      const displayName = p.alias || p.username;
+      label.textContent = displayName;
+      label.className = "text-xl font-semibold text-yellow-400";
+      caret.style.visibility = "hidden";
+
+
+      const pendingIndicator = document.createElement("span");
+      pendingIndicator.textContent = "(invited)";
+      pendingIndicator.className = "pending-indicator text-sm text-yellow-300 ml-2";
+      content.appendChild(pendingIndicator);
+
+      const img = new Image(48, 48);
+      img.src = p.avatarUrl;
+      img.className = "rounded-full opacity-60"; 
+      content.prepend(img);
+
+      box.className = box.className.replace("bg-[#0d2551]", "bg-yellow-900/30 border border-yellow-600/50");
     } else {
       const p = state.player;
       label.textContent = p.alias;
       label.className = "text-2xl font-bold";
+      sublabel.textContent = p.username;
       caret.style.visibility = "hidden";
       
       const img = new Image(48, 48);
@@ -111,7 +151,6 @@ export function buildPlayerSlot(opts: SlotOptions): {
   };
 
   document.addEventListener("click", () => menu.classList.add("hidden"));
-
   render(opts.state);
   return { el: box, update: render };
 }

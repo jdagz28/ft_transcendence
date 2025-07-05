@@ -62,7 +62,7 @@ export function renderNavBar(root: HTMLElement) {
           <div class="text-xl font-bold">🌊</div>
           <a href="#">Dashboard</a>
           <a href="#">Games</a>
-          <a href="#">Tournament</a>
+          <a href="#/tournaments">Tournament</a>
           <a href="#">Leaderboard</a>
           <a href="/#/chat">Chat</a>
         </div>

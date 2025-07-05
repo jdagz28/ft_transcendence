@@ -112,6 +112,14 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       return data
     },
 
+    async getUserById(request, userId) {
+      const { data } = await dbApi.get(`/users/search/id/${encodeURIComponent(userId)}`,
+        { headers: internalHeaders(request) },
+      )
+      console.log('User retrieved successfully:', data) //! DELETE
+      return data
+    }
+
   })
 }, {
   name: 'userAutoHooks'

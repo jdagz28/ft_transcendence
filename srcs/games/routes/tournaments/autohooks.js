@@ -38,10 +38,10 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       return data
     },
 
-    async joinTournament(request, tournamentId, userId) {
+    async joinTournament(request, tournamentId, userId, slotIndex) {
       try {
         const { data } = await dbApi.patch(`/tournaments/${tournamentId}/join`, 
-          { userId },
+          { userId, slotIndex },
           { headers: internalHeaders(request) },
         )
         console.log('Joined tournament:', data) //! DELETE
@@ -54,10 +54,10 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
       }
     },
 
-    async inviteUserToTournament(request, tournamentId, userId) {
+    async inviteUserToTournament(request, tournamentId, userId, slotIndex) {
       try {
         const { data } = await dbApi.post(`/tournaments/${tournamentId}/invite`, 
-          { userId },
+          { userId, slotIndex },
           { headers: internalHeaders(request) },
         )
         console.log('User invited to tournament:', data) //! DELETE
@@ -239,6 +239,34 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
         { headers: internalHeaders(request) },
       )
       console.log('Tournament summary retrieved:', data) //! DELETE
+      return data
+    },
+
+    async getAvailablePlayers(request, tournamentId) {
+      const { data } = await dbApi.get(`/tournaments/${tournamentId}/available`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Available players retrieved:', data) //! DELETE
+      return data
+    },
+
+    async getTournamentChat(request, tournamentId) {
+      const { data } = await dbApi.get(`/tournaments/${tournamentId}/chat`, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament chat retrieved:', data) //! DELETE
+      return data
+    },
+
+    async createTournamentAI(request, tournamentId, slotIndex) {
+      const userId = request.user.id
+      fastify.log.info(`Creating AI for tournament ${tournamentId} at slot ${slotIndex} for user ${userId}`) //! DELETE
+      fastify.log.info(`types: ${typeof tournamentId}, ${typeof slotIndex}, ${typeof userId}`) //! DELETE
+      const { data } = await dbApi.patch(`/tournaments/${tournamentId}/ai`, 
+        { slotIndex },
+        { headers: internalHeaders(request) },
+      )
+      console.log('Tournament AI created:', data) //! DELETE
       return data
     }
   })
