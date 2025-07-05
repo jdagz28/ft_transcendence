@@ -7,6 +7,7 @@ import { renderLobbyPage } from "./pages/lobby";
 import { renderDefault } from "./pages/default";
 import { renderTournamentPage } from "./pages/tournament";
 import { renderCreateTournamentPage } from "./pages/createTournament";
+import { renderOptionsTournamentPage } from "./pages/optionsTournament";
 import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderTournamentLobby } from "./pages/lobbyTournament";
 import { renderTournamentBracket } from "./pages/bracketsTournament";
@@ -25,6 +26,7 @@ export const DEFAULT                      = "/404";
 export const ROUTE_CHAT                   = "/chat";
 export const ROUTE_TOURNAMENTS            = "/tournaments";
 export const ROUTE_TOURNAMENT_CREATE      = "/tournaments/create";
+export const ROUTE_TOURNAMENT_OPTIONS     = "/tournaments/:tournamentId/options";
 export const ROUTE_TOURNAMENT_ALIAS       = "/tournaments/:tournamentId/alias";
 export const ROUTE_TOURNAMENT_LOBBY       = "/tournaments/:tournamentId/lobby";
 export const ROUTE_TOURNAMENT_BRACKET     = "/tournaments/:tournamentId/bracket";
@@ -79,6 +81,10 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_GAMES_PAGE,
     regex: tokenToRegex(ROUTE_GAMES_PAGE),
     handler: ({ gameId }) => renderGamePage({ gameId }) },
+
+  { pattern: ROUTE_TOURNAMENT_OPTIONS,
+    regex: tokenToRegex(ROUTE_TOURNAMENT_OPTIONS),
+    handler: ({ tournamentId }) => renderOptionsTournamentPage(Number(tournamentId)) },
 
   { pattern: ROUTE_TOURNAMENT_ALIAS,
     regex: tokenToRegex(ROUTE_TOURNAMENT_ALIAS),

@@ -53,7 +53,7 @@ export function renderCreateTournamentPage(): void {
 
       const tournamentId = await res.json();
 
-      window.location.hash = `#/tournaments/${tournamentId}/alias`
+      window.location.hash = `#/tournaments/${tournamentId}/options`
 
     } catch (err) {
       console.error(err);
