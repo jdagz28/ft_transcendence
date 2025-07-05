@@ -32,6 +32,7 @@ export const ROUTE_TOURNAMENT_ALIAS       = "/tournaments/:tournamentId/alias";
 export const ROUTE_TOURNAMENT_LOBBY       = "/tournaments/:tournamentId/lobby";
 export const ROUTE_TOURNAMENT_BRACKET     = "/tournaments/:tournamentId/bracket";
 export const ROUTE_TOURNAMENT_GAME        = "/tournaments/:tournamentId/:gameId";
+export const ROUTE_TOURNAMENT_GAME_PLAY   = "/tournaments/:tournamentId/:gameId/play";
 export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
 export const ERROR_403                    = "/403";
 
@@ -104,6 +105,10 @@ const routes: RouteEntry[] = [
     regex: tokenToRegex(ROUTE_TOURNAMENT_GAME),
     handler: ({ tournamentId, gameId }) => renderTournamentGameLobby({ tournamentId, gameId }) },
 
+  { pattern: ROUTE_TOURNAMENT_GAME_PLAY,
+    regex: tokenToRegex(ROUTE_TOURNAMENT_GAME_PLAY),
+    handler: ({ gameId }) => renderGamePage({ gameId }) },
+  
   { pattern: ROUTE_CHAT, regex: tokenToRegex(ROUTE_CHAT), handler: () => renderChat() },
 
   // fallback

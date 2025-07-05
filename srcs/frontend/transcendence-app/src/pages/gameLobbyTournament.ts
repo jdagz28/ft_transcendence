@@ -1,6 +1,6 @@
 /* src/pages/renderTournamentGameLobby.ts */
 import { setupAppLayout, whoAmI } from "../setUpLayout";
-import { getGamePlayersTournament, startGame } from "../api/game";   
+import { getGamePlayers, startGame } from "../api/game";   
 import type { TourPlayer } from "../types/game_api";
 import { getTournamentCreator, isTournamentAdmin } from "../api/tournament";
 import type { RouteParams } from "../router";
@@ -80,7 +80,7 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
   const creatorId = await getTournamentCreator(tournamentId);
   console.log("Tournament creator ID:", creatorId);
   const isAdmin = await isTournamentAdmin(creatorId);
-  const players: TourPlayer[] = await getGamePlayersTournament(gameId);
+  const players: TourPlayer[] = await getGamePlayers(gameId);
   if (
     players.length !== 2 ||
     !(
@@ -115,7 +115,7 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
     try {
       await startGame(gameId, p1, p2);
       alert("Game started successfully!");
-      // window.location.hash = `#/game/${gameId}/play`;  
+      window.location.hash = `#/tournaments/${tournamentId}/${gameId}/play`;  
     } catch (err) {
       console.error(err);
       startBtn.disabled = false;

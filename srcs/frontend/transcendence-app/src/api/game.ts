@@ -1,6 +1,6 @@
 import type { TourPlayer } from "@/types/game_api";
 
-export async function getGamePlayersTournament(gameId: number): Promise<any> {
+export async function getGamePlayers(gameId: number): Promise<any> {
   const token = localStorage.getItem("token");
   const response = await fetch(`games/${gameId}/players`, {
     method: 'GET',
@@ -58,4 +58,22 @@ export async function startGame(gameId: number, player1: TourPlayer, player2: To
     throw new Error(`Failed to start game ${gameId}`);
   }
   return;
+}
+
+
+export async function isTournamentAdmin(gameId: number): Promise<boolean> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`/games/${gameId}/isTourAdmin`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to check admin status for tournament ${gameId}`);
+  }
+  const data = await response.json();
+  
+  return data.isAdmin;
 }

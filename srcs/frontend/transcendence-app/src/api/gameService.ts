@@ -1,8 +1,12 @@
 import type { GameStatusUpdate } from '../types/game_api';
 
 export async function getConfig(gameId: number): Promise<any> {
+  const token = localStorage.getItem('token');
   const response = await fetch(`/games/${gameId}/details`, {
     method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
     credentials: 'include'
   });
   if (!response.ok) {
@@ -16,9 +20,10 @@ export async function sendStatus(
   body: GameStatusUpdate
 ) {
   const json = JSON.stringify(body);
+  const token = localStorage.getItem('token');
+
 
   if (body.status == 'aborted' && navigator.sendBeacon) {
-    // sendBeacon for aborted status to ensure it is sent even if the page unloads
     navigator.sendBeacon(`/games/${gameId}/status`,
        new Blob([json], { type: 'application/json' })
     );
@@ -27,7 +32,11 @@ export async function sendStatus(
 
   await fetch(`/games/${gameId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include',
     body: json
   });
 }

@@ -254,7 +254,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       break;
     }
   }
-  if (!authorized) {
+  if (!authorized ) {
     window.location.hash = "/403"; 
     return;
   }

@@ -77,7 +77,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     
     },
-
+  
 
     async getGames() {
       try {
@@ -262,8 +262,39 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       }
     },
 
-    async getGameDetails(gameId) {
+    async getGameDetails(gameId, userId) {
       try {
+        let query
+        const checkTournament = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId)
+        if (checkTournament.mode !== 'tournament') {
+          const check = fastify.db.prepare(
+            'SELECT * FROM games WHERE id = ? AND created_by = ?'
+          )
+          const checkGame = check.get(gameId, userId)
+          if (!checkGame) {
+            throw new Error('Game not found or user not authorized')
+          }
+        }
+        if (checkTournament.mode === 'tournament') {
+          query = fastify.db.prepare(`
+            SELECT
+              tournaments.created_by AS created_by
+            FROM tournament_games
+            JOIN tournaments ON tournaments.id = tournament_games.tournament_id
+            WHERE tournament_games.game_id = ?
+          `)
+          const creatorId = query.get(gameId)
+          
+          const playerCheck = fastify.db.prepare(`
+            SELECT player_id FROM game_players WHERE game_id = ? AND player_id = ?
+          `).get(gameId, userId)
+          if (creatorId.created_by !== Number(userId) && !playerCheck) {
+            throw new Error('User not authorized')
+          }
+        }
+
         const selectPlayers = fastify.db.prepare(`
            SELECT
               game_players.player_id,
@@ -351,7 +382,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             throw new Error('User not authorized')
           }
         }
-
 
         const checkStatus = fastify.db.prepare(
           'SELECT status FROM games WHERE id = ?'
@@ -634,6 +664,23 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           scoreRight:  m.scoreRight,
           hitsRight:   m.hitsRight
         }))
+      }
+    },
+
+    async isTourAdmin(gameId, userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT 1 FROM tournament_games
+          JOIN tournaments ON tournaments.id = tournament_games.tournament_id
+          WHERE tournament_games.game_id = ? AND tournaments.created_by = ?
+        `)
+        const result = query.get(gameId, userId)
+        if (result) 
+          return true
+        return false
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to check tournament admin status')
       }
     }
   })

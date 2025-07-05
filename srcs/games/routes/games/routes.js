@@ -201,6 +201,22 @@ module.exports = fp(
         return reply.code(200).send(summary)
       }
     })
+
+    fastify.get('/games/:gameId/isTourAdmin', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function isTourAdminHandler(request, reply) {
+        const { gameId } = request.params
+        const isAdmin = await fastify.gameService.isTourAdmin(request, gameId)
+        if (isAdmin === null) {
+          return reply.code(200).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send({ isAdmin })
+      }
+    })
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']

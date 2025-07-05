@@ -157,6 +157,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('All game history retrieved:', data) //! DELETE
       return data
+    },
+
+    async isTourAdmin(request, gameId) {
+      const { data } = await dbApi.get(`/games/${gameId}/isTourAdmin`, 
+        { headers: internalHeaders(request) }
+      )
+      console.log('Tour admin check:', data) //! DELETE
+      return data
     }
   })
 }, {
