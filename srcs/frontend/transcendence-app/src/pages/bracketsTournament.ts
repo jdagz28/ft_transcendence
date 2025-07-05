@@ -82,7 +82,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
       playBtn.textContent = "Play";
       playBtn.onclick = async () => {
         playBtn.disabled = true;
-        window.location.hash = `#tournament/${gameId}`
+        window.location.hash = `#/tournaments/${tournamentId}/${gameId}`
       };
       header.appendChild(playBtn);
     } else if (slot.status === "finished") {

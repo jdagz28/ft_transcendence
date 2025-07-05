@@ -215,12 +215,45 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
 
     async getGamePlayers(gameId) {
       try {
-        const query = fastify.db.prepare(
-          'SELECT * FROM game_players WHERE game_id = ?'
-        )
+        let query
+        const check = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId)
+        if (check.mode === 'tournament') {
+          query = fastify.db.prepare(`
+            SELECT
+              game_players.player_id,
+              game_players.paddle_loc,
+              game_players.paddle_side,
+              users.username,
+              tournament_aliases.alias
+            FROM game_players
+            JOIN users ON users.id = game_players.player_id
+            LEFT JOIN tournament_aliases ON tournament_aliases.user_id = game_players.player_id
+            WHERE game_players.game_id = ?
+          `)
+        } else {
+          query = fastify.db.prepare(`
+            SELECT
+              game_players.player_id,
+              game_players.paddle_loc,
+              game_players.paddle_side,
+              users.username
+            FROM game_players 
+            JOIN users ON users.id = game_players.player_id
+            WHERE game_id = ?
+          `)
+        }
         const players = query.all(gameId)
         if (!players) {
           throw new Error('Failed to retrieve game players')
+        }
+        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        for (const player of players) {
+          player.avatarUrl = `${baseURL}/users/${player.player_id}/avatar`
+          if (check.mode === 'tournament') {
+            player.alias = player.alias || player.username
+          }
         }
         return players
       } catch (err) {
@@ -284,14 +317,41 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     async startGame(gameId, userId, players) {
       try {
         fastify.db.exec('BEGIN')
-
-        const check = fastify.db.prepare(
-          'SELECT * FROM games WHERE id = ? AND created_by = ?'
-        )
-        const checkGame = check.get(gameId, userId)
-        if (!checkGame) {
-          throw new Error('Game not found or user not authorized')
+        let query
+        const checkTournament = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId)
+        if (checkTournament.mode !== 'tournament') {
+          const check = fastify.db.prepare(
+            'SELECT * FROM games WHERE id = ? AND created_by = ?'
+          )
+          const checkGame = check.get(gameId, userId)
+          if (!checkGame) {
+            throw new Error('Game not found or user not authorized')
+          }
         }
+        if (checkTournament.mode === 'tournament') {
+          query = fastify.db.prepare(`
+            SELECT
+              tournaments.created_by AS created_by
+            FROM tournament_games
+            JOIN tournaments ON tournaments.id = tournament_games.tournament_id
+            WHERE tournament_games.game_id = ?
+          `)
+          const creatorId = query.get(gameId)
+          
+          const playerCheck = fastify.db.prepare(`
+            SELECT player_id FROM game_players WHERE game_id = ? AND player_id = ?
+          `)
+          let playerExist;
+          for (const p of players) {
+            playerExist = playerCheck.get(gameId, p.userId)
+          }
+          if (creatorId.created_by !== Number(userId) && !playerExist) {
+            throw new Error('User not authorized')
+          }
+        }
+
 
         const checkStatus = fastify.db.prepare(
           'SELECT status FROM games WHERE id = ?'
