@@ -12,41 +12,48 @@ interface ChatMessage {
   username?: string;
 }
 
-
 let lobbyWs: WebSocket | null = null;
 let lobbyRoomJoined = false;
-
+let lobbyMessageHandler: ((ev: MessageEvent) => void) | null = null;
 
 async function connectLobbyChat(
   roomId: number,
   token: string,
   onMessage: (msg: ChatMessage ) => void
 ) {
-  if (lobbyWs) return;
+  if (!lobbyWs) {
+    lobbyWs = new WebSocket(
+      `wss://${location.host}/chat?token=${encodeURIComponent(token)}`
+    );
 
-  lobbyWs = new WebSocket(
-    `wss://${location.host}/chat?token=${encodeURIComponent(token)}`
-  );
+    lobbyWs.addEventListener("open", () => {
+      console.log("WebSocket connection opened for lobby chat");
+      setTimeout(() => {
+        if (lobbyWs) {
+          console.log("Joining chat room:", roomId);
+          lobbyWs.send(JSON.stringify({
+            action: 'join',
+            scope: 'group',
+            room: roomId
+          }));
+        }
+      }, 500);
+    });
 
-  lobbyWs.addEventListener("open", () => {
-    console.log("WebSocket connection opened for lobby chat");
-    setTimeout(() => {
-      if (lobbyWs) {
-        console.log("Joining chat room:", roomId);
-        lobbyWs.send(JSON.stringify({
-          action: 'join',
-          scope: 'group',
-          room: roomId
-        }));
-      }
-    }, 500);
-  });
+    lobbyWs.addEventListener("close", () => {
+      lobbyWs = null;
+      lobbyRoomJoined = false;
+      lobbyMessageHandler = null;
+    });
+  }
    
+  if (lobbyMessageHandler) {
+    lobbyWs.removeEventListener("message", lobbyMessageHandler);
+  }
 
-  lobbyWs.addEventListener("message", function bannerListener(ev) {
+  lobbyMessageHandler = (ev: MessageEvent) => {
     if (typeof ev.data === "string" && ev.data === "Room joined") {
       lobbyRoomJoined = true;
-      lobbyWs!.removeEventListener("message", bannerListener);
       fetch(`/chat/group/${roomId}/history`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${token}` },
@@ -70,13 +77,13 @@ async function connectLobbyChat(
       const data = JSON.parse(ev.data as string);
       if (data.message && data.from) onMessage(data);
     } catch {}
-  });
+  };
 
-
-  lobbyWs.addEventListener("close", () => {
-    lobbyWs = null;
-    lobbyRoomJoined = false;
-  });
+  lobbyWs.addEventListener("message", lobbyMessageHandler);
+  if (lobbyRoomJoined) {
+    lobbyMessageHandler(new MessageEvent("message", { data: "Room joined" }));
+  }
+  
 }
 
 
