@@ -109,6 +109,9 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
         slotIndex: pIdx,
         state
       });
+      if (slot.status === 'finished' && player && slot.winnerId === player.id) {
+        playerSlot.el.classList.add("ring-2", "ring-sky-400");
+      }
       container.appendChild(playerSlot.el);
 
       if (pIdx === 0) {
@@ -125,34 +128,84 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
     col1.appendChild(container);
   });
 
-  const tbdPlayer: Player = {
+  const createTbdPlayer = (): Player => ({
     id: 0,
     username: "",
     alias: "TBD",
     avatarUrl: "https://localhost:4242/users/1/avatar",
-  };
+  });
 
-   const tbdPlayer2: Player = {
-    id: 0,
-    username: "",
-    alias: "TBD",
-    avatarUrl: "https://localhost:4242/users/1/avatar",
-  };
+  const round2Slots = slots.brackets?.[1]?.slots ?? [];
+  
+  round2Slots.forEach((slot: any) => {
+    const container = document.createElement("div");
+    container.className = "flex flex-col items-center";
 
-  const championPlayer: Player = {
-    id: 0,
-    username: "",
-    alias: "Champion",
-    avatarUrl: "https://localhost:4242/users/1/avatar",
-  };
+    const header = document.createElement("div");
+    header.className = "mb-2 flex items-center gap-2";
+    header.innerText = `Championship Match`;
+    
+    const isUserInGame = slot.players.some((p: any) => p.playerId === userId);
 
-  const tbdSlot = buildPlayerSlot({ slotIndex: 0, state: { kind: "filled", player: tbdPlayer } });
-  col2.appendChild(tbdSlot.el);
+    if (slot.status === "pending" && isUserInGame) {
+        const gameId = slot.gameId;
+        const playBtn = document.createElement("button");
+        playBtn.className = "px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-sm";
+        playBtn.textContent = "Play";
+        playBtn.onclick = () => window.location.hash = `#/tournaments/${tournamentId}/${gameId}`;
+        header.appendChild(playBtn);
+    } else if (slot.status === "finished") {
+        const scoreSpan = document.createElement("span");
+        scoreSpan.className = "text-sm ml-2 font-bold";
+        const p1 = slot.players[0];
+        const p2 = slot.players[1];
+        if (p1 && p2 && slot.score) {
+            scoreSpan.textContent = `${slot.score[p1.playerId] ?? 0} – ${slot.score[p2.playerId] ?? 0}`;
+            header.appendChild(scoreSpan);
+        }
+    }
+    container.appendChild(header);
 
-  const tbdSlot2 = buildPlayerSlot({ slotIndex: 0, state: { kind: "filled", player: tbdPlayer2 } });
-  col2.appendChild(tbdSlot2.el);
+    for (let i = 0; i < 2; i++) {
+        const playerInfo = slot.players[i];
+        const player = playerInfo ? getPlayerById(playerInfo.playerId) : undefined;
+        const state: SlotState = player ? { kind: "filled", player } : { kind: "filled", player: createTbdPlayer() };
+        const playerSlot = buildPlayerSlot({ slotIndex: i, state });
+        
+        if (player) {
+          if (slot.status === 'finished' && slot.winnerId === player.id) {
+            playerSlot.el.classList.add("ring-2", "ring-sky-400");
+          }
+        }
+        container.appendChild(playerSlot.el);
 
-  const championSlot = buildPlayerSlot({ slotIndex: 0, state: { kind: "filled", player: championPlayer } });
+        if (i === 0) {
+            const spacer = document.createElement("div");
+            spacer.style.height = "32px";
+            container.appendChild(spacer);
+        }
+    }
+    col2.appendChild(container);
+  });
+
+  const championHeader = document.createElement("div");
+  championHeader.className = "mb-2 text-lg font-bold text-amber-400";
+  championHeader.textContent = "Champion";
+  col3.appendChild(championHeader);
+
+  const lastRound = slots.brackets[slots.brackets.length - 1];
+  const finalMatch = lastRound?.slots[0];
+  const winner = finalMatch?.status === 'finished' && finalMatch.winnerId 
+    ? getPlayerById(finalMatch.winnerId) 
+    : undefined;
+
+  const championState: SlotState = winner
+    ? { kind: "filled", player: winner }
+    : { kind: "filled", player: createTbdPlayer() };
+
+  const championSlot = buildPlayerSlot({ slotIndex: 0, state: championState });
+  if (winner) {
+    championSlot.el.classList.add("ring-2", "ring-amber-400");
+  }
   col3.appendChild(championSlot.el);
-
 }
