@@ -448,35 +448,49 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     },
 
     async updateGameStatus(gameId, matchId, status, stats, userId) {
+      let transactionActive = false;
+      
       try {
         fastify.db.exec('BEGIN')
-
-        const check = fastify.db.prepare(
-          'SELECT 1 FROM games WHERE id = ? AND created_by = ?'
-        )
-        const checkGame = check.get(gameId, userId)
-        if (!checkGame) {
-          throw new Error('Game not found or user not authorized')
-        }
-
-        if (['paused', 'aborted', 'finished'].includes(status)) {
-          const updateGame = fastify.db.prepare(`
-            UPDATE games
-              SET status = ?,
-                  updated = CURRENT_TIMESTAMP,
-                  ended = CASE WHEN ? = 'finished' THEN CURRENT_TIMESTAMP ELSE ended END
-            WHERE id = ?
+        transactionActive = true;
+        
+        const checkTournament = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId)
+        
+        if (checkTournament.mode !== 'tournament') {
+          const check = fastify.db.prepare(
+            'SELECT * FROM games WHERE id = ? AND created_by = ?'
+          )
+          const checkGame = check.get(gameId, userId)
+          if (!checkGame) {
+            throw new Error('Game not found or user not authorized')
+          }
+        } else {
+          const query = fastify.db.prepare(`
+            SELECT tournaments.created_by AS created_by
+            FROM tournament_games
+            JOIN tournaments ON tournaments.id = tournament_games.tournament_id
+            WHERE tournament_games.game_id = ?
           `)
-          updateGame.run(status, status, gameId)
-          fastify.db.exec('COMMIT')
-          if (status === 'finished') 
-            return { success: true, message: 'Game finished and updated successfully' }
-          return 
+          const creatorId = query.get(gameId)
+          
+          const playerCheck = fastify.db.prepare(`
+            SELECT player_id FROM game_players WHERE game_id = ? AND player_id = ?
+          `)
+          const players = fastify.db.prepare(`
+            SELECT player_id FROM game_players WHERE game_id = ?
+          `).all(gameId)
+
+          const playerExist = playerCheck.get(gameId, userId)
+          
+          if (creatorId.created_by !== Number(userId) && !playerExist) {
+            throw new Error('User not authorized')
+          }
         }
-        const currStatus = fastify.db.prepare(`
-          SELECT status FROM games WHERE id = ?
-        `).get(gameId).status
-        if (status === 'active' && currStatus === 'paused') {
+
+
+        if (status === 'paused' || status === 'aborted') {
           const updateGame = fastify.db.prepare(`
             UPDATE games
               SET status = ?,
@@ -484,6 +498,36 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             WHERE id = ?
           `)
           updateGame.run(status, gameId)
+          
+          fastify.db.exec('COMMIT')
+          transactionActive = false;
+          return { success: true, message: `Game ${status} successfully` }
+        }
+        if (status === 'finished') {
+          const updateGame = fastify.db.prepare(`
+            UPDATE games
+              SET status = ?,
+                  updated = CURRENT_TIMESTAMP,
+                  ended = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `)
+          updateGame.run(status, gameId)
+        }
+        
+        if (status === 'active') {
+          const currStatus = fastify.db.prepare(`
+            SELECT status FROM games WHERE id = ?
+          `).get(gameId)?.status
+          
+          if (currStatus === 'paused') {
+            const updateGame = fastify.db.prepare(`
+              UPDATE games
+                SET status = ?,
+                    updated = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `)
+            updateGame.run(status, gameId)
+          }
         }
 
         if (matchId) {
@@ -494,10 +538,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           let matchResult;
           if (matchExists) {
             const updateMatch = fastify.db.prepare(`
-            UPDATE game_matches
-              SET updated = CURRENT_TIMESTAMP,
-                  ended = CURRENT_TIMESTAMP
-            WHERE id = ?
+              UPDATE game_matches
+                SET updated = CURRENT_TIMESTAMP,
+                    ended = CURRENT_TIMESTAMP
+              WHERE id = ?
             `)
             matchResult = updateMatch.run(matchId)
           } else {
@@ -507,10 +551,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
               ORDER BY id DESC
               LIMIT 1
             `).get(gameId);
-            const createMatch  = fastify.db.prepare(`
+            const createMatch = fastify.db.prepare(`
               INSERT INTO game_matches (game_id, started, ended) VALUES (?, ?, CURRENT_TIMESTAMP)
             `)
-            matchResult = createMatch.run(gameId, prev.ended)
+            matchResult = createMatch.run(gameId, prev?.ended)
             matchId = matchResult.lastInsertRowid
 
             const players = fastify.db.prepare(`
@@ -526,12 +570,12 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
                 throw new Error(`Failed to add player ${playerId} to match_scores`)
               }
             }
-          }
+          }     
           if (matchResult.changes === 0) {
             throw new Error('Failed to update match status')
           }
         }
-        
+
         let topScore = 0;
         let winnerId = null;
         if (stats?.hits) {
@@ -541,10 +585,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             WHERE match_id = ? AND player_id = ?
           `)
 
-          for (const [PlayerId, hits] of Object.entries(stats.hits)) {
-            const statsResult = updateStats.run(hits, matchId, Number(PlayerId))
+          for (const [playerId, hits] of Object.entries(stats.hits)) {
+            const statsResult = updateStats.run(hits, matchId, Number(playerId))
             if (statsResult.changes === 0) {
-              throw new Error(`Failed to update stats for player ${PlayerId}`)
+              throw new Error(`Failed to update stats for player ${playerId}`)
             }
           }
         }
@@ -554,17 +598,19 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
               SET score = score + ?
             WHERE match_id = ? AND player_id = ?
           `)
-          for (const [PlayerId, score] of Object.entries(stats.scores)) {
-            const scoresResult = updateScores.run(score, matchId, PlayerId)
+          for (const [playerId, scoreValue] of Object.entries(stats.scores)) {
+            const scoresResult = updateScores.run(scoreValue, matchId, playerId)
             if (scoresResult.changes === 0) {
-              throw new Error(`Failed to update scores for player ${PlayerId}`)
+              throw new Error(`Failed to update scores for player ${playerId}`)
             }
-            const score = fastify.db.prepare(`
+            
+            const currentScore = fastify.db.prepare(`
               SELECT score FROM match_scores WHERE match_id = ? AND player_id = ?
-            `).get(matchId, PlayerId).score;
-            if (score > topScore) {
-              topScore = score;
-              winnerId = Number(PlayerId);
+            `).get(matchId, playerId).score;
+            
+            if (currentScore > topScore) {
+              topScore = currentScore;
+              winnerId = Number(playerId);
             }
           }
         }
@@ -578,16 +624,25 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         fastify.db.exec('COMMIT')
-        const checkTourGame = fastify.db.prepare(`
-          SELECT 1 FROM tournament_games WHERE game_id = ?
-        `).get(gameId)
-        if (status == 'finished' && checkTourGame) {
-          await fastify.dbTournaments.onGameFinished(gameId)
+        transactionActive = false;
+
+        if (status === 'finished' && checkTournament.mode === 'tournament') {
+          try {
+            await fastify.dbTournaments.onGameFinished(gameId)
+          } catch (tournamentError) {
+            fastify.log.error('Tournament processing failed:', tournamentError)
+          }
         }
 
         return { success: true, message: 'Game status updated successfully' }
       } catch (err) {
-        fastify.db.exec('ROLLBACK')
+        if (transactionActive) {
+          try {
+            fastify.db.exec('ROLLBACK')
+          } catch (rollbackErr) {
+            fastify.log.warn('Rollback failed:', rollbackErr.message)
+          }
+        }
         fastify.log.error(err)
         throw new Error('Failed to update game status')
       }
@@ -685,5 +740,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     }
   })
 }, {
-  name: 'gameAutoHooks'
+  name: 'gameAutoHooks',
+  dependencies: ['tournamentAutoHooks']
 })

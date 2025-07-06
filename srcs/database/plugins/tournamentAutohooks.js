@@ -1,7 +1,7 @@
 'use strict'
 
 const fp = require('fastify-plugin')
-const schemas = require('./schemas/loader')
+const schemas = require('../routes/tournaments/schemas/loader')
 const axios = require('axios')
 
 module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
@@ -94,7 +94,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           throw new Error('Tournament settings not found')
         }
 
-        if (checkTourSettings.game_mode === 'private' && tournament.created_by !== userId) {
+        if (checkTourSettings.game_mode === 'private' && checkTournament.created_by !== userId) {
           return { error: 'Tournament is private'}
         }
 
@@ -165,12 +165,12 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         }
         
         const row = fastify.db.prepare(`
-          SELECT 1 FROM tournament_playersslotIndexs
+          SELECT 1 FROM tournament_players
           WHERE tournament_id = ? AND user_id = ?
         `).get(tournamentId, userId);
         if (row) throw new Error('User already in tournament');
 
-        const result = fastify.db.prepare(`s
+        const result = fastify.db.prepare(`
           INSERT INTO tournament_invites
                 (tournament_id, user_id, slot_index, status)
           VALUES (?, ?, ?, 'pending')
@@ -502,7 +502,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         }
 
         if (players.length !== 4 && players.length !== 8 && players.length !== 16) {
-          throw new Error('Invlaid number of tournament players, cannot seed bracket')
+          throw new Error('Invalid number of tournament players, cannot seed bracket')
         }
 
         const tourConfig = fastify.db.prepare(
@@ -535,7 +535,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
             'UPDATE game_settings SET num_games = ?, num_matches = ?, ball_speed = ?, death_timed = ?, time_limit_s = ? WHERE game_id = ?'
           ).run(tourConfig.num_games, tourConfig.num_matches, tourConfig.ball_speed, tourConfig.death_timed, tourConfig.time_limit_s, gameId)
       
-          insertMatch.run(tournamentId, gameId, slot)
+          insertMatch.run(tournamentId, gameId, 1, slot)
           await fastify.publishEvent(`tournament.game.ready.${player1}`, {
             gameId,
             tournamentId,
@@ -795,53 +795,108 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     },
 
     async onGameFinished(gameId) {
-      const row = fastify.db.prepare(`
-        SELECT tournament_id, round FROM tournament_games WHERE game_id = ?
-      `).get(gameId)
-      if (!row)
-        return
+      let transactionActive = false;
+      try {
+        const row = fastify.db.prepare(`
+          SELECT tournament_id, round FROM tournament_games WHERE game_id = ?
+        `).get(gameId)
+        if (!row) {
+          fastify.log.warn(`No tournament game found for gameId: ${gameId}`)
+          return
+        }
+        fastify.log.info(`Found tournament game for gameId: ${gameId}`, row) //! DELETE
+        const { tournament_id: tournamentId, round } = row
+        fastify.log.info(`Processing tournament game ${gameId} for tournament ${tournamentId}, round ${round}`)  //! DELETE;        
 
-      const { tournament_id: tournamentId, round } = row
-      fastify.db.exec('BEGIN')
-      const winnerId = fastify.db.prepare(`
-        SELECT winner_id FROM games WHERE id = ?
-      `).get(gameId).winner_id
-      const updateTourGame = fastify.db.prepare(`
+        fastify.db.exec('BEGIN')
+        transactionActive = true;
+        
+        const gameResult = fastify.db.prepare(`
+          SELECT winner_id FROM games WHERE id = ?
+        `).get(gameId)
+        if (!gameResult) {
+          throw new Error(`Game not found: ${gameId}`)
+        }
+        const winnerId = gameResult.winner_id
+        fastify.log.info(`Updating tournament game ${gameId} with winner: ${winnerId}`) //! DELETE
+        
+        const updateTourGame = fastify.db.prepare(`
           UPDATE tournament_games
           SET status = 'finished', winner_id = ?
-        WHERE game_id = ?
-      `)
-      updateTourGame.run(winnerId, gameId)
-    
-      const pendingGames = fastify.db.prepare(`
-        SELECT 1 FROM tournament_games
-        WHERE tournament_id = ? AND round = ? AND status = 'pending'
-      `).get(tournamentId, round)
-      if (!pendingGames) {
-        await fastify.dbTournaments.nextRound(tournamentId, round)
+          WHERE game_id = ?
+        `)
+        const updateResult = updateTourGame.run(winnerId, gameId)
+        fastify.log.info(`Update result for tournament game ${gameId}:`, updateResult) //! DELETE
+        if (updateResult.changes === 0) {
+          throw new Error(`Failed to update tournament_games for gameId: ${gameId}`)
+        }
+        fastify.log.info(`Successfully updated tournament game ${gameId}`)
+        
+        const pendingGames = fastify.db.prepare(`
+          SELECT 1 FROM tournament_games
+          WHERE tournament_id = ? AND round = ? AND status = 'pending'
+        `).get(tournamentId, round)
+        fastify.log.info(`Pending games in round ${round} for tournament ${tournamentId}:`, pendingGames ? 'Yes' : 'No') //! DELETE
+        fastify.db.exec('COMMIT')
+        transactionActive = false;
+        
+        if (!pendingGames) {
+          try {
+            if (typeof fastify.dbTournaments.nextRound !== 'function') {
+              throw new Error('nextRound function is not available')
+            }
+            fastify.log.info(`All games finished in round ${round}, advancing tournament ${tournamentId}`) //! DELETE
+            await fastify.dbTournaments.nextRound(tournamentId, round)
+          } catch (nextRoundError) {
+            fastify.log.error('Failed to advance to next round:', {
+              tournamentId,
+              round,
+              error: nextRoundError.message,
+              stack: nextRoundError.stack
+            })
+          }
+        }
+        
+      } catch (err) {
+        if (transactionActive) {
+          try {
+            fastify.db.exec('ROLLBACK')
+            fastify.log.warn(`Rolled back tournament game update for gameId: ${gameId}`)
+          } catch (rollbackErr) {
+            fastify.log.error('Rollback failed:', rollbackErr.message)
+          }
+        }
+        
+        fastify.log.error(`Tournament processing failed for gameId ${gameId}:`, err)
+        throw err
       }
-      fastify.db.exec('COMMIT')
     },
 
     async nextRound(tournamentId, prevRound) {
       const winners = fastify.db.prepare(`
-        SELECT winner_id FROM tournament_games
+        SELECT winner_id, slot FROM tournament_games
         WHERE tournament_id = ? AND round = ? AND status = 'finished'
+        ORDER BY slot ASC
       `).all(tournamentId, prevRound)
+
+      if (winners.length === 0) {
+        return
+      }
+
       if (winners.length === 1) {
         fastify.db.prepare(`
           UPDATE tournaments
             SET status = 'finished', winner_id = ?, ended = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(winners[0], tournamentId)
+        `).run(winners[0].winner_id, tournamentId)
 
-        await fastify.publishEvent(`tournament.finished.${winners[0]}`, {
+        await fastify.publishEvent(`tournament.finished.${winners[0].winner_id}`, {
           tournamentId,
-          winnerId: winners[0],
+          winnerId: winners[0].winner_id,
           timestamp: Date.now()
         })
 
-        return { message: 'Tournament finished', winnerId: winners[0] }
+        return { message: 'Tournament finished', winnerId: winners[0].winner_id }
       }
 
       const nextRound = prevRound + 1
@@ -942,7 +997,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           ended: tournament.ended,
           winnerId: tournament.winner_id || null,
           totalRounds: Math.max(...rows.map(r => r.round)),
-          totalGames: rows.length,
+          totalGames: new Set(rows.map(r => r.gameId)).size,
           games: []
         }
         for (const row of rows) {
@@ -1048,6 +1103,5 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     }
   })
 }, {
-  name: 'tournamentAutoHooks',
-  dependencies: ['gameAutoHooks']
+  name: 'tournamentAutoHooks'
 })
