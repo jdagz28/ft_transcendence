@@ -2,8 +2,8 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { getGamePlayers, startGame } from "../api/game";   
 import type { TourPlayer } from "../types/game_api";
-import { getTournamentCreator, isTournamentAdmin } from "../api/tournament";
-import type { RouteParams } from "../router";
+import { getTournamentCreator } from "../api/tournament";
+import { type RouteParams, DEFAULT } from "../router";
 
 function buildPlayerCard(player: TourPlayer, playerNumber: number): HTMLDivElement {
   const card = document.createElement("div");
@@ -76,18 +76,24 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
     window.location.hash = "#/";
     return;
   }
+  const userId = user.data.id;
 
   const creatorId = await getTournamentCreator(tournamentId);
-  console.log("Tournament creator ID:", creatorId);
-  const isAdmin = await isTournamentAdmin(creatorId);
+  console.log("Tournament creator ID:", creatorId); //!DELTE
+  
   const players: TourPlayer[] = await getGamePlayers(gameId);
-  if (
-    players.length !== 2 ||
-    !(
-      players.some((p) => p.id === user.data.id) ||
-      isAdmin
-    )
-  ) {
+  console.log("Game players:", players); //!DELETE
+  if (players.length !== 2) {
+    console.error("This game lobby does not have exactly 2 players.");
+    window.location.hash = DEFAULT; 
+    return;
+  }
+
+  const isPlayerInGame = players.some((p) => p.id === userId);
+  const isTournamentAdmin = (userId === creatorId);
+  console.log(`User ${userId} is in game: ${isPlayerInGame}, is admin: ${isTournamentAdmin}`); //!DELETE
+  if (!isPlayerInGame && !isTournamentAdmin) {
+    console.log(`Access denied. User ${userId} is not a player and not admin (creator is ${creatorId}).`);
     window.location.hash = "/403";
     return;
   }

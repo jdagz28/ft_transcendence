@@ -678,7 +678,12 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
             tournament_games.winner_id,
             games.id AS gameId,
             game_players.player_id AS playerId,
-            tournament_aliases.alias AS playerAlias
+            tournament_aliases.alias AS playerAlias,
+            (
+              SELECT COUNT(*) 
+              FROM game_matches 
+              WHERE game_matches.game_id = tournament_games.game_id AND game_matches.winner_id = game_players.player_id
+            ) AS matchesWon
           FROM tournament_games
           JOIN games ON games.id = tournament_games.game_id
           JOIN game_players ON game_players.game_id = tournament_games.game_id
@@ -707,7 +712,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
               status: row.status,
               winnerId: row.winner_id,
               gameId: row.gameId,
-              players: []
+              players: [],
+              score: {}
             };
             round.slots.push(slot);
           }
@@ -718,6 +724,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
               playerAlias: row.playerAlias ?? null
             });
           }
+          slot.score[row.playerId] = row.matchesWon;
         }
 
         return { tournamentId, brackets }

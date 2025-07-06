@@ -229,7 +229,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
               tournament_aliases.alias
             FROM game_players
             JOIN users ON users.id = game_players.player_id
-            LEFT JOIN tournament_aliases ON tournament_aliases.user_id = game_players.player_id
+            JOIN tournament_games ON tournament_games.game_id = game_players.game_id
+            LEFT JOIN 
+              tournament_aliases ON tournament_aliases.user_id = game_players.player_id AND tournament_aliases.tournament_id = tournament_games.tournament_id
             WHERE game_players.game_id = ?
           `)
         } else {
@@ -246,7 +248,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         const players = query.all(gameId)
         if (!players) {
-          throw new Error('Failed to retrieve game players')
+          return []
         }
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         for (const player of players) {
@@ -621,6 +623,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
               SET winner_id = ?
             WHERE id = ?
           `).run(winnerId, gameId)
+          fastify.db.prepare(`
+            UPDATE game_matches
+              SET winner_id = ?
+            WHERE id = ?
+          `).run(winnerId, matchId)
         }
 
         fastify.db.exec('COMMIT')

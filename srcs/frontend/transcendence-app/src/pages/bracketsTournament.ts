@@ -87,12 +87,12 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
       header.appendChild(playBtn);
     } else if (slot.status === "finished") {
       const scoreSpan = document.createElement("span");
-      scoreSpan.className = "text-xs font-mono";
+      scoreSpan.className = "text-sm ";
       const p1 = slot.players[0];
       const p2 = slot.players[1];
       scoreSpan.textContent =
-        `${p1.playerAlias ?? p1.playerId} ${slot.score[p1.playerId]} – ` +
-        `${slot.score[p2.playerId]} ${p2.playerAlias ?? p2.playerId}`;
+        `${slot.score[p1.playerId]} – ` +
+        `${slot.score[p2.playerId]}`;
       header.appendChild(scoreSpan);
     }
     container.appendChild(header);
