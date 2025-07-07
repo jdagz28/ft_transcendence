@@ -173,12 +173,12 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const { contentContainer } = setupAppLayout();
   contentContainer.className = 
-    "flex-grow flex flex-col gap-8 px-8 py-10 text-white";
+    "flex-grow flex flex-col items-center gap-8 px-8 py-10 text-white";
 
   const tournamentName = await getTournamentName(tournamentId);
 
   const header = document.createElement("div");
-  header.className = "text-center py-6";
+  header.className = "text-center py-4";
   const title = document.createElement("h1");
   title.textContent = tournamentName;
   title.className = 
@@ -187,7 +187,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   contentContainer.appendChild(header);
 
   const main = document.createElement("div");
-  main.className = "flex justify-center items-start gap-20 px-8 py-10";
+  main.className = "flex flex-col items-center px-4 flex-1";
   contentContainer.appendChild(main);
 
   const players: Player[]  = await getTournamentPlayers(tournamentId);
@@ -212,13 +212,17 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);
-  
   const isAdmin = await isTournamentAdmin(created_by);
+
+  const slotsWrapper = document.createElement("div");
+  slotsWrapper.className =
+    "flex flex-col items-center justify-center flex-grow";
+  main.appendChild(slotsWrapper);
 
   const sideBar = document.createElement("div");
   sideBar.id = "player-slots";
-  sideBar.className = "flex flex-col gap-4 w-64";
-  main.appendChild(sideBar);
+  sideBar.className = "flex flex-col items-center gap-4 w-64";
+  slotsWrapper.appendChild(sideBar);
 
   for (let i = 0; i < maxPlayers; i++) {
     const playerForSlot = players.find(u => u.slotIndex === i);
@@ -312,7 +316,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   // Admin Buttons
   const btnContainer = document.createElement("div");
-  btnContainer.className = "absolute inset-x-0 bottom-0 pb-6 flex flex-col items-center gap-4";
+  btnContainer.className = "flex flex-col items-center gap-4 w-full pt-8 mt-auto";
   main.appendChild(btnContainer);
 
   const commonBtn =
@@ -342,6 +346,14 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       }
     });
   }
+  const optionsBtn = document.createElement("button");
+  optionsBtn.textContent = "Options";
+  optionsBtn.className = `${commonBtn} bg-gradient-to-r from-blue-600 to-blue-500 hover:opacity-90`;
+  btnContainer.appendChild(optionsBtn);
+  optionsBtn.addEventListener("click", () => {
+    window.location.hash = `#/tournaments/${tournamentId}/options`;
+  });
+
   const leaveBtn = document.createElement("button");
   if (isAdmin) {
     leaveBtn.textContent = "Delete";
