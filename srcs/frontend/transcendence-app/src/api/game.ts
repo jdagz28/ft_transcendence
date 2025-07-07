@@ -110,3 +110,24 @@ export async function getGameOptions(gameId: number): Promise<any> {
   const data = await response.json();
   return data;
 }
+
+export async function updateGameOptions(gameId: number, num_games: number, num_matches: number): Promise<any> {
+  const token = localStorage.getItem("token");
+  const requestBody = {
+    num_games,
+    num_matches
+  };
+
+  const response = await fetch(`/games/${gameId}/options`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(requestBody)
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update options for game ${gameId}`);
+  }
+}

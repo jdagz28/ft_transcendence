@@ -1,6 +1,6 @@
 import { type RouteParams, DEFAULT } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
-import { getGameOptions, getGamePlayers, isGameCreator } from "../api/game";
+import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 
 type user = {
   username: string;
@@ -187,7 +187,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
       <!-- </label> -->
 
       <label class="mb-4 block text-gray-700">
-        <span class="text-gray-700">Score to Win</span>
+        <span class="text-gray-700">Score to Win </span>
         <input id="scTW" type="text" inputmode="numeric" pattern="[0-9]*" value="10" maxlength="2" class="mt-1 block w-full rounded border-gray-300" autocomplete="off" />
       </label>
       <label class="mb-4 block text-gray-700">
@@ -292,9 +292,15 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
   const scTW = document.getElementById('scTW') as HTMLInputElement;
   const boG = document.getElementById("boG") as HTMLInputElement;
 
-    optionsBtn.addEventListener('click', () => {
+    optionsBtn.addEventListener('click', async () => {
       optionsModal.classList.remove('hidden');
     optionsModal.classList.add('flex');
+
+    const response = await updateGameOptions(Number(game), Number(boG), Number(scTW));
+    if (!response.ok) {
+      throw new Error('Failed to update game options');
+    }
+
     });
 
     closeOptions.addEventListener('click', () => {
@@ -388,7 +394,17 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       loginModal.classList.add('flex');
       userlog = 2;
     });
-    dis2.addEventListener('click', () => {
+    dis2.addEventListener('click', async () => {
+			const response = await fetch(`/games/${game}/leave`, {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${user2.token}`
+				},
+				credentials: 'include'
+			});
+			if (!response.ok) {
+				throw new Error('Error leaving game');
+			}
       user2.connected = false;
       user2.userID = "-1";
       user2.username = "Waiting...";
@@ -409,7 +425,17 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       loginModal.classList.add('flex');
       userlog = 3;
     });
-    dis3.addEventListener('click', () => {
+    dis3.addEventListener('click', async () => {
+			const response = await fetch(`/games/${game}/leave`, {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${user3.token}`
+				},
+				credentials: 'include'
+			});
+			if (!response.ok) {
+				throw new Error('Error leaving game');
+			}
       user3.connected = false;
       user3.userID = "-1";
       user3.username = "Waiting...";
@@ -430,7 +456,17 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       loginModal.classList.add('flex');
       userlog = 4;
     });
-    dis4.addEventListener('click', () => {
+    dis4.addEventListener('click', async () => {
+			const response = await fetch(`/games/${game}/leave`, {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${user4.token}`
+				},
+				credentials: 'include'
+			});
+			if (!response.ok) {
+				throw new Error('Error leaving game');
+			}
       user4.connected = false;
       user4.userID = "-1";
       user4.username = "Waiting...";
@@ -692,10 +728,29 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 
   const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 
-  startBtn.addEventListener('click', () => {
+  startBtn.addEventListener('click', async () => {
     if (scTW != boG)
       return ;
     //start game <--------------------------- IMPLEMENT!
+		if (playerCount === "1") {
+			const response = await fetch(`/games/${game}/start`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${user1.token}`
+				},
+				credentials: 'include',
+				body: JSON.stringify({
+					"userId": user1.userID,
+					"paddle_loc": "left",
+				}),
+			});
+			if (!response.ok) {
+				throw new Error('Error starting game');
+			}
+		}
+		window.location.hash = `#/games/${game}/play`;
+
   });
 }
 
@@ -733,6 +788,29 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     window.location.hash = DEFAULT;
     return; 
   }
+	if (gameSettings.mode === "training") {
+		const body = { options : [
+				{
+				"userId": userId,
+				"paddle_loc": "left",
+				}
+			]
+		};
+		const response = await fetch(`/games/${gameId}/start`, {
+			method: 'PATCH',
+			headers: { 
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${token}`
+			},
+			credentials: 'include',
+			body: JSON.stringify(body),
+		});
+		if (!response.ok) {
+			throw new Error('Error starting game');
+		}
+		window.location.hash = `#/games/${gameId}/play`;
+	}
+
   const playerCount = String(gameSettings.max_players); 
 
     // const response = await fetch(`/games/${game}/join`, {
@@ -767,7 +845,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
   if (user2tok){
     user2.username = localStorage.getItem("username2") ?? "Error Loading";
     user2.userID = localStorage.getItem("id2") ?? "-1";
-    user2.token = token;
+    user2.token = user2tok;
     user2.connected = true;
     const pfp = await fetch(localStorage.getItem("pfp2") ?? "", {
       method: 'get',
@@ -783,7 +861,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
   if (user3tok){
     user3.username = localStorage.getItem("username3") ?? "Error Loading";
     user3.userID = localStorage.getItem("id3") ?? "-1";
-    user3.token = token;
+    user3.token = user3tok;
     user3.connected = true;
     const pfp = await fetch(localStorage.getItem("pfp3") ?? "", {
       method: 'get',
@@ -799,7 +877,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
   if (user4tok){
     user4.username = localStorage.getItem("username4") ?? "Error Loading";
     user4.userID = localStorage.getItem("id4") ?? "-1";
-    user4.token = token;
+    user4.token = user4tok;
     user4.connected = true;
     const pfp = await fetch(localStorage.getItem("pfp4") ?? "", {
       method: 'get',

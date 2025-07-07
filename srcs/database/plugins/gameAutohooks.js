@@ -46,8 +46,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.db.exec('COMMIT')
         return gameId
       } catch (err) {
+        if (fastify.db.inTransaction) {
+          fastify.db.exec('ROLLBACK')
+        }
         fastify.log.error(err)
-        fastify.db.exec('ROLLBACK')
         throw new Error('Failed to create game')
       }
     },
@@ -382,7 +384,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           }
           if (creatorId.created_by !== Number(userId) && !playerExist) {
             throw new Error('User not authorized')
-          }
+          }s
         }
 
         const checkStatus = fastify.db.prepare(
@@ -415,7 +417,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const updatePlayer = fastify.db.prepare(`
           UPDATE game_players SET paddle_loc  = ?, paddle_side = ? WHERE game_id = ? AND player_id = ?
         `)
-
         const insertMatchScore = fastify.db.prepare(`
           INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
         `)
