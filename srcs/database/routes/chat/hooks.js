@@ -556,7 +556,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
           throw new Error('User is banned from this group');
         }
       }
-      
+
       const messagesQuery = fastify.db.prepare(`
         SELECT m.id, m.sender_id, u.username, m.content, m.created
         FROM messages m
@@ -567,8 +567,36 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       const messages = messagesQuery.all(groupId);
 
       return messages;
+    },
+
+    async blockUser(userId, blockedUserId) {
+      if (!(await this.userExist(blockedUserId))) {
+        throw new Error(`Blocked user ${blockedUserId} does not exist`);
+      }
+
+      if (userId === blockedUserId) {
+        throw new Error('Cannot block yourself');
+      }
+
+      const existingBlockQuery = fastify.db.prepare(`
+        SELECT 1 FROM user_blocks
+        WHERE blocker_id = ? AND blocked_user_id = ?
+        LIMIT 1
+      `);
+      const existingBlock = existingBlockQuery.get(userId, blockedUserId);
+      if (existingBlock) {
+        return { success: false, reason: 'User already blocked' };
+      }
+
+      const insertBlockQuery = fastify.db.prepare(`
+        INSERT INTO user_blocks (blocker_id, blocked_user_id)
+        VALUES (?, ?)
+      `);
+      insertBlockQuery.run(userId, blockedUserId);
+
+      return { success: true, blocker: userId, blocked: blockedUserId };
     }
-    
+
   })
   }, {
   name: 'chatAutoHooks',
