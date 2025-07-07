@@ -120,6 +120,15 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         let slot;
         if (isInvited) {
           slot = isInvited.slot_index
+        } else if (slotIndex === null || slotIndex === undefined) {
+          const nextSlotQuery = fastify.db.prepare(
+            'SELECT COALESCE(MAX(slot_index), -1) + 1 AS next_slot FROM tournament_players WHERE tournament_id = ?'
+          )
+          const nextSlotResult = nextSlotQuery.get(tournamentId)
+          slot = nextSlotResult.next_slot
+          if (slot >= checkTourSettings.max_players) {
+            throw new Error('No available slots in the tournament')
+          }
         } else {
           slot = slotIndex
         }

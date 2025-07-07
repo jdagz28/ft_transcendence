@@ -1,4 +1,4 @@
-import { setupAppLayout } from "../setUpLayout";
+import { setupAppLayout, whoAmI } from "../setUpLayout";
 import type { Tournament, Player} from "../types/tournament";
 
 
@@ -31,7 +31,6 @@ export async function renderTournamentPage() {
     window.location.hash = "#/tournaments/create";
   });
   
-  /* ------------------------------------------------ table skeleton --- */
   const tableWrapper = document.createElement("div");
   tableWrapper.className = "overflow-x-auto";
 
@@ -59,6 +58,8 @@ export async function renderTournamentPage() {
   const tbody = table.querySelector("tbody") as HTMLTableSectionElement | null;
   if (!tbody) return; 
   try {
+    const userData = await whoAmI();
+    const userId = userData.success ? userData.data.id : null;
     const token = localStorage.getItem("token") ?? "";
     const response = await fetch("/tournaments", {
       headers: { Authorization: `Bearer ${token}` },
@@ -115,12 +116,22 @@ export async function renderTournamentPage() {
 
       const actionTd = document.createElement("td");
       actionTd.className = "px-4 py-3";
-      if (tournament.status === "pending" && openPlayers > 0 && tournament.settings.gameMode !== "private") {
+      const isPlayer = userId ? tournament.players.some(p => p.id === userId) : false;
+      const isAdmin = userId ? tournament.created_by.id === userId : false;
+
+      if (isPlayer || isAdmin) {
+        const btn = document.createElement("button");
+        btn.textContent = "Go to Lobby";
+        btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded font-semibold";
+        btn.onclick = () => {
+          window.location.hash = `#/tournaments/${tournament.id}/lobby`;
+        };
+        actionTd.appendChild(btn);
+      } else if (tournament.status === "pending" && openPlayers > 0 && tournament.settings.gameMode !== "private") {
         const btn = document.createElement("button");
         btn.dataset.id = String(tournament.id);
         btn.textContent = "Join";
-        btn.className =
-          "join-tournament bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded";
+        btn.className = "join-tournament bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded";
         actionTd.appendChild(btn);
       }
       tr.appendChild(actionTd);
@@ -144,12 +155,14 @@ export async function renderTournamentPage() {
 
     target.setAttribute("disabled", "true");
     try {
-      const res = await fetch(`/api/tournaments/${tId}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/tournaments/${tId}/join`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to join");
-      await renderTournamentPage(); 
+      window.location.hash = `#/tournaments/${tId}/alias`;
     } catch (err) {
       console.error(err);
       target.removeAttribute("disabled");
