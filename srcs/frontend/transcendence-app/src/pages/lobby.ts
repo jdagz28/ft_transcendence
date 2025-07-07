@@ -41,16 +41,16 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     playersHTML = `
 <div class="relative z-10 flex [min-height:calc(100vh-3.5rem)] items-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-32 selection:bg-blue-400 selection:text-white">
 
-    <div class="relative flex flex-col items-center w-full -mt-40">
-      <div id="avatar1" class="h-35 w-35 rounded-full bg-white mx-auto"></div>
+    <div class="relative flex flex-col items-start -mt-40">
+        <div id="avatar1" class="h-35 w-35 rounded-full bg-white"></div>
         <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
-          <div class="bg-[rgba(20,50,90,0.70)] rounded-md px-2 py-2 w-64 flex items-center justify-between">
-            <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">W</div>
-            <span class="flex-1 mx-2 truncate text-center text-[25px]">${user1.username}</span>
-            <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">S</div>
-          </div>
-      </h2>
-    </div>`;
+            <div class="bg-[rgba(20,50,90,0.70)] rounded-md px-2 py-2 w-64 flex items-center justify-between">
+              <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">W</div>
+              <span class="flex-1 mx-2 truncate text-center text-[25px]">${user1.username}</span>
+              <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">S</div>
+            </div>
+        </h2>
+      </div>`;
   } else if (playerCount === "2") {
     playersHTML = `
     <div class="relative z-10 flex [min-height:calc(100vh-3.5rem)] items-center justify-between bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-32 selection:bg-blue-400 selection:text-white">
@@ -292,20 +292,19 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
   const scTW = document.getElementById('scTW') as HTMLInputElement;
   const boG = document.getElementById("boG") as HTMLInputElement;
 
-    optionsBtn.addEventListener('click', async () => {
+    optionsBtn.addEventListener('click', () => {
       optionsModal.classList.remove('hidden');
     optionsModal.classList.add('flex');
-
-    const response = await updateGameOptions(Number(game), Number(boG), Number(scTW));
-    if (!response.ok) {
-      throw new Error('Failed to update game options');
-    }
-
     });
 
-    closeOptions.addEventListener('click', () => {
+    closeOptions.addEventListener('click', async () => {
       optionsModal.classList.add('hidden');
       optionsModal.classList.remove('flex');
+
+      const response = await updateGameOptions(Number(game), Number(boG.value), Number(scTW.value));
+      if (!response.ok) {
+        throw new Error('Failed to update game options');
+      }
       
       /*
       if (numPlay.value !== playerCount) {
@@ -729,10 +728,15 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
   const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
 
   startBtn.addEventListener('click', async () => {
-    if (scTW != boG)
-      return ;
     //start game <--------------------------- IMPLEMENT!
 		if (playerCount === "1") {
+      const body = { options: [
+        {
+          "userId": user1.userID,
+          "paddle_loc": "left",
+        }
+      ]}
+
 			const response = await fetch(`/games/${game}/start`, {
 				method: 'PATCH',
 				headers: {
@@ -740,10 +744,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 					'Authorization': `Bearer ${user1.token}`
 				},
 				credentials: 'include',
-				body: JSON.stringify({
-					"userId": user1.userID,
-					"paddle_loc": "left",
-				}),
+				body: JSON.stringify(body)
 			});
 			if (!response.ok) {
 				throw new Error('Error starting game');
