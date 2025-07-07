@@ -1,12 +1,13 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
+// MODIFIED: Added createTournamentAlias to the import list
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
   invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
 import { ROUTE_MAIN } from "../router";
 
 
-let cachedAuthFlow: (() => Promise<string>) | null = null;
-function ensureAuthModals(): () => Promise<string> {
+let cachedAuthFlow: (() => Promise<{token: string, alias: string}>) | null = null;
+function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
   if (cachedAuthFlow) return cachedAuthFlow;
 
   const inputHTML =
@@ -44,6 +45,18 @@ function ensureAuthModals(): () => Promise<string> {
           <div id="local-mfa-error" class="text-red-400 text-sm text-center hidden mt-3"></div>
         </div>
       </div>
+
+      <div id="local-alias-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40">
+        <div class="relative w-96 rounded-lg bg-[#0f2a4e] border-4 border-white p-8">
+          <h2 class="text-center text-3xl font-bold text-white mb-6">Enter Your Alias</h2>
+          <p class="text-center text-gray-300 mb-6 text-sm">You must set an alias for this tournament.</p>
+          <form id="local-alias-form" class="space-y-5">
+            <input id="local-alias-input" class="w-full bg-[#081a37] text-white rounded px-4 py-2 placeholder-gray-400" placeholder="The Transcender" required />
+            <button class="w-full bg-gradient-to-r from-orange-600 to-orange-400 py-3 rounded font-semibold text-xl text-white">Confirm Alias</button>
+            <div id="local-alias-error" class="text-red-400 text-sm text-center hidden mt-3"></div>
+          </form>
+        </div>
+      </div>
       `
     );
   }
@@ -51,9 +64,35 @@ function ensureAuthModals(): () => Promise<string> {
   const $ = (id: string) => document.getElementById(id)!;
   const loginModal = $("local-login-modal");
   const mfaModal = $("local-mfa-modal");
+  const aliasModal = $("local-alias-modal"); 
 
   cachedAuthFlow = () =>
-    new Promise<string>((resolve, reject) => {
+    new Promise<{token: string, alias: string}>((resolve, reject) => { 
+      
+      const handleAuthSuccess = (token: string) => {
+        loginModal.classList.add("hidden");
+        mfaModal.classList.add("hidden");
+        aliasModal.classList.remove("hidden");
+
+        const aliasInput = $("local-alias-input") as HTMLInputElement;
+        const aliasForm = $("local-alias-form");
+        const aliasError = $("local-alias-error");
+        
+        aliasInput.focus();
+
+        aliasForm.onsubmit = (e) => {
+          e.preventDefault();
+          const alias = aliasInput.value.trim();
+          if (alias) {
+            aliasModal.classList.add("hidden");
+            resolve({ token, alias });
+          } else {
+            aliasError.textContent = "Alias cannot be empty.";
+            aliasError.classList.remove("hidden");
+          }
+        };
+      };
+
       loginModal.classList.remove("hidden");
 
       $("local-login-close").onclick = () => {
@@ -109,15 +148,12 @@ function ensureAuthModals(): () => Promise<string> {
                 $("local-mfa-error").classList.remove("hidden");
                 return;
               }
-              mfaModal.classList.add("hidden");
-              resolve(vData.token);
+              handleAuthSuccess(vData.token);
             };
 
             return;
           }
-
-          loginModal.classList.add("hidden");
-          resolve(data.token);
+          handleAuthSuccess(data.token);
         } catch (err: any) {
           $("local-login-error").textContent = err.message ?? "error";
           $("local-login-error").classList.remove("hidden");
@@ -140,7 +176,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     "flex-grow flex flex-col gap-8 px-8 py-10 text-white";
 
   const tournamentName = await getTournamentName(tournamentId);
-  console.log("Tournament name:", tournamentName);
 
   const header = document.createElement("div");
   header.className = "text-center py-6";
@@ -156,10 +191,8 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   contentContainer.appendChild(main);
 
   const players: Player[]  = await getTournamentPlayers(tournamentId);
-  console.log("Players in tournament:", players);
 
   const userData = await whoAmI();
-  console.log("Current user data:", userData); //! DELETE
   if (!userData.success) {
     console.error("Failed to get user data:", userData.error);
     window.location.hash = "#/";
@@ -167,18 +200,16 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const userId = userData.data.id;
   let authorized = false;
-  for (const player of players) {
-    if (player.id === userId) {
-      authorized = true;
-      break;
-    }
+  const created_by = await getTournamentCreator(tournamentId);
+  if (players.some(p => p.id === userId) || created_by === userId) {
+    authorized = true;
   }
+
   if (!authorized ) {
     window.location.hash = "/403"; 
     return;
   }
 
-  const created_by = await getTournamentCreator(tournamentId);
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);
   
@@ -225,15 +256,25 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
       onLocalConnect = async (slotIndex: number) => {
         try {
-          const token = await authFlow(); 
+          const { token, alias } = await authFlow(); 
           const response = await fetch(`/tournaments/${tournamentId}/join`, {
             method: "PATCH",
-            credentials: "include",
             headers: { "Authorization": `Bearer ${token}` ,
                       "Content-Type": "application/json"},
+            credentials: "include",
             body: JSON.stringify({ slotIndex })
           });
           if (!response.ok) throw new Error("could not join");
+          
+          const aliasResponse = await fetch(`/tournaments/${tournamentId}/alias`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` ,
+                      "Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({ alias })
+          });
+          if (!aliasResponse.ok) throw new Error("could not set alias");
+
           await renderTournamentLobby(tournamentId);  
         } catch (err) {
           if (err !== "cancel") console.error(err);
@@ -278,7 +319,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     "w-full max-w-xs text-xl font-semibold py-3 px-10 rounded-md shadow-sm transition";
   if (isAdmin) {
     const seedBtn = document.createElement("button");
-    seedBtn.textContent = "Seed";
+    seedBtn.textContent = "Start Tournament";
     seedBtn.className = `${commonBtn} bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90`;
     btnContainer.appendChild(seedBtn);
 
@@ -292,12 +333,12 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
           credentials: "include"
         });
         if (!response.ok) {
-          throw new Error("Failed to seed tournament");
+          throw new Error("Failed to start tournament");
         }
         window.location.hash = `#/tournaments/${tournamentId}/bracket`;
       } catch (err) {
         console.error(err);
-        alert((err as Error).message ?? 'Could not seed tournament');
+        alert((err as Error).message ?? 'Could not start tournament');
       }
     });
   }
