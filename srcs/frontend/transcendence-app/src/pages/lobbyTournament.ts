@@ -1,93 +1,13 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
+// MODIFIED: Added createTournamentAlias to the import list
 import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
-  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin, getTournamentChatRoom } from "../api/tournament";
-  
-  
-import { ROUTE_MAIN } from "@/router";
+  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
+import { ROUTE_MAIN } from "../router";
 
-interface ChatMessage {
-  from: number;
-  message: string;
-  username?: string;
-}
 
-let lobbyWs: WebSocket | null = null;
-let lobbyRoomJoined = false;
-let lobbyMessageHandler: ((ev: MessageEvent) => void) | null = null;
-
-async function connectLobbyChat(
-  roomId: number,
-  token: string,
-  onMessage: (msg: ChatMessage ) => void
-) {
-  if (!lobbyWs) {
-    lobbyWs = new WebSocket(
-      `wss://${location.host}/chat?token=${encodeURIComponent(token)}`
-    );
-
-    lobbyWs.addEventListener("open", () => {
-      console.log("WebSocket connection opened for lobby chat");
-      setTimeout(() => {
-        if (lobbyWs) {
-          console.log("Joining chat room:", roomId);
-          lobbyWs.send(JSON.stringify({
-            action: 'join',
-            scope: 'group',
-            room: roomId
-          }));
-        }
-      }, 500);
-    });
-
-    lobbyWs.addEventListener("close", () => {
-      lobbyWs = null;
-      lobbyRoomJoined = false;
-      lobbyMessageHandler = null;
-    });
-  }
-   
-  if (lobbyMessageHandler) {
-    lobbyWs.removeEventListener("message", lobbyMessageHandler);
-  }
-
-  lobbyMessageHandler = (ev: MessageEvent) => {
-    if (typeof ev.data === "string" && ev.data === "Room joined") {
-      lobbyRoomJoined = true;
-      fetch(`/chat/group/${roomId}/history`, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${token}` },
-        credentials: "include"
-      })
-      .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
-      .then((previousMessages: any[]) => {
-        previousMessages.forEach((msg: any) => {
-          onMessage({
-            from: msg.sender_id,
-            message: msg.content,
-            username: msg.username
-          });
-        });
-      })
-
-      .catch(err => console.error("Failed to fetch previous chat messages:", err));
-      return;
-    }
-    try {
-      const data = JSON.parse(ev.data as string);
-      if (data.message && data.from) onMessage(data);
-    } catch {}
-  };
-
-  lobbyWs.addEventListener("message", lobbyMessageHandler);
-  if (lobbyRoomJoined) {
-    lobbyMessageHandler(new MessageEvent("message", { data: "Room joined" }));
-  }
-  
-}
-
-let cachedAuthFlow: (() => Promise<string>) | null = null;
-function ensureAuthModals(): () => Promise<string> {
+let cachedAuthFlow: (() => Promise<{token: string, alias: string}>) | null = null;
+function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
   if (cachedAuthFlow) return cachedAuthFlow;
 
   const inputHTML =
@@ -125,6 +45,18 @@ function ensureAuthModals(): () => Promise<string> {
           <div id="local-mfa-error" class="text-red-400 text-sm text-center hidden mt-3"></div>
         </div>
       </div>
+
+      <div id="local-alias-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40">
+        <div class="relative w-96 rounded-lg bg-[#0f2a4e] border-4 border-white p-8">
+          <h2 class="text-center text-3xl font-bold text-white mb-6">Enter Your Alias</h2>
+          <p class="text-center text-gray-300 mb-6 text-sm">You must set an alias for this tournament.</p>
+          <form id="local-alias-form" class="space-y-5">
+            <input id="local-alias-input" class="w-full bg-[#081a37] text-white rounded px-4 py-2 placeholder-gray-400" placeholder="The Transcender" required />
+            <button class="w-full bg-gradient-to-r from-orange-600 to-orange-400 py-3 rounded font-semibold text-xl text-white">Confirm Alias</button>
+            <div id="local-alias-error" class="text-red-400 text-sm text-center hidden mt-3"></div>
+          </form>
+        </div>
+      </div>
       `
     );
   }
@@ -132,9 +64,35 @@ function ensureAuthModals(): () => Promise<string> {
   const $ = (id: string) => document.getElementById(id)!;
   const loginModal = $("local-login-modal");
   const mfaModal = $("local-mfa-modal");
+  const aliasModal = $("local-alias-modal"); 
 
   cachedAuthFlow = () =>
-    new Promise<string>((resolve, reject) => {
+    new Promise<{token: string, alias: string}>((resolve, reject) => { 
+      
+      const handleAuthSuccess = (token: string) => {
+        loginModal.classList.add("hidden");
+        mfaModal.classList.add("hidden");
+        aliasModal.classList.remove("hidden");
+
+        const aliasInput = $("local-alias-input") as HTMLInputElement;
+        const aliasForm = $("local-alias-form");
+        const aliasError = $("local-alias-error");
+        
+        aliasInput.focus();
+
+        aliasForm.onsubmit = (e) => {
+          e.preventDefault();
+          const alias = aliasInput.value.trim();
+          if (alias) {
+            aliasModal.classList.add("hidden");
+            resolve({ token, alias });
+          } else {
+            aliasError.textContent = "Alias cannot be empty.";
+            aliasError.classList.remove("hidden");
+          }
+        };
+      };
+
       loginModal.classList.remove("hidden");
 
       $("local-login-close").onclick = () => {
@@ -190,15 +148,12 @@ function ensureAuthModals(): () => Promise<string> {
                 $("local-mfa-error").classList.remove("hidden");
                 return;
               }
-              mfaModal.classList.add("hidden");
-              resolve(vData.token);
+              handleAuthSuccess(vData.token);
             };
 
             return;
           }
-
-          loginModal.classList.add("hidden");
-          resolve(data.token);
+          handleAuthSuccess(data.token);
         } catch (err: any) {
           $("local-login-error").textContent = err.message ?? "error";
           $("local-login-error").classList.remove("hidden");
@@ -218,13 +173,12 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const { contentContainer } = setupAppLayout();
   contentContainer.className = 
-    "flex-grow flex flex-col gap-8 px-8 py-10 text-white";
+    "flex-grow flex flex-col items-center gap-8 px-8 py-10 text-white";
 
   const tournamentName = await getTournamentName(tournamentId);
-  console.log("Tournament name:", tournamentName);
 
   const header = document.createElement("div");
-  header.className = "text-center py-6";
+  header.className = "text-center py-4";
   const title = document.createElement("h1");
   title.textContent = tournamentName;
   title.className = 
@@ -233,14 +187,12 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   contentContainer.appendChild(header);
 
   const main = document.createElement("div");
-  main.className = "flex justify-center items-start gap-20 px-8 py-10";
+  main.className = "flex flex-col items-center px-4 flex-1";
   contentContainer.appendChild(main);
 
   const players: Player[]  = await getTournamentPlayers(tournamentId);
-  console.log("Players in tournament:", players);
 
   const userData = await whoAmI();
-  console.log("Current user data:", userData); //! DELETE
   if (!userData.success) {
     console.error("Failed to get user data:", userData.error);
     window.location.hash = "#/";
@@ -248,27 +200,29 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const userId = userData.data.id;
   let authorized = false;
-  for (const player of players) {
-    if (player.id === userId) {
-      authorized = true;
-      break;
-    }
+  const created_by = await getTournamentCreator(tournamentId);
+  if (players.some(p => p.id === userId) || created_by === userId) {
+    authorized = true;
   }
-  if (!authorized) {
+
+  if (!authorized ) {
     window.location.hash = "/403"; 
     return;
   }
 
-  const created_by = await getTournamentCreator(tournamentId);
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);
-  
   const isAdmin = await isTournamentAdmin(created_by);
+
+  const slotsWrapper = document.createElement("div");
+  slotsWrapper.className =
+    "flex flex-col items-center justify-center flex-grow";
+  main.appendChild(slotsWrapper);
 
   const sideBar = document.createElement("div");
   sideBar.id = "player-slots";
-  sideBar.className = "flex flex-col gap-4 w-64";
-  main.appendChild(sideBar);
+  sideBar.className = "flex flex-col items-center gap-4 w-64";
+  slotsWrapper.appendChild(sideBar);
 
   for (let i = 0; i < maxPlayers; i++) {
     const playerForSlot = players.find(u => u.slotIndex === i);
@@ -306,15 +260,25 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
       onLocalConnect = async (slotIndex: number) => {
         try {
-          const token = await authFlow(); 
+          const { token, alias } = await authFlow(); 
           const response = await fetch(`/tournaments/${tournamentId}/join`, {
             method: "PATCH",
-            credentials: "include",
             headers: { "Authorization": `Bearer ${token}` ,
                       "Content-Type": "application/json"},
+            credentials: "include",
             body: JSON.stringify({ slotIndex })
           });
           if (!response.ok) throw new Error("could not join");
+          
+          const aliasResponse = await fetch(`/tournaments/${tournamentId}/alias`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` ,
+                      "Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({ alias })
+          });
+          if (!aliasResponse.ok) throw new Error("could not set alias");
+
           await renderTournamentLobby(tournamentId);  
         } catch (err) {
           if (err !== "cancel") console.error(err);
@@ -352,14 +316,14 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   // Admin Buttons
   const btnContainer = document.createElement("div");
-  btnContainer.className = "absolute inset-x-0 bottom-0 pb-6 flex flex-col items-center gap-4";
+  btnContainer.className = "flex flex-col items-center gap-4 w-full pt-8 mt-auto";
   main.appendChild(btnContainer);
 
   const commonBtn =
     "w-full max-w-xs text-xl font-semibold py-3 px-10 rounded-md shadow-sm transition";
   if (isAdmin) {
     const seedBtn = document.createElement("button");
-    seedBtn.textContent = "Seed";
+    seedBtn.textContent = "Start Tournament";
     seedBtn.className = `${commonBtn} bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90`;
     btnContainer.appendChild(seedBtn);
 
@@ -373,15 +337,23 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
           credentials: "include"
         });
         if (!response.ok) {
-          throw new Error("Failed to seed tournament");
+          throw new Error("Failed to start tournament");
         }
         window.location.hash = `#/tournaments/${tournamentId}/bracket`;
       } catch (err) {
         console.error(err);
-        alert((err as Error).message ?? 'Could not seed tournament');
+        alert((err as Error).message ?? 'Could not start tournament');
       }
     });
   }
+  const optionsBtn = document.createElement("button");
+  optionsBtn.textContent = "Options";
+  optionsBtn.className = `${commonBtn} bg-gradient-to-r from-blue-600 to-blue-500 hover:opacity-90`;
+  btnContainer.appendChild(optionsBtn);
+  optionsBtn.addEventListener("click", () => {
+    window.location.hash = `#/tournaments/${tournamentId}/options`;
+  });
+
   const leaveBtn = document.createElement("button");
   if (isAdmin) {
     leaveBtn.textContent = "Delete";
@@ -418,80 +390,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     } catch (err) {
       console.error(err);
       alert((err as Error).message ?? 'Could not leave tournament');
-    }
-  });
-
-  // Chat Area
-  const chatBox = document.createElement("div");
-  chatBox.className =
-    "flex-1 basis-2/3 max-w-2/3 bg-[#1a3a5a] rounded-lg p-4 h-250 flex flex-col shadow-lg";
-  main.appendChild(chatBox);
-
-  const messagesList = document.createElement("div");
-  messagesList.className = "flex-1 overflow-y-auto mb-4 space-y-2";
-  chatBox.appendChild(messagesList);
-
-  const form = document.createElement("form");
-  form.className = "flex justify-end";
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "Type a message…";
-  input.className = 
-    "flex-grow rounded-l-md px-3 py-2 text-white bg-[#162e4f] placeholder-gray-400 focus:outline-none"
-  form.appendChild(input);
-
-
-  const sendBtn = document.createElement("button");
-  sendBtn.type = "submit";
-  sendBtn.textContent = "Send";
-  sendBtn.className = 
-    "bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 rounded-r-md ";
-  form.appendChild(sendBtn);
-
-  chatBox.appendChild(form);
-
-  function appendMessage(msg: ChatMessage) {
-    const el = document.createElement("div");
-    el.className = "text-sm";
-    const player = players.find((p) => p.id === msg.from);
-    const name = player?.alias || player?.username || msg.username || `#${msg.from}`;
-    el.innerHTML = `<strong>${name}</strong>: ${msg.message}`;
-    messagesList.appendChild(el);
-    messagesList.scrollTop = messagesList.scrollHeight;
-  }
-
-
-  const roomId  = Number(await getTournamentChatRoom(tournamentId)); 
-  console.log("Connecting to chat room:", roomId);
-  connectLobbyChat(roomId, token, appendMessage);
-  
-  
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-     if (!lobbyRoomJoined || !lobbyWs || lobbyWs.readyState !== WebSocket.OPEN) {
-      alert("Chat connection not ready");
-      return;
-    }
-
-    const text = input.value.trim();
-    if (!text) {
-      console.log("Empty message, not sending");
-      return;
-    }
-    // appendMessage({ from: userId, message: text });s
-    lobbyWs.send(JSON.stringify({ action: "send", room: roomId, scope: "group", message: text }));
-    input.value = "";
-  });
-
-  sendBtn.addEventListener("click", () => {
-    form.requestSubmit();
-  });
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      form.requestSubmit();
     }
   });
 

@@ -14,3 +14,11 @@ export interface GameStatusUpdate {
   matchId?: number;
   stats?: StatsPayload;
 }
+
+export interface TourPlayer {
+  id: number;
+  username: string;
+  alias?: string;
+  paddle_loc: string;
+  avatarUrl: string;
+}

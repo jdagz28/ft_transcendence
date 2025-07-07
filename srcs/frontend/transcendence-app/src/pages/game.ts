@@ -1,9 +1,11 @@
-import type { RouteParams } from "../router";
+import  { type RouteParams, DEFAULT } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
 import { getConfig, sendStatus } from "../api/gameService";
 import { AIOpponent } from "../class/AiOpponent";
 import { StatsTracker } from "../class/StatsTracker";
 import type { GameStatusUpdate } from "../types/game_api";
+import { setupAppLayout, whoAmI } from "../setUpLayout";
+import { getGamePlayers, isTournamentAdmin } from "../api/game";
 
 
 function setupDom(root: HTMLElement): GamePageElements {
@@ -11,11 +13,11 @@ function setupDom(root: HTMLElement): GamePageElements {
 
   const container = document.createElement('main');
   container.id = 'game-container';
-  container.className = "relative w-full h-screen bg-black overflow-hidden";
+  container.className = "relative flex justify-center items-center w-full max-w-7xl mx-auto";
 
   const canvas = document.createElement('canvas');
   canvas.id = 'pong-canvas';
-  canvas.className = "w-full h-full";
+  canvas.className = "bg-black rounded shadow-lg";
   container.appendChild(canvas);
 
   const leftNames = document.createElement('div');
@@ -33,22 +35,49 @@ function setupDom(root: HTMLElement): GamePageElements {
 }
 
 export async function renderGamePage(params: RouteParams) {
-  const app = document.getElementById("app")!;
-  const { canvas, leftNames, rightNames } = setupDom(app);
-  const ctx = canvas.getContext("2d")!;
+  const { contentContainer } = setupAppLayout();
+  contentContainer.className = "flex items-center justify-center pt-12 pb-4 px-4";
 
-  const rawId = params.gameId;
-  const gameId = typeof rawId === "string" ? parseInt(rawId, 10) : (rawId ?? NaN);
-  if (isNaN(gameId)) {
-    app.innerHTML = `<h1 class="text-white font-sans">Missing or invalid gameId!</h1>`;
+  const gameId = Number(params.gameId);
+  const userData = await whoAmI();
+  if (!userData.success) {
+    window.location.hash = DEFAULT;
     return;
+  }
+  const userId = userData.data.id;
+  const players = await getGamePlayers(gameId);
+  if (!players || players.length === 0) {
+    window.location.hash = DEFAULT;
+  }
+  
+  let authorize = false;
+  for (const player of players) {
+    if (player.id === userId) {
+      authorize = true;
+      break;
+    }
   }
 
   const config: GameDetails = await getConfig(gameId);
+  const mode = config.settings.mode;
+  if (mode === "tournament") {
+    if (!authorize) {
+      const isTourAdmin = await isTournamentAdmin(gameId);
+      if (!isTourAdmin) {
+        window.location.hash = '#/403';
+        return;
+      }
+    }
+  }
+
+  const { canvas, leftNames, rightNames } = setupDom(contentContainer);
+  const ctx = canvas.getContext("2d")!;
+
+  
   const totalGames = config.settings.num_games; 
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
-  const mode = config.settings.mode;
+  
   let currMatchId = config.matchId
 
   let humanSide: 'left' | 'right';
@@ -76,18 +105,14 @@ export async function renderGamePage(params: RouteParams) {
     rightNames.appendChild(el);
   }
 
-  let canvasWidth = window.innerWidth;
-  let canvasHeight = window.innerHeight;
+  const maxWidth = Math.min(window.innerWidth - 100, 1900);
+  const maxHeight = Math.min(window.innerHeight - 200, 1200);
+
+  let canvasWidth = maxWidth;
+  let canvasHeight = maxHeight;
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
   canvas.style.backgroundColor = 'black';
-
-  window.addEventListener("resize", () => {
-    canvasWidth = window.innerWidth;
-    canvasHeight = window.innerHeight;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-  });
 
   let localGameState: GameState;
   let gameLoop: number | null = null;
@@ -269,12 +294,14 @@ export async function renderGamePage(params: RouteParams) {
 
     if (state.totalScore[side] === totalGames) {
       state.gameOver = true;
+      console.log('Game finished, sending final stats...'); //!DELETE
+      console.log(`Final stats for game ${gameId}, match ${currMatchId}:`, statsTracker.finishSession()); //!DELETE
       sendStatus(gameId, { 
         status: 'finished',
         gameId: gameId,
         matchId: currMatchId,
         stats: statsTracker.finishSession()
-      }).catch(console.error);
+      });
     }
     resetBall(state.ball, state);
   }
@@ -315,6 +342,11 @@ export async function renderGamePage(params: RouteParams) {
   document.addEventListener('keydown', e => { 
     const k = e.key;
     const c = e.code;
+    if (k === 'ArrowUp' || k === 'ArrowDown' || 
+        k === 'w' || k === 's' || k === 'l' || k === 'Enter' || k === 'Escape' ||
+        c === 'Numpad5') {
+      e.preventDefault();
+    }
     if (k in keyState) 
       keyState[k] = true;
     if (c in keyState) 
