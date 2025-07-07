@@ -51,6 +51,27 @@ module.exports = fp(
         }
       }
     })
+    
+    fastify.get('/games/:gameId/options', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getGameOptionsHandler (request, reply) {
+        try {
+          const { gameId } = request.params
+          const gameOptions = await fastify.dbGames.getGameOptions(gameId)
+          if (!gameOptions) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(gameOptions)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
 
     fastify.get('/games/all', {
       onRequest: fastify.authenticate,

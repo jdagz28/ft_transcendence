@@ -77,3 +77,36 @@ export async function isTournamentAdmin(gameId: number): Promise<boolean> {
   
   return data.isAdmin;
 }
+
+export async function isGameCreator(gameId: number, userId: number): Promise<boolean> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`/games/${gameId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to check creator status for game ${gameId}`);
+  }
+  const data = await response.json();
+
+  return data.created_by === userId;
+}
+
+export async function getGameOptions(gameId: number): Promise<any> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`/games/${gameId}/options`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch options for game ${gameId}`);
+  }
+  const data = await response.json();
+  return data;
+}

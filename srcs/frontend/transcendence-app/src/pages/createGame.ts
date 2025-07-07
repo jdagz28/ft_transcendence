@@ -56,10 +56,11 @@ async function createGame(mode: string, maxPlayers: number, clickedButton: HTMLB
         if (!response.ok) {
             throw new Error(responseData.message || 'Failed to create the game.');
         }
-
+        console.log("Game creation response:", responseData);
         const gameId = responseData;
+        console.log("Game created successfully with ID:", gameId);
         if (gameId) {
-            window.location.hash = `#/games/${gameId}`;
+            window.location.hash = `#/games/${gameId}/lobby`;
         } else {
             throw new Error("Game created, but the server did not return a game ID.");
         }
