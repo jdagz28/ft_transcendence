@@ -65,11 +65,9 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
     async addFriend(request) {
       const username = request.user.username
       const friend = request.params.username
-      const { data } = await dbApi.put(`/users/${username}/friends`, 
-        {
-          data: { friend }, 
-          headers: internalHeaders(request)
-        }
+      const { data } = await dbApi.put(`/users/${username}/friends`,
+        { friend }, 
+        { headers: internalHeaders(request) }
       )
       console.log('Friend added successfully:', data) //! DELETE
       return data
@@ -79,10 +77,8 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       const username = request.user.username
       const friend = request.body.friend
       const { data } = await dbApi.delete(`/users/${username}/friends`, 
-        { 
-          data: { friend },
-          headers: internalHeaders(request) 
-        }
+        { friend }, 
+        { headers: internalHeaders(request) }
       )
       console.log('Friend removed successfully:', data) //! DELETE
       return data
