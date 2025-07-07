@@ -292,7 +292,7 @@ export async function renderGamePage(params: RouteParams) {
         currMatchId++;
     }
 
-    if (state.totalScore[side] === totalGames) {
+    if (state.totalScore[side] === totalGames && mode !== "training") {
       state.gameOver = true;
       console.log('Game finished, sending final stats...'); //!DELETE
       console.log(`Final stats for game ${gameId}, match ${currMatchId}:`, statsTracker.finishSession()); //!DELETE

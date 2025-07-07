@@ -46,8 +46,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.db.exec('COMMIT')
         return gameId
       } catch (err) {
+        if (fastify.db.inTransaction) {
+          fastify.db.exec('ROLLBACK')
+        }
         fastify.log.error(err)
-        fastify.db.exec('ROLLBACK')
         throw new Error('Failed to create game')
       }
     },
@@ -382,7 +384,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           }
           if (creatorId.created_by !== Number(userId) && !playerExist) {
             throw new Error('User not authorized')
-          }
+          }s
         }
 
         const checkStatus = fastify.db.prepare(
@@ -415,7 +417,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const updatePlayer = fastify.db.prepare(`
           UPDATE game_players SET paddle_loc  = ?, paddle_side = ? WHERE game_id = ? AND player_id = ?
         `)
-
         const insertMatchScore = fastify.db.prepare(`
           INSERT INTO match_scores (match_id, player_id) VALUES (?, ?)
         `)
@@ -743,6 +744,32 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to check tournament admin status')
+      }
+    },
+
+    async getGameOptions(gameId) {
+      try {
+        const query = fastify.db.prepare(
+          'SELECT * FROM game_settings WHERE game_id = ?'
+        )
+        const options = query.get(gameId)
+        if (!options) {
+          throw new Error('Game options not found')
+        }
+        return {
+          mode:        options.mode,
+          game_type:   options.game_type,
+          game_mode:   options.game_mode,
+          max_players: options.max_players,
+          num_games:   options.num_games,
+          num_matches: options.num_matches,
+          ball_speed:  options.ball_speed,
+          death_timed: Boolean(options.death_timed),
+          time_limit_s: options.time_limit_s
+        }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve game options')
       }
     }
   })

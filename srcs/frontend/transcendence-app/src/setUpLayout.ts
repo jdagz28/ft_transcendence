@@ -142,7 +142,7 @@ export function renderNavBar(root: HTMLElement) {
 						throw new Error('Logout failed');
 					}
 					localStorage.removeItem('token');
-					window.location.href = '/';
+					window.location.hash = ROUTE_LOGIN;
 				} catch (err) {
 					console.error('Logout error:', err);
 				}

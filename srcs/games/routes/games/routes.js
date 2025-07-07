@@ -33,6 +33,21 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/:gameId/options', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function getGameOptionsHandler (request, reply) {
+        const { gameId } = request.params
+        const gameOptions = await fastify.gameService.getGameOptions(request, gameId)
+        if (!gameOptions) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.code(200).send(gameOptions)
+      }
+    })
+
     // get a list of games
     fastify.get('/games/all', {
       onRequest: fastify.authenticate,

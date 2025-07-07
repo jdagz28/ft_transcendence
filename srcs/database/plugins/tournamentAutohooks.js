@@ -501,7 +501,6 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
 
     async seedBracket(tournamentId) {
       try {
-        fastify.db.exec('BEGIN')
         const players = fastify.db.prepare(
           'SELECT user_id FROM tournament_players WHERE tournament_id = ?'
         ).all(tournamentId).map(p => p.user_id)
@@ -525,10 +524,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         const pairs = await fastify.dbTournaments.pairOffPlayers(players)
 
         const insertMatch = fastify.db.prepare(`
-          INSERT INTO tournament_games (tournament_id, game_id, round, slot) VALUES (?, ?, 1, ?)
+          INSERT INTO tournament_games (tournament_id, game_id, round, slot) VALUES (?, ?, ?, ?)
         `)
 
-        fastify.db.exec('COMMIT')
         let slot = 0
         for (const [player1, player2] of pairs) {
           const gameId = await fastify.dbGames.createGame(
@@ -537,6 +535,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           if (!gameId) {
             throw new Error('Failed to create game for tournament match')
           }
+          fastify.db.exec('BEGIN')
           fastify.db.prepare(
             'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
           ).run(gameId, player2)
@@ -545,6 +544,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           ).run(tourConfig.num_games, tourConfig.num_matches, tourConfig.ball_speed, tourConfig.death_timed, tourConfig.time_limit_s, gameId)
       
           insertMatch.run(tournamentId, gameId, 1, slot)
+          fastify.db.exec('COMMIT')
           await fastify.publishEvent(`tournament.game.ready.${player1}`, {
             gameId,
             tournamentId,
@@ -561,7 +561,6 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           })
           slot++
         }
-
         return { success: true, message: 'Tournament bracket seeded successfully' }
       } catch (err) {
         if (fastify.db.inTransaction)
@@ -1088,7 +1087,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament chat')
-      }
+      }s
     },
 
     async createTournamentAI(tournamentId, userId, slotIndex) {
