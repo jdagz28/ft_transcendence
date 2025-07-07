@@ -12,6 +12,7 @@ import { renderAliasTournamentPage } from "./pages/aliasTournament";
 import { renderTournamentLobby } from "./pages/lobbyTournament";
 import { renderTournamentBracket } from "./pages/bracketsTournament";
 import { renderTournamentGameLobby } from "./pages/gameLobbyTournament";
+import { renderCreateGameLobby } from "./pages/createGame";
 import { renderChat } from "./chat";
 import { whoAmI } from "./setUpLayout";
 import { renderAccountSettingsPage } from "./pages/accountSettings";
@@ -33,6 +34,7 @@ export const ROUTE_TOURNAMENT_LOBBY       = "/tournaments/:tournamentId/lobby";
 export const ROUTE_TOURNAMENT_BRACKET     = "/tournaments/:tournamentId/bracket";
 export const ROUTE_TOURNAMENT_GAME        = "/tournaments/:tournamentId/:gameId";
 export const ROUTE_TOURNAMENT_GAME_PLAY   = "/tournaments/:tournamentId/:gameId/play";
+export const ROUTE_CREATE_GAME            = "/games/create";
 export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
 export const ERROR_403                    = "/403";
 
@@ -73,6 +75,8 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_LOBBY, regex: tokenToRegex(ROUTE_LOBBY), handler: p => renderLobbyPage(p) },
   { pattern: ROUTE_TOURNAMENTS, regex: tokenToRegex(ROUTE_TOURNAMENTS), handler: () => renderTournamentPage() },
   { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
+
+  { pattern: ROUTE_CREATE_GAME, regex: tokenToRegex(ROUTE_CREATE_GAME), handler: () => renderCreateGameLobby() },
 
   { pattern: ERROR_403, regex: tokenToRegex(ERROR_403), handler: () => renderError403() },
 
