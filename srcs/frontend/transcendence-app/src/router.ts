@@ -178,6 +178,22 @@ async function handleRootRedirect() {
   }
 }
 
+export async function deletePastLobby() {
+	const gameId = localStorage.getItem("gameId");
+	const tok = localStorage.getItem("token");
+	if (gameId && tok) {
+		await fetch(`/games/${gameId}`, {
+    		method: 'DELETE',
+    		headers: {
+       			'Authorization': `Bearer ${tok}`
+			},
+      		credentials: 'include'
+    	});
+		localStorage.removeItem("gameId");
+	} 
+}
+
+
 
 export function initRouter() {
   const render = async () => {
@@ -199,10 +215,14 @@ export function initRouter() {
       
       if (m) {
         console.log("Route matched! Calling handler with params:", { ...params, ...extractParams(m, r.pattern) });
+		if (r.pattern !== ROUTE_LOBBY)
+			await deletePastLobby();
         r.handler({ ...params, ...extractParams(m, r.pattern) });
         return;
       }
     }
+
+	await deletePastLobby();
     
     console.log("No route matched, calling default handler");
     routes.find(r => r.pattern === DEFAULT)!.handler({});
