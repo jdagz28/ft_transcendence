@@ -174,15 +174,15 @@ export async function renderGamePage(params: RouteParams) {
     controllers.push({
       playerId: human.player_id,
       side:     humanSide,
-      upKey:    "ArrowUp",
-      downKey:  "ArrowDown",
+      upKey:    "w",
+      downKey:  "s",
     });
 
     controllers.push({
       playerId: ai.player_id,
       side:     aiSide,
-      upKey:    "w",
-      downKey:  "s",
+      upKey:    "ArrowUp",
+      downKey:  "ArrowDown",
     });
   } else {
     const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
@@ -408,7 +408,7 @@ export async function renderGamePage(params: RouteParams) {
     else if (totalPlayers == 4)
       ctx.fillText('Left Paddle 1: W / L | Right Paddle: Arrow Up / Numpad 5', w / 2, h / 2 + 50); 
     else
-      ctx.fillText('Player 1: Arrow Up/Down keys', w / 2, h / 2 + 50); 
+      ctx.fillText('Player 1: Arrow W/S keys', w / 2, h / 2 + 50); 
   }
 
   function drawBall(ctx:CanvasRenderingContext2D, b:any) {
