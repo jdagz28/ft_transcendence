@@ -174,15 +174,15 @@ export async function renderGamePage(params: RouteParams) {
     controllers.push({
       playerId: human.player_id,
       side:     humanSide,
-      upKey:    "ArrowUp",
-      downKey:  "ArrowDown",
+      upKey:    "w",
+      downKey:  "s",
     });
 
     controllers.push({
       playerId: ai.player_id,
       side:     aiSide,
-      upKey:    "w",
-      downKey:  "s",
+      upKey:    "ArrowUp",
+      downKey:  "ArrowDown",
     });
   } else {
     const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
@@ -287,7 +287,7 @@ export async function renderGamePage(params: RouteParams) {
         stats: statsTracker.finishMatch()
       };
       console.log(`Sending status update for match ${currMatchId}:`, body); //!DELETE
-      sendStatus(gameId, body).catch(console.error);
+      sendStatus(gameId, body);
       if (state.totalScore[side] !== totalGames) 
         currMatchId++;
     }
@@ -302,6 +302,7 @@ export async function renderGamePage(params: RouteParams) {
         matchId: currMatchId,
         stats: statsTracker.finishSession()
       });
+      cleanup();
     }
     resetBall(state.ball, state);
   }
@@ -342,11 +343,6 @@ export async function renderGamePage(params: RouteParams) {
   document.addEventListener('keydown', e => { 
     const k = e.key;
     const c = e.code;
-    if (k === 'ArrowUp' || k === 'ArrowDown' || 
-        k === 'w' || k === 's' || k === 'l' || k === 'Enter' || k === 'Escape' ||
-        c === 'Numpad5') {
-      e.preventDefault();
-    }
     if (k in keyState) 
       keyState[k] = true;
     if (c in keyState) 
@@ -354,6 +350,17 @@ export async function renderGamePage(params: RouteParams) {
     if (e.key === 'Enter') 
       localGameState.gameStarted = true; 
   });
+  const handleKeyDown = (e: KeyboardEvent) => { 
+    const k = e.key;
+    const c = e.code;
+    if (k in keyState) 
+      keyState[k] = true;
+    if (c in keyState) 
+      keyState[c] = true; 
+    if (e.key === 'Enter') 
+      localGameState.gameStarted = true; 
+  };
+
  
   document.addEventListener('keyup', e => { 
     const k = e.key;
@@ -363,10 +370,16 @@ export async function renderGamePage(params: RouteParams) {
     if (c in keyState) 
       keyState[c] = false;
   });
-  canvas.onclick = () => localGameState.gameStarted = true;
+  const handleKeyUp = (e: KeyboardEvent) => { 
+    const k = e.key;
+    const c = e.code;
+    if (k in keyState) 
+      keyState[k] = false;
+    if (c in keyState) 
+      keyState[c] = false;
+  };
 
-  render(localGameState);
-  startGame();  
+  canvas.onclick = () => localGameState.gameStarted = true;
 
   function render(state:any) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
@@ -395,7 +408,7 @@ export async function renderGamePage(params: RouteParams) {
     else if (totalPlayers == 4)
       ctx.fillText('Left Paddle 1: W / L | Right Paddle: Arrow Up / Numpad 5', w / 2, h / 2 + 50); 
     else
-      ctx.fillText('Player 1: Arrow Up/Down keys', w / 2, h / 2 + 50); 
+      ctx.fillText('Player 1: Arrow W/S keys', w / 2, h / 2 + 50); 
   }
 
   function drawBall(ctx:CanvasRenderingContext2D, b:any) {
@@ -490,7 +503,7 @@ export async function renderGamePage(params: RouteParams) {
         status: 'paused',
         gameId: gameId,
         matchId: currMatchId,
-      }).catch(console.error);
+      });
     } else {
       statsTracker.shiftTimes(performance.now() - pauseAt);
       localGameState.isPaused = false;
@@ -499,15 +512,55 @@ export async function renderGamePage(params: RouteParams) {
         status: 'active',
         gameId: gameId,
         matchId: currMatchId,
-      }).catch(console.error);
+      });
     }
   }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') togglePause();
   });
+  const handleEscapeKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') togglePause();
+  };
+
   document.addEventListener('click', e => {
     if (!canvas.contains(e.target as Node)) togglePause();
   });
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (!canvas.contains(e.target as Node)) togglePause();
+  };
+
+  const handleBeforeUnload = () => {
+    if (!localGameState.gameOver) {
+      sendStatus(gameId, {
+        status: 'aborted',
+        gameId: gameId,
+        matchId: currMatchId,
+      });
+    }
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('keyup', handleKeyUp);
+  document.addEventListener('keydown', handleEscapeKey);
+  document.addEventListener('click', handleClickOutside);
+
+  const cleanup = () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
+    document.removeEventListener('keydown', handleEscapeKey);
+    document.removeEventListener('click', handleClickOutside);
+    
+    if (gameLoop) {
+      cancelAnimationFrame(gameLoop);
+    }
+  };
+  
+
+  render(localGameState);
+  startGame();  
 }
 
