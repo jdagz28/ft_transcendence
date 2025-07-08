@@ -89,37 +89,78 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async getUserProfile(userId, request) {
       try {
-        const query = fastify.db.prepare(`
-          SELECT users.id,
-            users.username,
-            users.nickname,
-            users.email,
-            users.created
-          FROM users
-          WHERE users.id = ?
-        `)
-
-        const row = query.get(userId)
-        if (!row) {
-          fastify.log.error('User not found')
+        const userQuery = fastify.db.prepare(
+          'SELECT * FROM users WHERE id = ?'
+        )
+        const user = userQuery.get(userId)
+        if (!user) {
           throw new Error('User not found')
         }
 
+        const gamesPlayedQuery = fastify.db.prepare(`
+          SELECT COUNT(DISTINCT games.id) AS totalGames
+          FROM games
+          JOIN game_players ON games.id = game_players.game_id
+          WHERE game_players.player_id = ? AND games.status = 'finished'
+        `)
+        const gamesPlayedResult = gamesPlayedQuery.get(userId)
+
+        const recordQuery = fastify.db.prepare(`
+          SELECT
+              SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) as wins,
+              SUM(CASE WHEN winner_id != ? AND winner_id IS NOT NULL THEN 1 ELSE 0 END) as losses
+          FROM games
+          WHERE id IN (SELECT game_id FROM game_players WHERE player_id = ?) AND status = 'finished'
+        `)
+        const record = recordQuery.get(userId, userId, userId)
+
+        const successRate = (record.wins / (gamesPlayedResult.totalGames || 1)) * 100
+
+        const gameDaysQuery = fastify.db.prepare(`
+          SELECT DISTINCT DATE(created) as game_day
+          FROM games
+          JOIN game_players ON games.id = game_players.game_id
+          WHERE game_players.player_id = ? AND games.status = 'finished'
+          ORDER BY game_day DESC
+        `)
+        const gameDays = gameDaysQuery.all(userId).map(d => d.game_day)
+
+        let streak = 0
+        if (gameDays.length > 0) {
+          streak = 1
+          let today = new Date(gameDays[0])
+          for (let i = 1; i < gameDays.length; i++) {
+            const previousDay = new Date(gameDays[i])
+            const diffTime = today - previousDay
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+            if (diffDays === 1) {
+                streak++
+                today = previousDay
+            } else if (diffDays > 1) {
+                break
+            }
+          }
+        }        
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
-        const avatarUrl = baseURL + `/users/${row.id}/avatar` 
 
         return {
-          id: row.id,
-          username: row.username,
-          email: row.email,
-          created: row.created,
-          avatar: {
-            url: avatarUrl
-          }
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          email: user.email,
+          created:user.created,
+          avatar: `${baseURL}/users/${user.id}/avatar`,
+          daysStreak: streak,
+          gamesPlayed: gamesPlayedResult.totalGames || 0,
+          record: {
+            wins: record.wins || 0,
+            losses: record.losses || 0
+          },
+          successRate: parseFloat(successRate.toFixed(2))
         }
       } catch (err) {
-        fastify.log.error(`getUserProfile error: ${err.message}`)
-        throw new Error('User profile retrieval failed')
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve user profile')
       }
     },
 
