@@ -418,6 +418,20 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/:userId/matches', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getMatchHistoryHandler(request, reply) {
+        const { userId } = request.params
+        try {
+          const matches = await fastify.dbUsers.getMatchHistory(userId)
+          return reply.send(matches)
+        } catch (err) {
+          fastify.log.error(`Error retrieving match history: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve match history' })
+        }
+      }
+    }
+  )
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']

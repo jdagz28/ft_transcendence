@@ -538,7 +538,110 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`getMfaDetails error: ${err.message}`)
         throw new Error('Get MFA details failed')
       }
+    },
+
+    async getMatchHistory(userId) {
+      try {
+        const check = fastify.db.prepare('SELECT id FROM users WHERE id = ?')
+        const user = check.get(userId)
+        if (!user) {
+          throw new Error('User not found')
+        }
+        
+        const historyQuery = fastify.db.prepare(`
+          SELECT
+            games.id as gameId,
+            games.created,
+            games.ended,
+            game_players.paddle_loc as userPaddleLoc,
+            game_settings.num_games || '-' || game_settings.num_matches as gameOptions,
+            CASE WHEN games.winner_id = ? THEN 'W' ELSE 'L' END as result
+          FROM games
+          JOIN game_players ON games.id = game_players.game_id
+          JOIN game_settings ON games.id = game_settings.game_id
+          WHERE game_players.player_id = ? AND games.status = 'finished'
+          ORDER BY games.created DESC
+        `)
+        
+        const opponentQuery = fastify.db.prepare(`
+          SELECT users.username 
+          FROM users
+          JOIN game_players ON users.id = game_players.player_id
+          WHERE game_players.game_id = ? AND game_players.paddle_loc != ?
+        `)
+        
+        const matchScoresQuery = fastify.db.prepare(`
+          SELECT 
+            game_matches.game_id,
+            game_matches.id,
+            match_scores.player_id,
+            match_scores.score,
+            game_players.paddle_loc
+          FROM game_matches
+          JOIN match_scores ON game_matches.id = match_scores.match_id
+          JOIN game_players ON match_scores.player_id = game_players.player_id AND game_matches.game_id = game_players.game_id
+          WHERE game_matches.game_id = ?
+          ORDER BY game_matches.id
+        `)
+        
+        const games = historyQuery.all(user.id, user.id)
+        
+        return games.map(game => {
+          const opponent = opponentQuery.get(game.gameId, game.userPaddleLoc)?.username 
+          
+          const matchScores = matchScoresQuery.all(game.gameId)
+          
+          const matchScoresByMatch = {}
+          matchScores.forEach(score => {
+            const matchNumber = score.id
+            if (!matchScoresByMatch[matchNumber]) {
+              matchScoresByMatch[matchNumber] = {
+                matchId: matchNumber
+              }
+            }
+            matchScoresByMatch[matchNumber][score.paddle_loc] = score.score
+          })
+          
+          const matchScoresArray = []
+          let userWins = 0
+          let opponentWins = 0
+          
+          Object.values(matchScoresByMatch).forEach(match => {
+            const userScore = match[game.userPaddleLoc] || 0
+            const opponentScore = Object.values(match).find(score => score !== userScore) || 0
+            
+            matchScoresArray.push({
+              matchId: match.matchId,
+              userScore,
+              opponentScore,
+              scoreString: `${userScore}-${opponentScore}`
+            })
+            
+            if (userScore > opponentScore) userWins++
+            else if (opponentScore > userScore) opponentWins++
+          })
+          
+          return {
+            gameId: game.gameId,
+            created: game.created,
+            ended: game.ended,
+            result: game.result,
+            finalScore: `${userWins} - ${opponentWins}`,
+            opponent: opponent,
+            matchScores: matchScoresArray,
+            gameOptions: game.gameOptions,
+            duration: game.ended && game.created ? Math.round((new Date(game.ended) - new Date(game.created)) / 1000) + 's' : 'N/A'
+          }
+        })
+      } catch(err) {
+        fastify.log.error(err)
+        throw new Error('Failed to get match history')
+      }
     }
+
+
+
+
   })
 }, {
   name: 'userAutoHooks',

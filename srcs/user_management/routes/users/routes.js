@@ -282,6 +282,39 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/me/matchHistory', {
+      onRequest: [fastify.authenticate],
+      handler: async function getMatchHistoryHandler (request, reply) {
+        const userId = request.user.id
+        try {
+          const matches = await fastify.usersDataSource.getMatchHistory(request, userId)
+          return reply.send(matches)
+        } catch (err) {
+          fastify.log.error(err)
+          throw new Error('Failed to get match history')
+        }
+      }
+    })
+    
+    fastify.get('/users/:username/matchHistory', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getMatchHistoryByUsernameHandler (request, reply) {
+        const userId = request.user.id
+        try {
+          const matches = await fastify.usersDataSource.getMatchHistory(request, userId)
+          return reply.send(matches)
+        } catch (err) {
+          fastify.log.error(err)
+          throw new Error('Failed to get match history')
+        }
+      }
+
+
+    })
+
   }, {
     name: 'userRoutes',
     dependencies: [ 'userAutoHooks']
