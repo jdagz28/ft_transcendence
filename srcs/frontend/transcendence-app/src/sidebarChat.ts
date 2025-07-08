@@ -62,7 +62,16 @@ export async function openSidebarChat(groupId: number, groupName: string) {
     ">
       <div class="px-4 py-2 border-b border-gray-700 flex justify-between items-center rounded-t-xl">
         <span class="text-lg font-bold text-white truncate">Chat: ${groupName}</span>
-        <button id="closeSidebarChat" class="text-white text-xl hover:text-red-400">✖</button>
+        <div class="flex items-center gap-2">
+          <button id="chatMenuBtn" class="text-white text-xl hover:text-gray-400 px-2" title="Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="5" cy="12" r="2" fill="currentColor"/>
+              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+              <circle cx="19" cy="12" r="2" fill="currentColor"/>
+            </svg>
+          </button>
+          <button id="closeSidebarChat" class="text-white text-xl hover:text-red-400">✖</button>
+        </div>
       </div>
       <div id="sidebar-chat-messages" class="flex-1 overflow-y-auto px-4 py-2"></div>
       <form id="sidebar-chat-form" class="px-4 py-2 flex gap-2 border-t border-gray-700">
@@ -109,6 +118,42 @@ export async function openSidebarChat(groupId: number, groupName: string) {
   };
 
   currentWs.onclose = () => {};
+
+  const chatMenuBtn = document.getElementById('chatMenuBtn');
+  if (chatMenuBtn) {
+    chatMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let dropdownDiv = document.getElementById('chatMenuDropdown');
+      if (!dropdownDiv) {
+        dropdownDiv = document.createElement('div');
+        dropdownDiv.id = 'chatMenuDropdown';
+        dropdownDiv.className = 'absolute right-10 top-12 bg-white dark:bg-gray-800 rounded shadow-lg z-50 min-w-[140px]';
+        dropdownDiv.innerHTML = `
+          <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+            <li><button class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Option 1</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Option 2</button></li>
+          </ul>
+        `;
+        const header = (e.currentTarget as HTMLElement).parentElement;
+        if (header) {
+          header.appendChild(dropdownDiv);
+        }
+      } else {
+        if (dropdownDiv.style.display === 'none' || dropdownDiv.style.display === '') {
+          dropdownDiv.style.display = 'block';
+        } else {
+          dropdownDiv.style.display = 'none';
+        }
+      }
+
+      document.addEventListener('click', function closeMenu(ev) {
+        if (dropdownDiv && !dropdownDiv.contains(ev.target as Node)) {
+          dropdownDiv.remove();
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    });
+  }
 
   document.getElementById('closeSidebarChat')?.addEventListener('click', () => {
     if (currentWs) {

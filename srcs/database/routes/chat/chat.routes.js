@@ -138,10 +138,22 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
 
   fastify.get('/chat/group/:groupId/history/:userId', async (request, reply) => {
     const groupId = Number(request.params.groupId)
-    const userId = Number(request.params.groupId)
+    const userId = Number(request.params.userId)
 
     try {
       const response = await fastify.dbChat.getGroupHistory(groupId, userId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.put('/chat/block-user', async (request, reply) => {
+    const { userId, blockedUserId } = request.body;
+
+    console.log(`blocker user ${typeof userId} blocked user ${typeof blockedUserId}`)
+    try {
+      const response = await fastify.dbChat.blockUser(userId, blockedUserId)
       return reply.send(response)
     } catch (err) {
       return reply.status(500).send({error: `${err.message}`})
