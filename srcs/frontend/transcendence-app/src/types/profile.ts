@@ -18,9 +18,16 @@ export interface Match {
 }
 
 export interface UserProfile {
+    id: number;
     avatar: string;
     username: string;
     nickname: string | null;
     email: string;
     created: string;
+    gamesPlayed: number;
+    record: {
+        wins: number;
+        losses: number;
+    };
+    successRate: number;
 }
