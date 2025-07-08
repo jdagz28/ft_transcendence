@@ -310,18 +310,14 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 
     optionsBtn.addEventListener('click', () => {
       optionsModal.classList.remove('hidden');
-    optionsModal.classList.add('flex');
+      optionsModal.classList.add('flex');
     });
 
     closeOptions.addEventListener('click', async () => {
       optionsModal.classList.add('hidden');
       optionsModal.classList.remove('flex');
 
-      const response = await updateGameOptions(Number(game), Number(boG.value), Number(scTW.value));
-      if (!response.ok) {
-        throw new Error('Failed to update game options');
-      }
-      
+      await updateGameOptions(Number(game), Number(boG.value), Number(scTW.value));
       /*
       if (numPlay.value !== playerCount) {
         playerCount = numPlay.value;
@@ -348,11 +344,12 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       */
     });
 
-    optionsModal.addEventListener('click', (e) => {
+    optionsModal.addEventListener('click', async (e) => {
       if (e.target === optionsModal) {
           optionsModal.classList.add('hidden');
           optionsModal.classList.remove('flex');
 
+          await updateGameOptions(Number(game), Number(boG.value), Number(scTW.value));
           /*
           if (numPlay.value !== playerCount) {
             playerCount = numPlay.value;

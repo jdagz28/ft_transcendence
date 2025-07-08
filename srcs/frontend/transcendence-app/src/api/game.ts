@@ -130,4 +130,5 @@ export async function updateGameOptions(gameId: number, num_games: number, num_m
   if (!response.ok) {
     throw new Error(`Failed to update options for game ${gameId}`);
   }
+  return response.json();
 }

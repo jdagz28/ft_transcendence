@@ -287,7 +287,7 @@ export async function renderGamePage(params: RouteParams) {
         stats: statsTracker.finishMatch()
       };
       console.log(`Sending status update for match ${currMatchId}:`, body); //!DELETE
-      sendStatus(gameId, body).catch(console.error);
+      sendStatus(gameId, body);
       if (state.totalScore[side] !== totalGames) 
         currMatchId++;
     }
@@ -302,6 +302,7 @@ export async function renderGamePage(params: RouteParams) {
         matchId: currMatchId,
         stats: statsTracker.finishSession()
       });
+      cleanup();
     }
     resetBall(state.ball, state);
   }
@@ -349,6 +350,17 @@ export async function renderGamePage(params: RouteParams) {
     if (e.key === 'Enter') 
       localGameState.gameStarted = true; 
   });
+  const handleKeyDown = (e: KeyboardEvent) => { 
+    const k = e.key;
+    const c = e.code;
+    if (k in keyState) 
+      keyState[k] = true;
+    if (c in keyState) 
+      keyState[c] = true; 
+    if (e.key === 'Enter') 
+      localGameState.gameStarted = true; 
+  };
+
  
   document.addEventListener('keyup', e => { 
     const k = e.key;
@@ -358,10 +370,16 @@ export async function renderGamePage(params: RouteParams) {
     if (c in keyState) 
       keyState[c] = false;
   });
-  canvas.onclick = () => localGameState.gameStarted = true;
+  const handleKeyUp = (e: KeyboardEvent) => { 
+    const k = e.key;
+    const c = e.code;
+    if (k in keyState) 
+      keyState[k] = false;
+    if (c in keyState) 
+      keyState[c] = false;
+  };
 
-  render(localGameState);
-  startGame();  
+  canvas.onclick = () => localGameState.gameStarted = true;
 
   function render(state:any) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
@@ -485,7 +503,7 @@ export async function renderGamePage(params: RouteParams) {
         status: 'paused',
         gameId: gameId,
         matchId: currMatchId,
-      }).catch(console.error);
+      });
     } else {
       statsTracker.shiftTimes(performance.now() - pauseAt);
       localGameState.isPaused = false;
@@ -494,15 +512,55 @@ export async function renderGamePage(params: RouteParams) {
         status: 'active',
         gameId: gameId,
         matchId: currMatchId,
-      }).catch(console.error);
+      });
     }
   }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') togglePause();
   });
+  const handleEscapeKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') togglePause();
+  };
+
   document.addEventListener('click', e => {
     if (!canvas.contains(e.target as Node)) togglePause();
   });
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (!canvas.contains(e.target as Node)) togglePause();
+  };
+
+  const handleBeforeUnload = () => {
+    if (!localGameState.gameOver) {
+      sendStatus(gameId, {
+        status: 'aborted',
+        gameId: gameId,
+        matchId: currMatchId,
+      });
+    }
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('keyup', handleKeyUp);
+  document.addEventListener('keydown', handleEscapeKey);
+  document.addEventListener('click', handleClickOutside);
+
+  const cleanup = () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
+    document.removeEventListener('keydown', handleEscapeKey);
+    document.removeEventListener('click', handleClickOutside);
+    
+    if (gameLoop) {
+      cancelAnimationFrame(gameLoop);
+    }
+  };
+  
+
+  render(localGameState);
+  startGame();  
 }
 
