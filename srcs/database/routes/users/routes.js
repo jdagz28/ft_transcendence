@@ -416,20 +416,38 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/users/:userId/matches', {
+    // fastify.get('/users/:userId/matches', {
+    //   onRequest: [fastify.authenticate, fastify.checkInternalKey],
+    //   handler: async function getMatchHistoryHandler(request, reply) {
+    //     const { userId } = request.params
+    //     try {
+    //       const matches = await fastify.dbUsers.getMatchHistory(userId)
+    //       return reply.send(matches)
+    //     } catch (err) {
+    //       fastify.log.error(`Error retrieving match history: ${err.message}`)
+    //       reply.code(500).send({ error: 'Failed to retrieve match history' })
+    //     }
+    //   }
+    // })
+
+    fastify.get('/users/:username/matches', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
       onRequest: [fastify.authenticate, fastify.checkInternalKey],
-      handler: async function getMatchHistoryHandler(request, reply) {
-        const { userId } = request.params
+      handler: async function getMatchHistoryByUsernameHandler (request, reply) {
+        const username = request.params.username
+        const userId = await fastify.getUserId(username)
         try {
           const matches = await fastify.dbUsers.getMatchHistory(userId)
           return reply.send(matches)
         } catch (err) {
-          fastify.log.error(`Error retrieving match history: ${err.message}`)
+          fastify.log.error(`Error retrieving match history for user ${username}: ${err.message}`)
           reply.code(500).send({ error: 'Failed to retrieve match history' })
         }
       }
-    }
-  )
+    })
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']

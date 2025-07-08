@@ -606,8 +606,11 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           let opponentWins = 0
           
           Object.values(matchScoresByMatch).forEach(match => {
+            const opponentPaddleLoc = Object.keys(match).find(key => 
+              key !== 'matchId' && key !== game.userPaddleLoc
+            )
             const userScore = match[game.userPaddleLoc] || 0
-            const opponentScore = Object.values(match).find(score => score !== userScore) || 0
+            const opponentScore = match[opponentPaddleLoc] || 0
             
             matchScoresArray.push({
               matchId: match.matchId,
@@ -637,8 +640,6 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         throw new Error('Failed to get match history')
       }
     }
-
-
 
 
   })

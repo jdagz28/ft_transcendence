@@ -116,8 +116,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       return data
     },
 
-    async getMatchHistory(request, userId) {
-      const { data } = await dbApi.get(`/users/${encodeURIComponent(userId)}/matches`,
+    // async getMatchHistory(request, userId) {
+    //   const { data } = await dbApi.get(`/users/${encodeURIComponent(userId)}/matches`,
+    //     { headers: internalHeaders(request) },
+    //   )
+    //   console.log('Match history retrieved successfully:', data) //! DELETE
+    //   return data
+    // },
+
+    async getMatchHistory(request, username) {
+      const { data } = await dbApi.get(`/users/${encodeURIComponent(username)}/matches`,
         { headers: internalHeaders(request) },
       )
       console.log('Match history retrieved successfully:', data) //! DELETE

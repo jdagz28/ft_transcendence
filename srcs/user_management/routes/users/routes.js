@@ -283,12 +283,12 @@ module.exports = fp(
       }
     })
 
-    fastify.get('/users/me/matchHistory', {
+    fastify.get('/users/me/matches', {
       onRequest: [fastify.authenticate],
       handler: async function getMatchHistoryHandler (request, reply) {
-        const userId = request.user.id
+        const username = request.user.username
         try {
-          const matches = await fastify.usersDataSource.getMatchHistory(request, userId)
+          const matches = await fastify.usersDataSource.getMatchHistory(request, username)
           return reply.send(matches)
         } catch (err) {
           fastify.log.error(err)
@@ -297,15 +297,15 @@ module.exports = fp(
       }
     })
     
-    fastify.get('/users/:username/matchHistory', {
+    fastify.get('/users/:username/matches', {
       schema: {
         params: fastify.getSchema('schema:users:getUserByUsername')
       },
       onRequest: [fastify.authenticate],
       handler: async function getMatchHistoryByUsernameHandler (request, reply) {
-        const userId = request.user.id
+        const username = request.params.username
         try {
-          const matches = await fastify.usersDataSource.getMatchHistory(request, userId)
+          const matches = await fastify.usersDataSource.getMatchHistory(request, username)
           return reply.send(matches)
         } catch (err) {
           fastify.log.error(err)
