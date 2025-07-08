@@ -86,8 +86,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-
-    async getUserProfile(userId, request) {
+    async getUserProfile(userId) {
       try {
         const userQuery = fastify.db.prepare(
           'SELECT * FROM users WHERE id = ?'

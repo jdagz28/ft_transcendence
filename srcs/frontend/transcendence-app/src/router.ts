@@ -16,6 +16,7 @@ import { renderCreateGameLobby } from "./pages/createGame";
 import { renderChat } from "./chat";
 import { whoAmI } from "./setUpLayout";
 import { renderAccountSettingsPage } from "./pages/accountSettings";
+import { renderProfilePage } from "./pages/profile";
 import { renderError403 } from "./pages/403";
 
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
@@ -37,6 +38,7 @@ export const ROUTE_CREATE_GAME            = "/games/create";
 export const ROUTE_LOBBY                  = "/games/:gameId/lobby";
 export const ROUTE_GAME_PLAY              = "/games/:gameId/play";
 export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
+export const ROUTE_PROFILE                = "/users/:username";
 export const ERROR_403                    = "/403";
 
 
@@ -123,6 +125,10 @@ const routes: RouteEntry[] = [
     handler: ({ gameId }) => renderGamePage({ gameId }) },
 
   { pattern: ROUTE_CHAT, regex: tokenToRegex(ROUTE_CHAT), handler: () => renderChat() },
+
+  { pattern: ROUTE_PROFILE,
+    regex: tokenToRegex(ROUTE_PROFILE),
+    handler: ({ username }) => renderProfilePage(String(username)) },
 
   // fallback
   { pattern: DEFAULT, regex: tokenToRegex(DEFAULT), handler: () => renderDefault() }

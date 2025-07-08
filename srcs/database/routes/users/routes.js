@@ -112,9 +112,6 @@ module.exports = fp(
       }
     })
 
-
-
-
     fastify.get('/users/me', {
       schema: { 
         querystring: fastify.getSchema('schema:users:getProfile')
@@ -125,7 +122,7 @@ module.exports = fp(
       handler: async function getUserProfile(request, reply) {
         try {
           const userId = request.query.id
-          const userProfile = await fastify.dbUsers.getUserProfile(userId, request)
+          const userProfile = await fastify.dbUsers.getUserProfile(userId)
           if (!userProfile) {
             reply.code(404).send({ error: 'User profile not found' })
           } else {
@@ -235,7 +232,8 @@ module.exports = fp(
         try {
           const { username } = request.params
           console.log('Looking for:', username) //! DELETE
-          const user = await fastify.dbUsers.getUserByUsername(username)
+          const userId = await fastify.getUserId(username)
+          const user = await fastify.dbUsers.getUserProfile(userId)
           if (!user) {
             fastify.log.error('User not found')
             reply.code(404);

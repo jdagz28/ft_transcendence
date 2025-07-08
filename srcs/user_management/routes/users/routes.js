@@ -177,7 +177,8 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function userProfileHandler (request, reply) {
-        const user = await fastify.usersDataSource.getUserByUsername(request, request.params.username)
+        const username = request.params.username
+        const user = await fastify.usersDataSource.getUserByUsername(request, username)
         if (!user) {
           return reply.code(404).send({ error: 'User not found' })
         }
