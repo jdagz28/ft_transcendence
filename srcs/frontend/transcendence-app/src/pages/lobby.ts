@@ -1,4 +1,4 @@
-import { type RouteParams, DEFAULT } from "../router";
+import { type RouteParams, DEFAULT, ROUTE_MAIN } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 
@@ -34,6 +34,16 @@ type user = {
 //     </p>
 //   `;
 // }
+
+function clearGameLocalStorage() {
+  const userKeys = ["user", "username", "id", "pfp"];
+  for (let i = 1; i <= 4; i++) {
+    userKeys.forEach(key => {
+      localStorage.removeItem(`${key}${i}`);
+    });
+  }
+  localStorage.removeItem("gamemode");
+}
 
 function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string) {
   let playersHTML: string;
@@ -168,6 +178,12 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
         class="bg-white hover:bg-gray-100 text-gray-800 font-semibold text-lg text-[40px] px-12 py-1 rounded-lg shadow transition duration-200"
       >
         Options
+      </button>
+      <button
+        id="cancelBtn"
+        class="bg-red-500 hover:bg-red-600 text-white font-semibold text-lg text-[40px] px-12 py-1 rounded-lg shadow transition duration-200"
+      >
+        CANCEL
       </button>
     </div>
 
@@ -621,6 +637,17 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
         return;
       }
 
+      const user = await whoAmI();
+      if (!user.success) {
+        window.location.hash = "#/";
+        return;
+      }
+      const currUsername = user.data.username;
+      if (currUsername === username) {
+        alert("User already logged in and part of the game!");
+        return;
+      }
+
       try {
         const response = await fetch('/auth/authenticate', {
           method: 'POST',
@@ -729,30 +756,85 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 
   startBtn.addEventListener('click', async () => {
     //start game <--------------------------- IMPLEMENT!
+    let body;
 		if (playerCount === "1") {
-      const body = { options: [
+      body = { options: [
         {
           "userId": user1.userID,
           "paddle_loc": "left",
         }
       ]}
-
-			const response = await fetch(`/games/${game}/start`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${user1.token}`
-				},
-				credentials: 'include',
-				body: JSON.stringify(body)
-			});
-			if (!response.ok) {
-				throw new Error('Error starting game');
-			}
-		}
-		window.location.hash = `#/games/${game}/play`;
-
+		} else if (playerCount === "2") {
+      body = { options: [
+        {
+          "userId": user1.userID,
+          "paddle_loc": "left",
+        },
+        {
+          "userId": user2.userID,
+          "paddle_loc": "right",
+        }
+      ]}
+    } else if (playerCount === "4") {
+        body = { options: [
+          {
+            "userId": user1.userID,
+            "paddle_loc": "left",
+            "paddle_side": "top"
+          },
+          {
+            "userId": user2.userID,
+            "paddle_loc": "right",
+            "paddle_side": "bottom"
+          },
+          {
+            "userId": user3.userID,
+            "paddle_loc": "left",
+            "paddle_side": "top"
+          },
+          {
+            "userId": user4.userID,
+            "paddle_loc": "right",
+            "paddle_side": "bottom"
+          }
+        ]
+      }
+    }
+    const response = await fetch(`/games/${game}/start`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user1.token}`
+      },
+      credentials: 'include',
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      throw new Error('Error starting game');
+    }
+    clearGameLocalStorage();
+    window.location.hash = `#/games/${game}/play`;
   });
+
+  const cancelBtn = document.getElementById('cancelBtn') as HTMLButtonElement;
+  cancelBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to cancel this game?')) {
+      return; 
+    }
+    const response = await fetch(`/games/${game}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${user1.token}`
+      },
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      throw new Error('Error cancelling game');
+    }
+    clearGameLocalStorage();
+    window.location.hash = ROUTE_MAIN;
+  });
+  
 }
 
 export async function renderLobbyPage(params: RouteParams): Promise<void> {

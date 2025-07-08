@@ -342,11 +342,6 @@ export async function renderGamePage(params: RouteParams) {
   document.addEventListener('keydown', e => { 
     const k = e.key;
     const c = e.code;
-    if (k === 'ArrowUp' || k === 'ArrowDown' || 
-        k === 'w' || k === 's' || k === 'l' || k === 'Enter' || k === 'Escape' ||
-        c === 'Numpad5') {
-      e.preventDefault();
-    }
     if (k in keyState) 
       keyState[k] = true;
     if (c in keyState) 
