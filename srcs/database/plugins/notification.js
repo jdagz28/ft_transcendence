@@ -61,6 +61,16 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
         gameId,
         message: `You have been invited to join a game by user ${senderId}`
       });
+    },
+
+    async tournamentInvite(senderId, recipientId, tournamentId) {
+      console.log(`Notifying recipient ${recipientId} of tournament invite from ${senderId} for tournament ${tournamentId}`);
+      await fastify.notifications.notifyUser(recipientId, {
+        type: 'tournament.invite',
+        senderId,
+        tournamentId,
+        message: `You have been invited to join a tournament by user ${senderId}`
+      });
     }
 
   });

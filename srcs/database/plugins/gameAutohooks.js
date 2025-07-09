@@ -128,8 +128,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const checkSettings = checksettings.get(gameId)
         if (!checkSettings) {
-          throw new Error('Game settings not found')
+          return { error: 'Game settings not found' }
         }
+        const isInvited = fastify.db.prepare(
+          'SELECT * FROM game_invites WHERE game_id = ? AND user_id = ? AND status = ?'
+        ).get(gameId, userId, 'accepted')
+
+        if (checkSettings.mode === 'private' && !isInvited) {
+          return { error: 'User is not invited to the game' }
+        }
+
         const totalPlayers = fastify.db.prepare(
           'SELECT COUNT (*) FROM game_players WHERE game_id = ?'
         )
@@ -805,10 +813,91 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to get leaderboard stats')
       }
-    }
+    },
 
+    async inviteToGame(gameId, userId, inviter) {
+      try {
+        const query = fastify.db.prepare(`
+          INSERT INTO game_invites (game_id, user_id, inviter_id)
+          VALUES (?, ?, ?)
+        `)
+        const result = query.run(gameId, userId, inviter)
+        if (result.changes === 0) {
+          throw new Error('Failed to invite user to game')
+        }
+        
+        await fastify.notifications.gameInvite(inviter, userId, gameId)
+
+        return { message: `Game invite sent successfully to ${userId}` }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to invite user to game')
+      }
+    },
+
+    async respondToInvite(gameId, userId, response) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT * FROM game_invites
+          WHERE game_id = ? AND user_id = ? AND status = 'pending'
+        `)
+        const invite = query.get(gameId, userId)
+
+        if (!invite) {
+          throw new Error('Invite not found or already responded')
+        }
+
+        const gameStatus = fastify.db.prepare(`
+          SELECT status FROM games WHERE id = ?
+        `).get(gameId)
+        
+        if (gameStatus.status !== 'pending') {
+          throw new Error('Game is not joinable')
+        }
+
+        const updateQuery = fastify.db.prepare(`
+          UPDATE game_invites SET status = ? WHERE id = ?
+        `)
+        const newStatus = response === 'accept' ? 'accepted' : 'rejected'
+        const result = updateQuery.run(newStatus, invite.id)
+        if (result.changes === 0) {
+          throw new Error('Failed to update invite status')
+        }
+        
+        if (response === 'accept') {
+          await fastify.dbGames.joinGame(gameId, userId)
+        }
+
+        return { message: `Invite ${newStatus} successfully` }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to respond to invite')
+      }
+    },
+
+    async getGameInvites(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT game_invites.id, game_invites.game_id, game_invites.inviter_id, games.status, games.created
+          FROM game_invites
+          JOIN games ON games.id = game_invites.game_id
+          WHERE game_invites.user_id = ? AND game_invites.status = 'pending'
+        `)
+        const invites = query.all(userId)
+        if (!invites) {
+          return []
+        }
+        return invites.map(invite => ({
+          ...invite,
+          created: new Date(invite.created).toISOString()
+        }))
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve game invites')
+      }
+    }
   })
 }, {
   name: 'gameAutoHooks',
-  dependencies: ['tournamentAutoHooks']
+  dependencies: ['tournamentAutoHooks', 'notificationPlugin']
 })

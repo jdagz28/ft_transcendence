@@ -91,11 +91,15 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTourSettings = checkSettings.get(tournamentId)
         if (!checkTourSettings) {
-          throw new Error('Tournament settings not found')
+          return { error: 'Tournament settings not found' }
         }
 
-        if (checkTourSettings.game_mode === 'private' && checkTournament.created_by !== userId) {
-          return { error: 'Tournament is private'}
+        const hasAccepted = fastify.db.prepare(
+          'SELECT * FROM tournament_invites WHERE tournament_id = ? AND user_id = ? AND status = ?'
+        ).get(tournamentId, userId, 'accepted')
+
+        if (checkTourSettings.game_mode === 'private' && !hasAccepted) {
+          return { error: 'Tournament is private' }
         }
 
         const totalPlayers = fastify.db.prepare(
@@ -179,6 +183,13 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         `).get(tournamentId, userId);
         if (row) throw new Error('User already in tournament');
 
+        const tournamentStatus = fastify.db.prepare(`
+          SELECT status FROM tournaments WHERE id = ?
+        `).get(tournamentId);
+        if (tournamentStatus.status !== 'pending') {
+          throw new Error('Tournament is not joinable')
+        }
+
         const result = fastify.db.prepare(`
           INSERT INTO tournament_invites
                 (tournament_id, user_id, slot_index, status)
@@ -191,6 +202,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to invite user to tournament')
         }
+
+        await fastify.notifications.tournamentInvite(checkTournament.created_by, userId, tournamentId)
 
         return { message: 'User invited to tournament successfully' }
       } catch (err) {
@@ -1071,7 +1084,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve tournament chat')
-      }s
+      }
     },
 
     async createTournamentAI(tournamentId, userId, slotIndex) {

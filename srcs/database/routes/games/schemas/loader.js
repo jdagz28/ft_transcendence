@@ -8,4 +8,6 @@ module.exports = fp( async function schemaLoaderPlugin (fastify, opts) {
   fastify.addSchema(require('./gameID.json'))
   fastify.addSchema(require('./gameDetails.json'))
   fastify.addSchema(require('./updateGameStatus.json'))
+  fastify.addSchema(require('./inviteUser.json'))
+  fastify.addSchema(require('./respondToInvite.json'))
 })

@@ -297,16 +297,17 @@ async function databaseConnector(fastify) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS game_invites (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        games_id  INTEGER NOT NULL,
+        game_id        INTEGER NOT NULL,
         user_id        INTEGER NOT NULL,
+        inviter_id     INTEGER NOT NULL,
         status         TEXT    NOT NULL
                         CHECK(status IN ('pending','accepted','rejected'))
                         DEFAULT 'pending',
         created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(games_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE,
         FOREIGN KEY(user_id)       REFERENCES users(id)       ON DELETE CASCADE,
-        UNIQUE (games_id, user_id)
+        UNIQUE (game_id, user_id)
       );
     `);
   }
@@ -470,6 +471,7 @@ async function databaseConnector(fastify) {
       FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `);
+  }
 }
 
   fastify.decorate('db', db);

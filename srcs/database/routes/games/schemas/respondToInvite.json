@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "$id": "schema:games:respondToInvite",
+  "required": [
+    "gameId",
+    "response"
+  ],
+  "properties": {
+    "gameId": { "type": "number" },
+    "response": {
+      "type": "string",
+      "enum": [
+        "accept",
+        "decline"
+      ] 
+    }
+  }
+}

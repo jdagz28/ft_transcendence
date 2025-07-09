@@ -338,6 +338,77 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/games/:gameId/invite', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:inviteUser')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function inviteToGameHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const { username } = request.body
+          const inviter = request.user.id
+          const userId = await fastify.getUserId(username)
+          if (!userId) {
+            reply.status(404).send({ error: 'User not found' })
+            return
+          }
+          const result = await fastify.dbGames.inviteToGame(gameId, userId, inviter)
+          if (!result) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.patch('/games/invites/respond', {
+      schema: {
+        body: fastify.getSchema('schema:games:respondToInvite')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function respondToInviteHandler(request, reply) {
+        try {
+          const { gameId, response } = request.body
+          const userId = request.user.id
+          console.log('Responding to invite for gameId:', gameId, 'by userId:', userId, 'with response:', response) //! DELETE
+          const result = await fastify.dbGames.respondToInvite(gameId, userId, response)
+          if (!result) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.get('/games/invites', {
+      onRequest: fastify.authenticate,
+      handler: async function getGameInvitesHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Fetching invites for userId:', userId) //! DELETE
+          const invites = await fastify.dbGames.getGameInvites(userId)
+          if (!invites) {
+            reply.status(404).send({ error: 'No invites found' })
+            return
+          }
+          reply.status(200).send(invites)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',
