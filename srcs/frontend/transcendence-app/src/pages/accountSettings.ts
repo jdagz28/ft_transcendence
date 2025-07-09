@@ -25,7 +25,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   userInfoSection.className = "flex flex-col items-center space-y-4";
 
   const avatarImg = document.createElement("img");
-  avatarImg.src = avatar.url;
+  avatarImg.src = avatar;
   avatarImg.alt = "User Avatar";
   avatarImg.className = "w-52 h-52 rounded-full border-4 border-gray-700 shadow";
   userInfoSection.appendChild(avatarImg);
@@ -335,7 +335,7 @@ async function refreshUserInfo() {
   if (!res.success) return;
   const { data } = res;
   (document.querySelector("img[alt='User Avatar']") as HTMLImageElement)
-    .src = data.avatar.url;
+    .src = data.avatar;
   const details = document.getElementById("user-details")!;
   details.innerHTML = `
     <div><strong>Username:</strong> ${data.username}</div>
