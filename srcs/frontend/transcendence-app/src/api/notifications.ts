@@ -1,7 +1,16 @@
+import { whoAmI } from "../setUpLayout";
+
 
 let notificationWS: WebSocket | null = null;
 
-export function connectNotifications(): WebSocket | null {
+export async function connectNotifications(): Promise<WebSocket | null> {
+  const user = await whoAmI();
+  if (!user.success) {
+    console.warn('User is not authenticated, cannot connect to notifications WebSocket');
+    return null;
+  }
+  const userId = user.data.id;
+  
   if (notificationWS && notificationWS.readyState === WebSocket.OPEN) {
     return notificationWS;
   }
@@ -13,7 +22,7 @@ export function connectNotifications(): WebSocket | null {
 
   try {
     notificationWS = new WebSocket(
-      `wss://${location.host}/notifications/ws`
+      `wss://${location.host}/notifications/ws?userId=${userId}`
     );
 
     notificationWS.onopen = () => {

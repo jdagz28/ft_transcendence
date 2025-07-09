@@ -51,6 +51,7 @@ async function databaseConnector(fastify) {
       createConvoMembersTable();
       createMessagesTable();
       createGroupInvitationsTable();
+      createNotificationsTable();
       db.exec('COMMIT');
       fastify.log.info("Created tables successfully.");
 
@@ -472,7 +473,23 @@ async function databaseConnector(fastify) {
     );
   `);
   }
-}
+
+  function createNotificationsTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        type_id INTEGER,
+        content TEXT NOT NULL,
+        is_read BOOLEAN NOT NULL DEFAULT 0,
+        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
 
   fastify.decorate('db', db);
   fastify.log.info("Fastify instance has 'db': " + fastify.hasDecorator('db')); 

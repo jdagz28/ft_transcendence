@@ -19,7 +19,7 @@ module.exports = fp(async function (fastify, opts) {
 
   fastify.decorate('sendNotificationToUser', (userId, notification) => {
     const message = JSON.stringify(notification)
-
+    console.log(`Sending notification to user ${userId}:`, notification) //!DELETE
     fastify.notificationClients.forEach(client => {
       if (client.readyState === 1 && client.userId === userId) {
         client.send(message)
@@ -36,7 +36,7 @@ module.exports = fp(async function (fastify, opts) {
       reply.code(426).send({ error: 'Upgrade Required' });
     },
     wsHandler: (socket, request) => {
-      const userId = request.query.userId || request.headers['user-id']
+      const userId = request.query.userId
       socket.userId = userId
       fastify.log.info(`WebSocket for notifications established`)
       if (!socket) {
@@ -45,6 +45,7 @@ module.exports = fp(async function (fastify, opts) {
       }
       if (!fastify.notificationClients)
         fastify.notificationClients = new Set()
+      console.log(`Adding WebSocket client for user ${userId}`) //!DELETE
       fastify.notificationClients.add(socket)
 
       socket.on('close', () => {
