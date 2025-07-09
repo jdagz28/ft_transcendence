@@ -232,6 +232,17 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/leaderboard', {
+      onRequest: fastify.authenticate,
+      handler: async function getLeaderboardHandler(request, reply) {
+        const leaderboard = await fastify.gameService.getLeaderboard(request)
+        if (!leaderboard) {
+          return reply.code(400).send({ error: 'Failed to retrieve leaderboard' })
+        }
+        return reply.send(leaderboard)
+      }
+    })
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']

@@ -771,7 +771,42 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve game options')
       }
+    },
+
+    async getLeaderboardStats(userId) {
+      try {
+        const leaderboardQuery = fastify.db.prepare(`
+          SELECT 
+            users.id as userId,
+            users.username,
+            COUNT(games.id) as totalGames,
+            SUM(CASE WHEN games.winner_id = users.id THEN 1 ELSE 0 END) as wins,
+            COUNT(games.id) - SUM(CASE WHEN games.winner_id = users.id THEN 1 ELSE 0 END) as losses,
+            CASE 
+              WHEN COUNT(games.id) = 0 THEN 0 
+              ELSE ROUND(CAST(SUM(CASE WHEN games.winner_id = users.id THEN 1 ELSE 0 END) AS FLOAT) / COUNT(games.id) * 100, 2) 
+            END as winPercentage
+          FROM users
+          LEFT JOIN game_players ON users.id = game_players.player_id
+          LEFT JOIN games ON game_players.game_id = games.id AND games.status = 'finished'
+          WHERE users.id != 1
+          GROUP BY users.id, users.username
+          HAVING COUNT(games.id) > 0
+          ORDER BY wins DESC, winPercentage DESC
+        `)
+        const results = leaderboardQuery.all()
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT;
+
+        return results.map(user => ({
+          ...user,
+          avatar: `${baseURL}/users/${user.userId}/avatar`
+        }))
+      } catch(err) {
+        fastify.log.error(err)
+        throw new Error('Failed to get leaderboard stats')
+      }
     }
+
   })
 }, {
   name: 'gameAutoHooks',
