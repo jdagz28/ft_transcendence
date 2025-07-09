@@ -16,6 +16,19 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return false;
     },
 
+    async groupExist(groupId) {
+      const groupQuery = fastify.db.prepare(`
+        SELECT id FROM conversations
+        WHERE id = ? AND type = 'group'
+        LIMIT 1
+      `);
+      const group = groupQuery.get(groupId);
+      if (group && group.id) {
+        return true;
+      }
+      return false;
+    },
+
     async createDirectMessage(userIdA, userIdB) {
       try {
         if (userIdA === userIdB) {
@@ -212,7 +225,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const convoQuery = fastify.db.prepare(`
-        SELECT id, type, group_type FROM conversations
+        SELECT id, type, group_type, is_game FROM conversations
         WHERE id = ?
         LIMIT 1
       `);
@@ -246,16 +259,22 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         return { Permission: true, reason: 'Can join public group', Chat: `${roomId}` };
       }
 
+      if (convo.group_type === 'private' && convo.is_game === 1) {
+        return { Permission: true, reason: 'Can join private game group', Chat: `${roomId}` };
+      }
+
       throw new Error('User cannot join this group');
     },
 
-    async createGroup(userId, name, groupType) {
+    async createGroup(userId, name, groupType, isGame) {
       try {
+        const isGameValue = isGame ? 1 : 0;
+
         const insertGroup = fastify.db.prepare(`
-          INSERT INTO conversations (is_group, name, type, group_type, message_id)
-          VALUES (?,?,'group',?,NULL)
+          INSERT INTO conversations (is_group, name, type, group_type, is_game, message_id)
+          VALUES (?, ?, 'group', ?, ?, NULL)
         `)
-        const result = insertGroup.run(1, name, groupType)
+        const result = insertGroup.run(1, name, groupType, isGameValue)
         const conversationId = result.lastInsertRowid
 
         const insertMember = fastify.db.prepare(`
@@ -276,7 +295,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const groupQuery = fastify.db.prepare(`
-        SELECT id, group_type FROM conversations
+        SELECT id, group_type, is_game FROM conversations
         WHERE id = ? AND type = 'group'
         LIMIT 1
       `);
@@ -305,6 +324,15 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         `);
         insertMember.run(groupId, userId);
         return { joined: true, groupId, via: 'public' };
+      }
+
+      if (group.group_type === 'private' && group.is_game === 1) {
+        const insertMember = fastify.db.prepare(`
+          INSERT INTO convo_members (conversation_id, user_id, role)
+          VALUES (?, ?, 'member')
+        `);
+        insertMember.run(groupId, userId);
+        return { joined: true, groupId, via: 'private_game' };
       }
 
       const invitationQuery = fastify.db.prepare(`
@@ -469,8 +497,106 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       updateInvitation.run(invitation.id);
 
       return { refused: true, groupId };
+    },
+
+    async getUserChats(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`)
+      }
+
+      const memberGroupsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type
+        FROM conversations c
+        JOIN convo_members m ON c.id = m.conversation_id
+        WHERE m.user_id = ?
+          AND c.type = 'group'
+          AND m.banned_at IS NULL
+          AND m.kicked_at IS NULL
+      `);
+      const memberGroups = memberGroupsQuery.all(userId);
+
+      const publicGroupsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type
+        FROM conversations c
+        WHERE c.type = 'group'
+          AND c.group_type = 'public'
+          AND c.id NOT IN (
+            SELECT conversation_id FROM convo_members WHERE user_id = ?
+          )
+      `);
+      const publicGroups = publicGroupsQuery.all(userId);
+
+      const allGroups = [...memberGroups, ...publicGroups];
+
+      return allGroups;
+    },
+
+    async getGroupHistory(groupId, userId) {
+      if (!(await this.groupExist(groupId))) {
+        throw new Error('Group not found');
+      }
+
+      const groupTypeRow = fastify.db.prepare(`
+        SELECT group_type, is_game FROM conversations
+        WHERE id = ? AND type = 'group'
+        LIMIT 1
+      `).get(groupId);
+
+      if (groupTypeRow.group_type === 'private' && groupTypeRow.is_game === 0) {
+        const memberQuery = fastify.db.prepare(`
+          SELECT banned_at, kicked_at FROM convo_members
+          WHERE conversation_id = ? AND user_id = ?
+          LIMIT 1
+        `);
+        const member = memberQuery.get(groupId, userId);
+        if (!member) {
+          throw new Error('User is not a member of this private group');
+        }
+        if (member.banned_at !== null) {
+          throw new Error('User is banned from this group');
+        }
+      }
+
+      const messagesQuery = fastify.db.prepare(`
+        SELECT m.id, m.sender_id, u.username, m.content, m.created
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = ?
+        ORDER BY m.created ASC
+      `);
+      const messages = messagesQuery.all(groupId);
+
+      return messages;
+    },
+
+    async blockUser(userId, blockedUserId) {
+      if (!(await this.userExist(blockedUserId))) {
+        throw new Error(`Blocked user ${blockedUserId} does not exist`);
+      }
+
+      if (userId === blockedUserId) {
+        throw new Error('Cannot block yourself');
+      }
+
+      const existingBlockQuery = fastify.db.prepare(`
+        SELECT 1 FROM user_blocks
+        WHERE blocker_id = ? AND blocked_user_id = ?
+        LIMIT 1
+      `);
+      const existingBlock = existingBlockQuery.get(userId, blockedUserId);
+      if (existingBlock) {
+        return { success: false, reason: 'User already blocked' };
+      }
+
+      const insertBlockQuery = fastify.db.prepare(`
+        INSERT INTO user_blocks (blocker_id, blocked_user_id)
+        VALUES (?, ?)
+      `);
+      insertBlockQuery.run(userId, blockedUserId);
+
+      return { success: true, blocker: userId, blocked: blockedUserId };
     }
-    
+
   })
   }, {
   name: 'chatAutoHooks',

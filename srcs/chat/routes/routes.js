@@ -79,7 +79,7 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       return
 
     const userId = data.user.id
-    const { name, type } = request.body
+    const { name, type, is_game } = request.body
 
     if (typeof type != "string" || !["public", "private"].includes(type))
       return reply.status(500).send({error: "invalid 'type'"})
@@ -87,11 +87,14 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     if (name !== null && typeof name !== "string")
       return reply.status(500).send({error: "Invalid 'name'"})
 
+    const isGameValue = typeof is_game === "boolean" ? is_game : false;
+
     try {
       const result = await axios.post(`http://database:${process.env.DB_PORT}/chat/create/group`, {
         userId: userId,
         name: name,
-        type: type
+        type: type,
+        isGame: isGameValue
       })
       reply.send(result.data)
     } catch (err) {
@@ -183,6 +186,65 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data)
     } catch (err) {
       return reply.status(500).send({error: `${err.response.data.error}`})
+    }
+  }),
+
+  fastify.get('/chat/mychats', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/mychats/${userId}`)
+      reply.send(response.data)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.response.data.error}`})
+    }
+  }),
+
+  fastify.get('/chat/group/:id/history', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const groupId = Number(request.params.id);
+
+    if (!Number.isInteger(groupId) || groupId <= 0) {
+      return reply.status(400).send({ error: "Invalid group id" });
+    }
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/group/${groupId}/history/${userId}`)
+      reply.send(response.data);
+    } catch (err) {
+      return reply.status(500).send({error: `${err.response.data.error}`})
+    }
+  }),
+
+  fastify.put('/chat/block-user', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const { blockedUserId } = request.body;
+    console.log(`userId: ${userId}, blockedUserId: ${blockedUserId}`)
+    if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
+      return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
+    }
+
+    try {
+      const response = await axios.put(`http://database:${process.env.DB_PORT}/chat/block-user`, {
+        userId: Number(userId),
+        blockedUserId: blockedUserId
+      })
+      reply.send(response.data);
+    } catch (err) {
+      console.error(`error blocking user: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
     }
   })
 })

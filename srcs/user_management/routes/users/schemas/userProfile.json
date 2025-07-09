@@ -1,18 +1,35 @@
 {
   "type": "object",
   "$id": "schema:users:userProfile",
-  "required": ["username", "email"],
+  "required": [
+    "id",
+    "username",
+    "email",
+    "nickname",
+    "created",
+    "avatar",
+    "daysStreak",
+    "gamesPlayed",
+    "record",
+    "successRate"
+  ],
   "properties": {
+    "id": { "type": "number" },
     "username": { "type": "string" },
     "email": { "type": "string", "format": "email" },
     "nickname": { "type": "string" },
     "created": { "type": "string", "format": "date-time" },
-    "avatar": {
+    "avatar": { "type": "string", "format": "uri" },
+    "daysStreak": { "type": "number" },
+    "gamesPlayed": { "type": "number" },
+    "record": {
       "type": "object",
       "properties": {
-        "url": { "type": "string", "format": "uri" }
+        "wins": { "type": "number" },
+        "losses": { "type": "number" }
       },
-      "required": ["url"]
-    }
+      "required": ["wins", "losses"]
+    },
+    "successRate": { "type": "number" }
   }
 }

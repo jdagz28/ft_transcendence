@@ -86,40 +86,80 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-
-    async getUserProfile(userId, request) {
+    async getUserProfile(userId) {
       try {
-        const query = fastify.db.prepare(`
-          SELECT users.id,
-            users.username,
-            users.nickname,
-            users.email,
-            users.created
-          FROM users
-          WHERE users.id = ?
-        `)
-
-        const row = query.get(userId)
-        if (!row) {
-          fastify.log.error('User not found')
+        const userQuery = fastify.db.prepare(
+          'SELECT * FROM users WHERE id = ?'
+        )
+        const user = userQuery.get(userId)
+        if (!user) {
           throw new Error('User not found')
         }
 
-        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
-        const avatarUrl = baseURL + `/users/${row.id}/avatar` 
+        const gamesPlayedQuery = fastify.db.prepare(`
+          SELECT COUNT(DISTINCT games.id) AS totalGames
+          FROM games
+          JOIN game_players ON games.id = game_players.game_id
+          WHERE game_players.player_id = ? AND games.status = 'finished'
+        `)
+        const gamesPlayedResult = gamesPlayedQuery.get(userId)
 
-        return {
-          id: row.id,
-          username: row.username,
-          email: row.email,
-          created: row.created,
-          avatar: {
-            url: avatarUrl
+        const recordQuery = fastify.db.prepare(`
+          SELECT
+              SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) as wins,
+              SUM(CASE WHEN winner_id != ? AND winner_id IS NOT NULL THEN 1 ELSE 0 END) as losses
+          FROM games
+          WHERE id IN (SELECT game_id FROM game_players WHERE player_id = ?) AND status = 'finished'
+        `)
+        const record = recordQuery.get(userId, userId, userId)
+
+        const successRate = (record.wins / (gamesPlayedResult.totalGames || 1)) * 100
+
+        const gameDaysQuery = fastify.db.prepare(`
+          SELECT DISTINCT DATE(created) as game_day
+          FROM games
+          JOIN game_players ON games.id = game_players.game_id
+          WHERE game_players.player_id = ? AND games.status = 'finished'
+          ORDER BY game_day DESC
+        `)
+        const gameDays = gameDaysQuery.all(userId).map(d => d.game_day)
+
+        let streak = 0
+        if (gameDays.length > 0) {
+          streak = 1
+          let today = new Date(gameDays[0])
+          for (let i = 1; i < gameDays.length; i++) {
+            const previousDay = new Date(gameDays[i])
+            const diffTime = today - previousDay
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+            if (diffDays === 1) {
+                streak++
+                today = previousDay
+            } else if (diffDays > 1) {
+                break
+            }
           }
         }
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+
+        return {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          email: user.email,
+          created:user.created,
+          avatar: `${baseURL}/users/${user.id}/avatar`,
+          daysStreak: streak,
+          gamesPlayed: gamesPlayedResult.totalGames || 0,
+          record: {
+            wins: record.wins || 0,
+            losses: record.losses || 0
+          },
+          successRate: parseFloat(successRate.toFixed(2))
+        }
       } catch (err) {
-        fastify.log.error(`getUserProfile error: ${err.message}`)
-        throw new Error('User profile retrieval failed')
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve user profile')
       }
     },
 
@@ -351,14 +391,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('No friends found')
         }
 
-        const baseURL = request.protocol + ":" + process.env.SERVER_NAME
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         const friends = rows.map(row => ({
           id: row.id,
           username: row.username,
           nickname: row.nickname,
-          avatar: {
-            url: `${baseURL}/users/${row.id}/avatar`
-          }
+          avatar: `${baseURL}/users/${row.id}/avatar`
         }))
         return friends
       } catch (err) {
@@ -449,7 +487,159 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`enableMfa error: ${err.message}`)
         throw new Error('Enable MFA failed')
       }
+    },
+
+    async setMfaQrCode(userId, qrCode) {
+      try {
+        const check = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
+        `)
+        const user = check.get(userId)
+        let result;
+        if (!user) {
+          const query = fastify.db.prepare(`
+            INSERT INTO user_mfa (user_id, qr_code) VALUES (?, ?)
+          `)
+          result = query.run(userId, qrCode)
+        } else {
+          const query = fastify.db.prepare(`
+            UPDATE user_mfa SET qr_code = ? WHERE user_id = ?
+          `)
+          result = query.run(qrCode, userId)
+        }
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA QR code for user ${userId}`)
+          throw new Error('Set MFA QR code failed')
+        }
+        return qrCode
+      } catch (err) {
+        fastify.log.error(`setMfaQrCode error: ${err.message}`)
+        throw new Error('Set MFA QR code failed')
+      }
+    },
+
+    async getMfaDetails(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          return { mfa_enabled: false, qr_code: null }
+        }
+        return { 
+          mfa_enabled: row.mfa_enabled,
+          qr_code: row.qr_code
+        }
+      } catch (err) {
+        fastify.log.error(`getMfaDetails error: ${err.message}`)
+        throw new Error('Get MFA details failed')
+      }
+    },
+
+    async getMatchHistory(userId) {
+      try {
+        const check = fastify.db.prepare('SELECT id FROM users WHERE id = ?')
+        const user = check.get(userId)
+        if (!user) {
+          throw new Error('User not found')
+        }
+        
+        const historyQuery = fastify.db.prepare(`
+          SELECT
+            games.id as gameId,
+            games.created,
+            games.ended,
+            game_players.paddle_loc as userPaddleLoc,
+            game_settings.num_games || '-' || game_settings.num_matches as gameOptions,
+            CASE WHEN games.winner_id = ? THEN 'W' ELSE 'L' END as result
+          FROM games
+          JOIN game_players ON games.id = game_players.game_id
+          JOIN game_settings ON games.id = game_settings.game_id
+          WHERE game_players.player_id = ? AND games.status = 'finished'
+          ORDER BY games.created DESC
+        `)
+        
+        const opponentQuery = fastify.db.prepare(`
+          SELECT users.username 
+          FROM users
+          JOIN game_players ON users.id = game_players.player_id
+          WHERE game_players.game_id = ? AND game_players.paddle_loc != ?
+        `)
+        
+        const matchScoresQuery = fastify.db.prepare(`
+          SELECT 
+            game_matches.game_id,
+            game_matches.id,
+            match_scores.player_id,
+            match_scores.score,
+            game_players.paddle_loc
+          FROM game_matches
+          JOIN match_scores ON game_matches.id = match_scores.match_id
+          JOIN game_players ON match_scores.player_id = game_players.player_id AND game_matches.game_id = game_players.game_id
+          WHERE game_matches.game_id = ?
+          ORDER BY game_matches.id
+        `)
+        
+        const games = historyQuery.all(user.id, user.id)
+        
+        return games.map(game => {
+          const opponent = opponentQuery.get(game.gameId, game.userPaddleLoc)?.username 
+          
+          const matchScores = matchScoresQuery.all(game.gameId)
+          
+          const matchScoresByMatch = {}
+          matchScores.forEach(score => {
+            const matchNumber = score.id
+            if (!matchScoresByMatch[matchNumber]) {
+              matchScoresByMatch[matchNumber] = {
+                matchId: matchNumber
+              }
+            }
+            matchScoresByMatch[matchNumber][score.paddle_loc] = score.score
+          })
+          
+          const matchScoresArray = []
+          let userWins = 0
+          let opponentWins = 0
+          
+          Object.values(matchScoresByMatch).forEach(match => {
+            const opponentPaddleLoc = Object.keys(match).find(key => 
+              key !== 'matchId' && key !== game.userPaddleLoc
+            )
+            const userScore = match[game.userPaddleLoc] || 0
+            const opponentScore = match[opponentPaddleLoc] || 0
+            
+            matchScoresArray.push({
+              matchId: match.matchId,
+              userScore,
+              opponentScore,
+              scoreString: `${userScore}-${opponentScore}`
+            })
+            
+            if (userScore > opponentScore) userWins++
+            else if (opponentScore > userScore) opponentWins++
+          })
+          
+          return {
+            gameId: game.gameId,
+            created: game.created,
+            ended: game.ended,
+            result: game.result,
+            finalScore: `${userWins} - ${opponentWins}`,
+            opponent: opponent,
+            matchScores: matchScoresArray,
+            gameOptions: game.gameOptions,
+            duration: game.ended && game.created ? Math.round((new Date(game.ended) - new Date(game.created)) / 1000) + 's' : 'N/A'
+          }
+        })
+      } catch(err) {
+        fastify.log.error(err)
+        throw new Error('Failed to get match history')
+      }
     }
+
+
   })
 }, {
   name: 'userAutoHooks',

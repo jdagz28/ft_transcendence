@@ -71,10 +71,10 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
   })
 
   fastify.post('/chat/create/group', async (request, reply) => {
-    const { userId, name, type } = request.body
+    const { userId, name, type ,isGame} = request.body
 
     try {
-      const response = await fastify.dbChat.createGroup(userId,name,type)
+      const response = await fastify.dbChat.createGroup(userId, name, type, isGame)
       return reply.send(response)
     } catch (err) {
       return reply.status(500).send({error: `${err.message}`})
@@ -119,6 +119,41 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
 
     try {
       const response = await fastify.dbChat.refuseInvite(userId, groupId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.get('/chat/mychats/:userId', async (request, reply) => {
+    const userId = Number(request.params.userId)
+
+    try {
+      const response = await fastify.dbChat.getUserChats(userId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.get('/chat/group/:groupId/history/:userId', async (request, reply) => {
+    const groupId = Number(request.params.groupId)
+    const userId = Number(request.params.userId)
+
+    try {
+      const response = await fastify.dbChat.getGroupHistory(groupId, userId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.put('/chat/block-user', async (request, reply) => {
+    const { userId, blockedUserId } = request.body;
+
+    console.log(`blocker user ${typeof userId} blocked user ${typeof blockedUserId}`)
+    try {
+      const response = await fastify.dbChat.blockUser(userId, blockedUserId)
       return reply.send(response)
     } catch (err) {
       return reply.status(500).send({error: `${err.message}`})

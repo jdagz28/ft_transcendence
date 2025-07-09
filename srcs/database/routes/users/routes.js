@@ -112,9 +112,6 @@ module.exports = fp(
       }
     })
 
-
-
-
     fastify.get('/users/me', {
       schema: { 
         querystring: fastify.getSchema('schema:users:getProfile')
@@ -125,7 +122,7 @@ module.exports = fp(
       handler: async function getUserProfile(request, reply) {
         try {
           const userId = request.query.id
-          const userProfile = await fastify.dbUsers.getUserProfile(userId, request)
+          const userProfile = await fastify.dbUsers.getUserProfile(userId)
           if (!userProfile) {
             reply.code(404).send({ error: 'User profile not found' })
           } else {
@@ -235,7 +232,8 @@ module.exports = fp(
         try {
           const { username } = request.params
           console.log('Looking for:', username) //! DELETE
-          const user = await fastify.dbUsers.getUserByUsername(username)
+          const userId = await fastify.getUserId(username)
+          const user = await fastify.dbUsers.getUserProfile(userId)
           if (!user) {
             fastify.log.error('User not found')
             reply.code(404);
@@ -383,6 +381,69 @@ module.exports = fp(
         } catch (err) {
           fastify.log.error(`Auth: failed to enable mfa for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to enable mfa' })
+        }
+      }
+    })
+
+    fastify.put('/users/:userId/mfa/qr', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function setMfaQrCodeHandler(request, reply) {
+        const userId = request.user.id
+        try {
+          const { qr_code } = request.body
+          const QRCode = await fastify.dbUsers.setMfaQrCode(userId, qr_code)
+          return reply.send({ success: true, qr_code: QRCode })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA QR code: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA QR code' })
+        }
+      }
+    }
+    )
+
+    fastify.get('/users/:userId/mfa/details', {
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getMfaDetailsHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Fetching MFA details for user ID:', userId) //! DELETE
+          const mfaDetails = await fastify.dbUsers.getMfaDetails(userId)
+          return reply.send(mfaDetails)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA details: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA details' })
+        }
+      }
+    })
+
+    // fastify.get('/users/:userId/matches', {
+    //   onRequest: [fastify.authenticate, fastify.checkInternalKey],
+    //   handler: async function getMatchHistoryHandler(request, reply) {
+    //     const { userId } = request.params
+    //     try {
+    //       const matches = await fastify.dbUsers.getMatchHistory(userId)
+    //       return reply.send(matches)
+    //     } catch (err) {
+    //       fastify.log.error(`Error retrieving match history: ${err.message}`)
+    //       reply.code(500).send({ error: 'Failed to retrieve match history' })
+    //     }
+    //   }
+    // })
+
+    fastify.get('/users/:username/matches', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getMatchHistoryByUsernameHandler (request, reply) {
+        const username = request.params.username
+        const userId = await fastify.getUserId(username)
+        try {
+          const matches = await fastify.dbUsers.getMatchHistory(userId)
+          return reply.send(matches)
+        } catch (err) {
+          fastify.log.error(`Error retrieving match history for user ${username}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve match history' })
         }
       }
     })

@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:tournaments:inviteUser",
+  "required": [ "userId" ],
+  "properties": {
+    "userId": { "type": "integer" }
+  }
+}

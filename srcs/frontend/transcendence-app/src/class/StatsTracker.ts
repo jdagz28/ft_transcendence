@@ -53,10 +53,17 @@ export class StatsTracker {
   }
 
   finishSession(): StatsPayload {
+    const perPlayerScore: ScoreMap = {};
+    (['left', 'right'] as Side[]).forEach(side => {
+      for (const playerId of this.sideMap[side]) {
+        perPlayerScore[playerId] = this.sideScore[side];
+      }
+    });
+
     return {
       duration_ms: Math.trunc(performance.now() - this.sessionStart),
       hits: { ...this.totalHits },
-      scores: {}
+      scores: perPlayerScore
     };
   }
 

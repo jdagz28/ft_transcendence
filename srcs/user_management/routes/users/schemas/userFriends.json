@@ -1,25 +1,18 @@
 {
   "$id": "schema:users:userFriends",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "required": ["id", "username", "avatar"],
-    "additionalProperties": false,
-    "properties": {
-      "id": { "type": "integer" },
-      "username": { "type": "string" },
-      "nickname": {
-        "type": ["string", "null"]
-      },
-      "avatar": {
+  "type": "object",
+  "required": [ "data" ],
+  "properties": {
+    "data": {
+      "type": "array",
+      "items": {
         "type": "object",
-        "required": ["url"],
-        "additionalProperties": false,
+        "required": ["id", "username", "avatar"],
         "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri"
-          }
+          "id": { "type": "integer" },
+          "username": { "type": "string" },
+          "nickname": { "type": ["string", "null"] },
+          "avatar": { "type": "string", "format": "uri" }
         }
       }
     }

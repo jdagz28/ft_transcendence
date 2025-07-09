@@ -77,14 +77,14 @@ module.exports = fp(
     })
 
     fastify.get('/users/:userId/avatar', {
-      onRequest: [fastify.authenticate],
+      // onRequest: [fastify.authenticate],
       handler: async function avatarHandler (request, reply) {
         const userId = request.params.userId
         try {
           const { data, headers } = await dbApi.get(`/users/${encodeURIComponent(userId)}/avatar`, 
           {
-            responseType: 'arraybuffer',
-            headers: internalHeaders(request),
+            responseType: 'arraybuffer'
+            // headers: internalHeaders(request),
           })
           return reply
           .type(headers['content-type'])
@@ -177,7 +177,8 @@ module.exports = fp(
       },
       onRequest: [fastify.authenticate],
       handler: async function userProfileHandler (request, reply) {
-        const user = await fastify.usersDataSource.getUserByUsername(request, request.params.username)
+        const username = request.params.username
+        const user = await fastify.usersDataSource.getUserByUsername(request, username)
         if (!user) {
           return reply.code(404).send({ error: 'User not found' })
         }
@@ -265,92 +266,56 @@ module.exports = fp(
       }
     })
 
-
-    /*
-    // Blocked users
-    fastify.get('/:username/blocked', {
+    fastify.get('/users/id/:userId', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserById'),
+        response: {
+          200: fastify.getSchema('schema:users:userProfile')
+        }
+      },
       onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
+      handler: async function getUserByIdHandler (request, reply) {
+        const user = await fastify.usersDataSource.getUserById(request, request.params.userId)
+        if (!user) {
+          return reply.code(404).send({ error: 'User not found' })
+        }
+        return reply.send(user)
       }
     })
 
-    // User game History
-    fastify.get('/:username/games', {
+    fastify.get('/users/me/matches', {
       onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User Stats
-    fastify.get('/:username/stats', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-
-    // User block user
-    fastify.post('/me/blockUser', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User unblock user
-    fastify.delete('/me/unblockUser', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-    */
-
-/*
-    // User generate MFA
-    fastify.post('/me/settings/generateMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
-      }
-    })
-
-    // User disable MFA
-    fastify.delete('/me/settings/disableMFA', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
+      handler: async function getMatchHistoryHandler (request, reply) {
+        const username = request.user.username
+        try {
+          const matches = await fastify.usersDataSource.getMatchHistory(request, username)
+          return reply.send(matches)
+        } catch (err) {
+          fastify.log.error(err)
+          throw new Error('Failed to get match history')
+        }
       }
     })
     
-    // User enable MFA
-    fastify.put('/me/settings/enableMFA', {
+    fastify.get('/users/:username/matches', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
       onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
-
+      handler: async function getMatchHistoryByUsernameHandler (request, reply) {
+        const username = request.params.username
+        try {
+          const matches = await fastify.usersDataSource.getMatchHistory(request, username)
+          return reply.send(matches)
+        } catch (err) {
+          fastify.log.error(err)
+          throw new Error('Failed to get match history')
+        }
       }
-    })
-  */
 
-    /**
-    // User Profile Account Settings / security
-    // email, (change email)
-    // password, (change password)
-    // has_mfa, 
-    // last password change, 
-    // mfa token (or generate)
-    fastify.get('/me/settings', {
-      onRequest: [fastify.authenticate],
-      handler: async (request, reply) => {
 
-      }
     })
 
-    
-    */
   }, {
     name: 'userRoutes',
     dependencies: [ 'userAutoHooks']

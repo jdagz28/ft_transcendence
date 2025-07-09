@@ -1,6 +1,8 @@
 # Docker multistage build
 FROM node:23-slim as builder
 
+RUN apt-get update || : && apt-get install python3 build-essential -y
+
 WORKDIR /builder
 COPY package.json package-lock.json ./
 COPY ./entrypoint.sh /
