@@ -1,4 +1,4 @@
-import { type RouteParams, DEFAULT, ROUTE_MAIN } from "../router";
+import { type RouteParams, DEFAULT, ROUTE_MAIN, deletePastLobby } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 
@@ -818,6 +818,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     if (!confirm('Are you sure you want to cancel this game?')) {
       return; 
     }
+	localStorage.removeItem("gameId");
     const response = await fetch(`/games/${game}`, {
       method: 'DELETE',
       headers: {
@@ -841,7 +842,10 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     window.location.hash = "#/404";
     return;
   }
-
+  const tempId = localStorage.getItem("gameId");
+  if (tempId && tempId !== params.gameId)
+	await deletePastLobby();
+  localStorage.setItem("gameId", gameId);
   const token = localStorage.getItem("token") ?? "";
 	const user = await whoAmI();
   if (!user.success) {
