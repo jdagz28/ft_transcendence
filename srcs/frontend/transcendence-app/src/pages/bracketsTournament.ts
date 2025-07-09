@@ -136,7 +136,18 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   });
 
 
-  const round2Slots = slots.brackets?.[1]?.slots ?? [];
+  let round2Slots = slots.brackets?.[1]?.slots ?? [];
+  if (round2Slots.length === 0 && round1Slots.length > 0) {
+    round2Slots = [{
+        slot: 0,
+        status: "pending",
+        players: [],
+        gameId: null,
+        winnerId: null,
+        score: {}
+    }];
+  }
+
   
   round2Slots.forEach((slot: any) => {
     const container = document.createElement("div");

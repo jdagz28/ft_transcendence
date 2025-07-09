@@ -1,4 +1,5 @@
 import { ROUTE_LOGIN } from "./router"
+import { connectNotifications } from "./api/notifications";
 
 export type userData = {
   id: number;
@@ -183,7 +184,8 @@ export function setupAppLayout() {
 	const token = localStorage.getItem("token");
 	if (token) {
   	renderNavBar(navContainer);
-	}
-	
+    connectNotifications();
+  }
+
   return { contentContainer };
 }
