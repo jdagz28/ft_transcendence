@@ -789,12 +789,18 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           FROM users
           LEFT JOIN game_players ON users.id = game_players.player_id
           LEFT JOIN games ON game_players.game_id = games.id AND games.status = 'finished'
+          WHERE users.id != 1
           GROUP BY users.id, users.username
           HAVING COUNT(games.id) > 0
           ORDER BY wins DESC, winPercentage DESC
         `)
-        
-        return leaderboardQuery.all()
+        const results = leaderboardQuery.all()
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT;
+
+        return results.map(user => ({
+          ...user,
+          avatar: `${baseURL}/users/${user.userId}/avatar`
+        }))
       } catch(err) {
         fastify.log.error(err)
         throw new Error('Failed to get leaderboard stats')

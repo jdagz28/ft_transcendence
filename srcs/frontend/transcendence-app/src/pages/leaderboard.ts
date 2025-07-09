@@ -42,7 +42,10 @@ export async function renderLeaderboardPage() {
           ${leaderboard.map((player, index) => `
               <tr class="border-b border-gray-700 last:border-b-0 hover:bg-[#1a3a5e]">
                   <td class="p-3 font-bold text-white">${index + 1}</td>
-                  <td class="p-3">${player.username}</td>
+                  <td class="p-3">
+                    <img src="${player.avatar}" alt="${player.username}'s avatar" class="inline-block w-8 h-8 rounded-full mr-2">
+                    <a href="#/users/${player.username}" class="hover:underline">${player.username}</a>
+                  </td>
                   <td class="p-3">${player.totalGames}</td>
                   <td class="p-3">${player.wins}</td>
                   <td class="p-3">${player.losses}</td>

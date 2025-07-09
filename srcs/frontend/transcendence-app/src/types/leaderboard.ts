@@ -5,4 +5,5 @@ export interface LeaderboardUser {
   wins: number;
   losses: number;
   winPercentage: number;
+  avatar: string
 }
