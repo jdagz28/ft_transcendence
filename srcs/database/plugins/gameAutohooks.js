@@ -384,7 +384,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           }
           if (creatorId.created_by !== Number(userId) && !playerExist) {
             throw new Error('User not authorized')
-          }s
+          }
         }
 
         const checkStatus = fastify.db.prepare(
