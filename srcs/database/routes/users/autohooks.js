@@ -139,8 +139,8 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
                 break
             }
           }
-        }        
-        const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        }
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
 
         return {
           id: user.id,
@@ -391,14 +391,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           throw new Error('No friends found')
         }
 
-        const baseURL = request.protocol + ":" + process.env.SERVER_NAME
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         const friends = rows.map(row => ({
           id: row.id,
           username: row.username,
           nickname: row.nickname,
-          avatar: {
-            url: `${baseURL}/users/${row.id}/avatar`
-          }
+          avatar: `${baseURL}/users/${row.id}/avatar`
         }))
         return friends
       } catch (err) {

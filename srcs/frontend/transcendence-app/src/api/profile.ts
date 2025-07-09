@@ -1,5 +1,5 @@
 
-import type { Match, UserProfile } from "../types/profile";
+import type { Match, UserProfile, Friend } from "../types/profile";
 
 export async function getUserProfile(username: string): Promise<UserProfile> {
   const token = localStorage.getItem("token");
@@ -16,6 +16,7 @@ export async function getUserProfile(username: string): Promise<UserProfile> {
   const data = await response.json();
   return data;
 }
+
 export async function getMatchHistory(username: string): Promise<Match[]> {
   const token = localStorage.getItem("token");
   const response = await fetch(`/users/${username}/matches`, {
@@ -30,4 +31,20 @@ export async function getMatchHistory(username: string): Promise<Match[]> {
   }
   const data = await response.json();
   return data;
+}
+
+export async function getFriendsList(): Promise<Friend[]> {
+  const token = localStorage.getItem("token");
+  const response = await fetch("/users/me/friends", {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    },
+    credentials: "include" 
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch friends list");
+  }
+  const data = await response.json();
+  return data.data;
 }

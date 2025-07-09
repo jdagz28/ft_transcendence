@@ -31,3 +31,10 @@ export interface UserProfile {
     };
     successRate: number;
 }
+
+export interface Friend {
+    id : number;
+    username: string;
+    nickname: string | null;
+    avatar: string;
+}
