@@ -545,20 +545,10 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       
           insertMatch.run(tournamentId, gameId, 1, slot)
           fastify.db.exec('COMMIT')
-          await fastify.publishEvent(`tournament.game.ready.${player1}`, {
-            gameId,
-            tournamentId,
-            opponentId: player2,
-            round: 1,
-            timestamp: Date.now()
-          })
-          await fastify.publishEvent(`tournament.game.ready.${player2}`, {
-            gameId,
-            tournamentId,
-            opponentId: player1,
-            round: 1,
-            timestamp: Date.now()
-          })
+          
+          await fastify.notifications.gameTurn(player1, gameId);
+          await fastify.notifications.gameTurn(player2, gameId);
+          
           slot++
         }
         return { success: true, message: 'Tournament bracket seeded successfully' }
@@ -889,7 +879,12 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
 
     async nextRound(tournamentId, prevRound) {
       const winners = fastify.db.prepare(`
-        SELECT winner_id, slot FROM tournament_games
+        SELECT 
+          tournament_games.winner_id, 
+          slot, 
+          users.username
+        FROM tournament_games
+        JOIN users ON users.id = tournament_games.winner_id
         WHERE tournament_id = ? AND round = ? AND status = 'finished'
         ORDER BY slot ASC
       `).all(tournamentId, prevRound)
@@ -905,11 +900,11 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           WHERE id = ?
         `).run(winners[0].winner_id, tournamentId)
 
-        await fastify.publishEvent(`tournament.finished.${winners[0].winner_id}`, {
-          tournamentId,
-          winnerId: winners[0].winner_id,
-          timestamp: Date.now()
-        })
+        const tournamentName = fastify.db.prepare(`
+          SELECT name FROM tournaments WHERE id = ?
+        `).get(tournamentId)
+
+        await fastify.notifications.tournamentUpdate(tournamentId, `Tournament ${tournamentName} has finished! Winner: ${winners[0].username}`, 'finished')
 
         return { message: 'Tournament finished', winnerId: winners[0].winner_id }
       }
@@ -939,20 +934,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
         ).run(gameId, player2)
         insertMatch.run(tournamentId, gameId, nextRound, slot)
-        await fastify.publishEvent(`tournament.game.ready.${player1}`, {
-            gameId,
-            tournamentId,
-            opponentId: player2,
-            round: nextRound,
-            timestamp: Date.now()
-          })
-          await fastify.publishEvent(`tournament.game.ready.${player2}`, {
-            gameId,
-            tournamentId,
-            opponentId: player1,
-            round: nextRound,
-            timestamp: Date.now()
-          })
+        
+        await fastify.notifications.gameTurn(player1, gameId);
+        await fastify.notifications.gameTurn(player2, gameId);
       }
     },
 
@@ -1118,5 +1102,6 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     }
   })
 }, {
-  name: 'tournamentAutoHooks'
+  name: 'tournamentAutoHooks',
+  dependencies: ['notificationPlugin']
 })

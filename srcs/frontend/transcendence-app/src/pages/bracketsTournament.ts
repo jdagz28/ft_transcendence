@@ -135,6 +135,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
     avatarUrl: "https://localhost:4242/users/1/avatar",
   });
 
+
   const round2Slots = slots.brackets?.[1]?.slots ?? [];
   
   round2Slots.forEach((slot: any) => {
