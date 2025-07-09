@@ -320,6 +320,24 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/leaderboard', {
+      onRequest: fastify.authenticate,
+      handler: async function getLeaderboardHandler(request, reply) {
+        try {
+          const leaderboard = await fastify.dbGames.getLeaderboardStats()
+          if (!leaderboard) {
+            reply.status(400).send({ error: 'Failed to retrieve leaderboard' })
+            return
+          }
+          console.log('Leaderboard retrieved:', leaderboard) //! DELETE
+          reply.status(200).send(leaderboard)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',

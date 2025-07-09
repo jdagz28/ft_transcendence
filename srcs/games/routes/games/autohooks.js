@@ -173,7 +173,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Game options retrieved:', data) //! DELETE
       return data
-    }
+    },
+
+    async getLeaderboard(request) {
+      const { data } = await dbApi.get('/games/leaderboard', 
+        { headers: internalHeaders(request) }
+      )
+      console.log('Leaderboard retrieved:', data) //! DELETE
+      return data
+    } 
+    
   })
 }, {
   name: 'gameAutoHooks'
