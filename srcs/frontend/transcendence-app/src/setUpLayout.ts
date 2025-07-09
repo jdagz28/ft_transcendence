@@ -54,18 +54,26 @@ export function renderNavBar(root: HTMLElement) {
     const user = data.data.username;
 	localStorage.setItem("userName", data.data.username);
 	localStorage.setItem("userID", data.data.id.toString());
+	let notificationCount = 333;
+	let notifString:string = notificationCount.toString();
+	if (notifString.length > 1)
+		notifString = '9+';
     root.innerHTML = /*html*/`
     <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-sm font-semibold text-white">
         <div class="flex items-center gap-6">
-          <div class="text-xl font-bold">🌊</div>
-          <a href="#">Dashboard</a>
+          <img src="/icons8-tailwindcss.svg" class="w-8 h-8"/>
+          <a href="#/main">Dashboard</a>
           <a href="#/games/create">Games</a>
           <a href="#/tournaments">Tournament</a>
           <a href="#/leaderboard">Leaderboard</a>
-          <a href="/#/chat">Chat</a>
+          <a href="#/chat">Chat</a>
         </div>
         <div class="flex items-center gap-6">
-          <span class="text-xl">${user} 🔔</span>
+		<div id="notifBtn" class="relative">
+			<img src="/icons8-bell.svg" class="w-8 h-8 invert"/>
+			<span id="notification-badge" class="absolute top-0 right-0 items-center justify-center text-[10px] font-bold text-white h-4 w-4 rounded-full bg-red-600 border-2 border-white hidden">${notifString}</span>
+		</div>
+          <span class="text-xl">${user}</span>
           <div class="relative ml-3">
             <div>
               <button type="button" class="relative flex rounded-full bg-gray-800 text-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
@@ -83,6 +91,12 @@ export function renderNavBar(root: HTMLElement) {
         </div>
     </nav>`;
 
+	//friend request friend.request
+	//game invite game.invite.game.ready 
+	//tournament invite tournament.invite
+	//tournament update tournament.update
+
+
     const userAvatar = document.getElementById('avatar');
     if (userAvatar) {
       const img = document.createElement('img');
@@ -94,13 +108,14 @@ export function renderNavBar(root: HTMLElement) {
       userAvatar.appendChild(img);
     }
 
-    const btn = document.getElementById('user-menu-button')!;
-    const menu = document.getElementById('user-menu')!;
+    const userDropDownBtn = document.getElementById('user-menu-button');
+    const menu = document.getElementById('user-menu');
     let open = false;
 
-    btn.addEventListener('click', () => {
+	if (userDropDownBtn && menu) {
+    userDropDownBtn.addEventListener('click', () => {
       open = !open;
-      btn.setAttribute('aria-expanded', String(open));
+      userDropDownBtn.setAttribute('aria-expanded', String(open));
       if (open) {
         menu.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
         menu.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
@@ -113,18 +128,17 @@ export function renderNavBar(root: HTMLElement) {
         menu.classList.add('ease-in', 'duration-75');
       }
     });
-
     document.addEventListener('click', (event) => {
-      if (!btn.contains(event.target as Node) && !menu.contains(event.target as Node)) {
+      if (!userDropDownBtn.contains(event.target as Node) && !menu.contains(event.target as Node)) {
         if (open) {
           open = false;
-          btn.setAttribute('aria-expanded', 'false');
+          userDropDownBtn.setAttribute('aria-expanded', 'false');
           menu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
           menu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
         }
       }
     });
-
+	}
 		const logoutBtn = document.getElementById('user-menu-item-2');
 		if (logoutBtn) {
 			logoutBtn.addEventListener('click', async () => {
@@ -146,6 +160,24 @@ export function renderNavBar(root: HTMLElement) {
 				}
 			});
 		}
+		const notifBtn = document.getElementById('notifBtn');
+	if (notifBtn) {
+		notifBtn.addEventListener('click', () => {
+			alert("Notifications are not implemented yet, but will be soon!");
+		});
+	}
+
+	const badge = document.getElementById('notification-badge');
+
+	if (badge) {
+		if (notificationCount > 0) {
+			badge.classList.remove('hidden');
+			badge.classList.add('flex');
+		} else {
+			badge.classList.add('hidden');
+			badge.classList.remove('flex');
+		}
+	}
 
   });
 	data = false;

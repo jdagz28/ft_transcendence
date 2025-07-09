@@ -3,7 +3,8 @@ import { setupAppLayout } from "../setUpLayout";
 export function renderMainPage(): void {
 	const root = setupAppLayout();
 	if (!root) return;
-	root.contentContainer.innerHTML = `
+	const rootContent:HTMLDivElement = document.createElement('div');
+	rootContent.innerHTML = `
 	<div class="relative z-10 min-h-screen bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] selection:bg-blue-400 selection:text-white flex items-center justify-center px-4">
   <div class="grid w-full gap-6 grid-cols-1 lg:grid-cols-[repeat(3,minmax(280px,1fr))] max-w-none lg:auto-rows-fr">
     
@@ -31,5 +32,7 @@ export function renderMainPage(): void {
     </div>
 
   </div>
-</div>`
+</div>`;
+
+	root.contentContainer.appendChild(rootContent);
 }
