@@ -11,17 +11,7 @@
       "nickname": {
         "type": ["string", "null"]
       },
-      "avatar": {
-        "type": "object",
-        "required": ["url"],
-        "additionalProperties": false,
-        "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri"
-          }
-        }
-      }
+      "avatar": { "type": "string", "format": "uri" }
     }
   }
 }

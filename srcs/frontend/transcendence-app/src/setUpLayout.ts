@@ -5,9 +5,7 @@ export type userData = {
 	username: string;
 	email:string;
 	created: string;
-	avatar: {
-		url:string;
-	}
+	avatar: string;
 };
 
 type loggedIn =
@@ -31,7 +29,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	  console.error('Access check failed:', json);
 	  return { success: false, error: json};
 	}
-	const pfp = await fetch(json.avatar.url, {
+	const pfp = await fetch(json.avatar, {
 		method: 'get',
 	  credentials: 'include',
 	  headers: { 'Content-Type': 'application/json',
@@ -39,7 +37,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	  },
 	});
 	const rawpfp:Blob = await pfp.blob();
-	return { success: true, data: json, pfp: rawpfp, pfpString: json.avatar.url };
+	return { success: true, data: json, pfp: rawpfp, pfpString: json.avatar };
   } catch (err) {
 	console.error('Fetch error:', err);
 	return { success: false, error: err};
@@ -64,11 +62,11 @@ export function renderNavBar(root: HTMLElement) {
     <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-sm font-semibold text-white">
         <div class="flex items-center gap-6">
           <img src="/icons8-tailwindcss.svg" class="w-8 h-8"/>
-          <a href="/#/main">Dashboard</a>
-          <a href="/#/games/create">Games</a>
+          <a href="#/main">Dashboard</a>
+          <a href="#/games/create">Games</a>
           <a href="#/tournaments">Tournament</a>
-          <a href="#">Leaderboard</a>
-          <a href="/#/chat">Chat</a>
+          <a href="#/leaderboard">Leaderboard</a>
+          <a href="#/chat">Chat</a>
         </div>
         <div class="flex items-center gap-6">
 		<div id="notifBtn" class="relative">
@@ -85,7 +83,7 @@ export function renderNavBar(root: HTMLElement) {
               </button>
             </div>
             <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-hidden opacity-0 scale-95 pointer-events-none transition ease-in duration-75" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">Your Profile</a>
+              <a href="#/users/${user}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">My Profile</a>
               <a href="#/users/${user}/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-1">Account Settings</a>
               <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-2">Sign out</button>
             </div>

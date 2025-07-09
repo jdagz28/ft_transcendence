@@ -16,6 +16,8 @@ import { renderCreateGameLobby } from "./pages/createGame";
 import { renderChat } from "./chat";
 import { whoAmI } from "./setUpLayout";
 import { renderAccountSettingsPage } from "./pages/accountSettings";
+import { renderProfilePage } from "./pages/profile";
+import { renderLeaderboardPage } from "./pages/leaderboard";
 import { renderError403 } from "./pages/403";
 
 export const ROUTE_GAMES_PAGE             = "/games/:gameId";
@@ -37,6 +39,8 @@ export const ROUTE_CREATE_GAME            = "/games/create";
 export const ROUTE_LOBBY                  = "/games/:gameId/lobby";
 export const ROUTE_GAME_PLAY              = "/games/:gameId/play";
 export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
+export const ROUTE_PROFILE                = "/users/:username";
+export const ROUTE_LEADERBOARD            = "/leaderboard";
 export const ERROR_403                    = "/403";
 
 
@@ -53,7 +57,6 @@ function tokenToRegex(pattern: string): RegExp {
   return new RegExp(
     "^" +
       pattern
-        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
         .replace(/:([a-zA-Z0-9_]+)/g, "([^/]+)")
       + "$"
   );
@@ -78,6 +81,8 @@ const routes: RouteEntry[] = [
   { pattern: ROUTE_TOURNAMENT_CREATE, regex: tokenToRegex(ROUTE_TOURNAMENT_CREATE), handler: () => renderCreateTournamentPage() },
 
   { pattern: ROUTE_CREATE_GAME, regex: tokenToRegex(ROUTE_CREATE_GAME), handler: () => renderCreateGameLobby() },
+
+  { pattern: ROUTE_LEADERBOARD, regex: tokenToRegex(ROUTE_LEADERBOARD), handler: () => renderLeaderboardPage() },
 
   { pattern: ERROR_403, regex: tokenToRegex(ERROR_403), handler: () => renderError403() },
 
@@ -123,6 +128,10 @@ const routes: RouteEntry[] = [
     handler: ({ gameId }) => renderGamePage({ gameId }) },
 
   { pattern: ROUTE_CHAT, regex: tokenToRegex(ROUTE_CHAT), handler: () => renderChat() },
+
+  { pattern: ROUTE_PROFILE,
+    regex: tokenToRegex(ROUTE_PROFILE),
+    handler: ({ username }) => renderProfilePage(String(username)) },
 
   // fallback
   { pattern: DEFAULT, regex: tokenToRegex(DEFAULT), handler: () => renderDefault() }
