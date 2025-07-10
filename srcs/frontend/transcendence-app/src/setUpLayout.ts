@@ -5,9 +5,7 @@ export type userData = {
 	username: string;
 	email:string;
 	created: string;
-	avatar: {
-		url:string;
-	}
+	avatar: string;
 };
 
 type loggedIn =
@@ -31,7 +29,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	  console.error('Access check failed:', json);
 	  return { success: false, error: json};
 	}
-	const pfp = await fetch(json.avatar.url, {
+	const pfp = await fetch(json.avatar, {
 		method: 'get',
 	  credentials: 'include',
 	  headers: { 'Content-Type': 'application/json',
@@ -39,7 +37,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	  },
 	});
 	const rawpfp:Blob = await pfp.blob();
-	return { success: true, data: json, pfp: rawpfp, pfpString: json.avatar.url };
+	return { success: true, data: json, pfp: rawpfp, pfpString: json.avatar };
   } catch (err) {
 	console.error('Fetch error:', err);
 	return { success: false, error: err};
@@ -56,18 +54,26 @@ export function renderNavBar(root: HTMLElement) {
     const user = data.data.username;
 	localStorage.setItem("userName", data.data.username);
 	localStorage.setItem("userID", data.data.id.toString());
+	let notificationCount = 333;
+	let notifString:string = notificationCount.toString();
+	if (notifString.length > 1)
+		notifString = '9+';
     root.innerHTML = /*html*/`
     <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-sm font-semibold text-white">
         <div class="flex items-center gap-6">
-          <div class="text-xl font-bold">🌊</div>
-          <a href="#">Dashboard</a>
-          <a href="#">Games</a>
+          <img src="/icons8-tailwindcss.svg" class="w-8 h-8"/>
+          <a href="#/main">Dashboard</a>
+          <a href="#/games/create">Games</a>
           <a href="#/tournaments">Tournament</a>
-          <a href="#">Leaderboard</a>
-          <a href="/#/chat">Chat</a>
+          <a href="#/leaderboard">Leaderboard</a>
+          <a href="#/chat">Chat</a>
         </div>
         <div class="flex items-center gap-6">
-          <span class="text-xl">${user} 🔔</span>
+		<div id="notifBtn" class="relative">
+			<img src="/icons8-bell.svg" class="w-8 h-8 invert"/>
+			<span id="notification-badge" class="absolute top-0 right-0 items-center justify-center text-[10px] font-bold text-white h-4 w-4 rounded-full bg-red-600 border-2 border-white hidden">${notifString}</span>
+		</div>
+          <span class="text-xl">${user}</span>
           <div class="relative ml-3">
             <div>
               <button type="button" class="relative flex rounded-full bg-gray-800 text-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
@@ -77,13 +83,19 @@ export function renderNavBar(root: HTMLElement) {
               </button>
             </div>
             <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-hidden opacity-0 scale-95 pointer-events-none transition ease-in duration-75" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">Your Profile</a>
+              <a href="#/users/${user}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">My Profile</a>
               <a href="#/users/${user}/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-1">Account Settings</a>
               <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-2">Sign out</button>
             </div>
           </div>
         </div>
     </nav>`;
+
+	//friend request friend.request
+	//game invite game.invite.game.ready 
+	//tournament invite tournament.invite
+	//tournament update tournament.update
+
 
     const userAvatar = document.getElementById('avatar');
     if (userAvatar) {
@@ -96,13 +108,14 @@ export function renderNavBar(root: HTMLElement) {
       userAvatar.appendChild(img);
     }
 
-    const btn = document.getElementById('user-menu-button')!;
-    const menu = document.getElementById('user-menu')!;
+    const userDropDownBtn = document.getElementById('user-menu-button');
+    const menu = document.getElementById('user-menu');
     let open = false;
 
-    btn.addEventListener('click', () => {
+	if (userDropDownBtn && menu) {
+    userDropDownBtn.addEventListener('click', () => {
       open = !open;
-      btn.setAttribute('aria-expanded', String(open));
+      userDropDownBtn.setAttribute('aria-expanded', String(open));
       if (open) {
         menu.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
         menu.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
@@ -115,18 +128,17 @@ export function renderNavBar(root: HTMLElement) {
         menu.classList.add('ease-in', 'duration-75');
       }
     });
-
     document.addEventListener('click', (event) => {
-      if (!btn.contains(event.target as Node) && !menu.contains(event.target as Node)) {
+      if (!userDropDownBtn.contains(event.target as Node) && !menu.contains(event.target as Node)) {
         if (open) {
           open = false;
-          btn.setAttribute('aria-expanded', 'false');
+          userDropDownBtn.setAttribute('aria-expanded', 'false');
           menu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
           menu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
         }
       }
     });
-
+	}
 		const logoutBtn = document.getElementById('user-menu-item-2');
 		if (logoutBtn) {
 			logoutBtn.addEventListener('click', async () => {
@@ -148,6 +160,24 @@ export function renderNavBar(root: HTMLElement) {
 				}
 			});
 		}
+		const notifBtn = document.getElementById('notifBtn');
+	if (notifBtn) {
+		notifBtn.addEventListener('click', () => {
+			alert("Notifications are not implemented yet, but will be soon!");
+		});
+	}
+
+	const badge = document.getElementById('notification-badge');
+
+	if (badge) {
+		if (notificationCount > 0) {
+			badge.classList.remove('hidden');
+			badge.classList.add('flex');
+		} else {
+			badge.classList.add('hidden');
+			badge.classList.remove('flex');
+		}
+	}
 
   });
 	data = false;

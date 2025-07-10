@@ -1,4 +1,4 @@
-import { type RouteParams, DEFAULT, ROUTE_MAIN } from "../router";
+import { type RouteParams, DEFAULT, ROUTE_MAIN, deletePastLobby } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 
@@ -580,7 +580,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     }
 
       const json: userData = await getUser.json();
-      const pfp = await fetch(json.avatar.url, {
+      const pfp = await fetch(json.avatar, {
       method: 'get',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json',
@@ -595,21 +595,21 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       localStorage.setItem("user2", user2.token);
       localStorage.setItem("username2", user2.username);
       localStorage.setItem("id2", user2.userID);
-      localStorage.setItem("pfp2", json.avatar.url);
+      localStorage.setItem("pfp2", json.avatar);
       }
       else if (userlog === 3) {
       user3 = temp;
       localStorage.setItem("user3", user3.token);
       localStorage.setItem("username3", user3.username);
       localStorage.setItem("id3", user3.userID);
-      localStorage.setItem("pfp3", json.avatar.url);
+      localStorage.setItem("pfp3", json.avatar);
       }
       else if (userlog === 4) {
       user4 = temp;
       localStorage.setItem("user4", user4.token);
       localStorage.setItem("username4", user4.username);
       localStorage.setItem("id4", user4.userID);
-      localStorage.setItem("pfp4", json.avatar.url);
+      localStorage.setItem("pfp4", json.avatar);
       }
       const errorDiv = document.getElementById('loginError');
       if (errorDiv) {
@@ -707,7 +707,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
             throw new Error(errorData.message || 'Error Fetching User Data');
       }
       const json: userData = await getUser.json();
-      const pfp = await fetch(json.avatar.url, {
+      const pfp = await fetch(json.avatar, {
       method: 'get',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json',
@@ -722,21 +722,21 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       localStorage.setItem("user2", user2.token);
       localStorage.setItem("username2", user2.username);
       localStorage.setItem("id2", user2.userID);
-      localStorage.setItem("pfp2", json.avatar.url);
+      localStorage.setItem("pfp2", json.avatar);
       }
       else if (userlog === 3) {
       user3 = temp;
       localStorage.setItem("user3", user3.token);
       localStorage.setItem("username3", user3.username);
       localStorage.setItem("id3", user3.userID);
-      localStorage.setItem("pfp3", json.avatar.url);
+      localStorage.setItem("pfp3", json.avatar);
       }
       else if (userlog === 4) {
       user4 = temp;
       localStorage.setItem("user4", user4.token);
       localStorage.setItem("username4", user4.username);
       localStorage.setItem("id4", user4.userID);
-      localStorage.setItem("pfp4", json.avatar.url);
+      localStorage.setItem("pfp4", json.avatar);
       }
       renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
       setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
@@ -818,6 +818,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     if (!confirm('Are you sure you want to cancel this game?')) {
       return; 
     }
+	localStorage.removeItem("gameId");
     const response = await fetch(`/games/${game}`, {
       method: 'DELETE',
       headers: {
@@ -841,7 +842,10 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     window.location.hash = "#/404";
     return;
   }
-
+  const tempId = localStorage.getItem("gameId");
+  if (tempId && tempId !== params.gameId)
+	await deletePastLobby();
+  localStorage.setItem("gameId", gameId);
   const token = localStorage.getItem("token") ?? "";
 	const user = await whoAmI();
   if (!user.success) {
