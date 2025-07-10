@@ -270,6 +270,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           fastify.log.error(`Failed to send friend request from ${userId} to ${friendId}`)
           throw new Error('Friend request failed')
         }
+
+        const username = fastify.db.prepare('SELECT username FROM users WHERE id = ?').get(userId)
+        await fastify.notifications.friendRequest(userId, friendId, username.username)
+
         return true
       } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {

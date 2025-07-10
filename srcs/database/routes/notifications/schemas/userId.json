@@ -1,8 +1,8 @@
 {
   "type": "object",
-  "$id": "schema:users:getUserById",
+  "$id": "schema:notifications:userId",
   "required": ["userId"],
   "properties": {
     "userId": { "type": "number" }
-  }
+  } 
 }

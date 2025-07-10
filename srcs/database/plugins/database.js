@@ -51,6 +51,7 @@ async function databaseConnector(fastify) {
       createConvoMembersTable();
       createMessagesTable();
       createGroupInvitationsTable();
+      createNotificationsTable();
       db.exec('COMMIT');
       fastify.log.info("Created tables successfully.");
 
@@ -297,16 +298,17 @@ async function databaseConnector(fastify) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS game_invites (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        games_id  INTEGER NOT NULL,
+        game_id        INTEGER NOT NULL,
         user_id        INTEGER NOT NULL,
+        inviter_id     INTEGER NOT NULL,
         status         TEXT    NOT NULL
                         CHECK(status IN ('pending','accepted','rejected'))
                         DEFAULT 'pending',
         created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(games_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE,
         FOREIGN KEY(user_id)       REFERENCES users(id)       ON DELETE CASCADE,
-        UNIQUE (games_id, user_id)
+        UNIQUE (game_id, user_id)
       );
     `);
   }
@@ -470,7 +472,24 @@ async function databaseConnector(fastify) {
       FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `);
-}
+  }
+
+  function createNotificationsTable() {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        sender_id INTEGER,
+        type TEXT NOT NULL,
+        type_id INTEGER,
+        content TEXT NOT NULL,
+        is_read BOOLEAN NOT NULL DEFAULT 0,
+        created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
 
   fastify.decorate('db', db);
   fastify.log.info("Fastify instance has 'db': " + fastify.hasDecorator('db')); 
