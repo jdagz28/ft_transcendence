@@ -181,10 +181,35 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Leaderboard retrieved:', data) //! DELETE
       return data
-    } 
+    },
+
+    async inviteToGame(request, gameId, username) {
+      const { data } = await dbApi.post(`/games/${gameId}/invite`, 
+        { username }, 
+        { headers: internalHeaders(request) },
+      )
+      console.log('User invited to game:', data) //! DELETE
+      return data
+    },
+
+    async respondToInvite(request, gameId, response) {
+      const { data } = await dbApi.patch(`/games/invites/respond`, 
+        { gameId, response },
+        { headers: internalHeaders(request) }
+      )
+      console.log('Invite response sent:', data) //! DELETE
+      return data
+    },
+
+    async getGameInvites(request) {
+      const { data } = await dbApi.get('/games/invites',
+        { headers: internalHeaders(request) }
+      )
+      console.log('Game invites retrieved:', data) //! DELETE
+      return data
+    }
     
   })
 }, {
-  name: 'gameAutoHooks'
-  
+  name: 'gameAutoHooks',
 })

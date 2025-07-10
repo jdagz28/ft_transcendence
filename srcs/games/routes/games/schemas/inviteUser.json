@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:games:inviteUser",
+  "required": [ "username" ],
+  "properties": {
+    "username": { "type": "string" }
+  }
+}

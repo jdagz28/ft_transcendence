@@ -243,6 +243,50 @@ module.exports = fp(
       }
     })
 
+    fastify.post('/games/:gameId/invite', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:inviteUser')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function inviteToGameHandler(request, reply) {
+        const { gameId } = request.params
+        const { username } = request.body
+        const result = await fastify.gameService.inviteToGame(request, gameId, username)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
+    fastify.patch('/games/invites/respond', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:respondToInvite')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function respondToInviteHandler(request, reply) {
+        const { gameId, response } = request.body
+        const result = await fastify.gameService.respondToInvite(request, gameId, response)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
+    fastify.get('/games/invites', {
+      onRequest: fastify.authenticate,
+      handler: async function getGameInvitesHandler(request, reply) {
+        const invites = await fastify.gameService.getGameInvites(request)
+        if (!invites) {
+          return reply.code(404).send({ error: 'No invites found' })
+        }
+        return reply.send(invites)
+      }
+    })
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']
