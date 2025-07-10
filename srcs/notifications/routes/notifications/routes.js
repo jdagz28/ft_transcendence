@@ -33,7 +33,7 @@ module.exports = fp(async function (fastify, opts) {
 
   fastify.get('/notifications/:userId', {
     schema: {
-      params: fastify.getSchema('schemas:notifications:userId')
+      params: fastify.getSchema('schema:notifications:userId')
     },
     onRequest: fastify.authenticate,
     handler: async function notificationsHandler(request) {
@@ -47,8 +47,8 @@ module.exports = fp(async function (fastify, opts) {
 
   fastify.patch('/notifications/:userId/:notificationId', {
     schema: {
-      params: fastify.getSchema('schemas:notifications:notificationId'),
-      body: fastify.getSchema('schemas:notifications:updateNotificationStatus'),
+      params: fastify.getSchema('schema:notifications:notificationId'),
+      body: fastify.getSchema('schema:notifications:updateNotificationStatus'),
     },
     onRequest: fastify.authenticate,
     handler: async function updateNotificationStatusHandler(request, reply) {
@@ -62,5 +62,6 @@ module.exports = fp(async function (fastify, opts) {
   })
 
 }, {
-  name: 'notificationsRoutes', 
+  name: 'notificationsRoutes',
+  dependencies: [ 'notificationsAutoHooks']
 })  

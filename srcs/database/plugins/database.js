@@ -479,7 +479,7 @@ async function databaseConnector(fastify) {
       CREATE TABLE IF NOT EXISTS notifications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        sender_id INTEGER NOT NULL,
+        sender_id INTEGER,
         type TEXT NOT NULL,
         type_id INTEGER,
         content TEXT NOT NULL,

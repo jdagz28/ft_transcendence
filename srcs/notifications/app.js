@@ -23,9 +23,14 @@ module.exports = async function (fastify, opts) {
   // This loads all plugins defined in routes
   // define your routes in one of these
   fastify.register(AutoLoad, {
-    dir: path.join(__dirname, 'routes'),
-    options: Object.assign({}, opts)
-  })
+     dir: path.join(__dirname, 'routes'),
+     indexPattern: /.*routes(\.js|\.cjs)$/i,
+     ignorePattern: /.*\.js/,
+     autoHooksPattern: /.*hooks(\.js|\.cjs)$/i,
+     autoHooks: true,
+     cascadeHooks: true,
+     options: Object.assign({}, opts)
+   })
 }
 
 module.exports.options = options
