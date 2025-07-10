@@ -49,7 +49,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
   let playersHTML: string;
   if (playerCount === "1" || playerCount === "Training") {
     playersHTML = `
-<div class="relative z-10 flex [min-height:calc(100vh-3.5rem)] items-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-32 selection:bg-blue-400 selection:text-white">
+<div class="relative z-10 flex min-h-[calc(100vh-64px)] items-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-32 selection:bg-blue-400 selection:text-white">
 
     <div class="relative flex flex-col items-start -mt-40">
         <div id="avatar1" class="h-35 w-35 rounded-full bg-white"></div>
@@ -63,7 +63,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
       </div>`;
   } else if (playerCount === "2") {
     playersHTML = `
-    <div class="relative z-10 flex [min-height:calc(100vh-3.5rem)] items-center justify-between bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-32 selection:bg-blue-400 selection:text-white">
+    <div class="relative z-10 flex min-h-[calc(100vh-64px)] items-center justify-between bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-32 selection:bg-blue-400 selection:text-white">
   
       <div class="relative flex flex-col items-start -mt-40">
         <div id="avatar1" class="h-35 w-35 rounded-full bg-white"></div>
@@ -94,7 +94,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
       </div>`;
   } else if (playerCount === "4") {
     playersHTML = `
-    <div class="relative z-10 grid grid-cols-2 gap-x-32 gap-y-20 [min-height:calc(100vh-3.5rem)] items-center justify-items-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-12 py-40 selection:bg-blue-400 selection:text-white">
+    <div class="relative z-10 grid grid-cols-2 gap-x-32 gap-y-20 min-h-[calc(100vh-64px)] items-center justify-items-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-12 py-40 selection:bg-blue-400 selection:text-white">
 
   <!-- Player 1 -->
   <div class="relative flex flex-col items-center -mt-40">
