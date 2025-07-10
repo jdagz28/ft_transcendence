@@ -753,6 +753,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
 
   startBtn.addEventListener('click', async () => {
     //start game <--------------------------- IMPLEMENT!
+	localStorage.removeItem("gameId");
     let body;
 		if (playerCount === "1") {
       body = { options: [
