@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:notifications:notificationId",
+  "required": ["notificationId"],
+  "properties": {
+    "notificationId": { "type": "number" }
+  }
+}

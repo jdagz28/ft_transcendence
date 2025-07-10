@@ -9,33 +9,6 @@ const options = {}
 module.exports = async function (fastify, opts) {
   // Place here your custom code!
 
-  fastify.post('/notify/user/:userId', async (request, reply) => {
-    const { userId } = request.params
-    const notification = request.body
-    
-    if (!notification.timestamp) {
-      notification.timestamp = Date.now()
-    }
-    
-    console.log(`Sending notification to user ${userId}:`, notification)
-
-    fastify.sendNotificationToUser(userId, notification)
-    
-    return { success: true, message: 'Notification sent to user' }
-  })
-  
-  fastify.post('/notify/broadcast', async (request, reply) => {
-    const notification = request.body
-    
-    if (!notification.timestamp) {
-      notification.timestamp = Date.now()
-    }
-    
-    fastify.broadcastNotification(notification)
-    
-    return { success: true, message: 'Notification broadcasted' }
-  })
-
 
   // Do not touch the following lines
 
