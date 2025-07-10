@@ -73,7 +73,7 @@ export function renderNavBar(root: HTMLElement) {
 		<div id="notifBtn" class="relative">
 			<img src="/icons8-bell.svg" class="w-8 h-8 invert"/>
 			<span id="notification-badge" class="absolute top-0 right-0 items-center justify-center text-[10px] font-bold text-white h-4 w-4 rounded-full bg-red-600 border-2 border-white hidden">${notifString}</span>
-			<div id="notifModal" class="z-50 pointer-events-none absolute right-0 mt-2 max-h-40 w-64 scale-95 overflow-y-auto rounded-md bg-white opacity-0 shadow-lg ring-1 ring-black/5 transition duration-150 ease-in scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+			<div id="notifModal" class="z-index pointer-events-none absolute right-0 mt-2 max-h-40 w-64 scale-95 overflow-y-auto rounded-md bg-white opacity-0 shadow-lg ring-1 ring-black/5 transition duration-150 ease-in scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         		<div class="p-4 text-gray-700">
           			<p class="mb-2 font-semibold">Notifications</p>
           			<!-- Example notification items -->
@@ -96,7 +96,7 @@ export function renderNavBar(root: HTMLElement) {
                 <div id="avatar" class="h-8 w-8 overflow-hidden rounded-full bg-white"></div>
               </button>
             </div>
-            <div class="absolute right-0 z-49 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-hidden opacity-0 scale-95 pointer-events-none transition ease-in duration-75" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
+            <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-hidden opacity-0 scale-95 pointer-events-none transition ease-in duration-75" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
               <a href="#/users/${user}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">My Profile</a>
               <a href="#/users/${user}/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-1">Account Settings</a>
               <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-2">Sign out</button>
@@ -213,12 +213,12 @@ export function renderNavBar(root: HTMLElement) {
 	if (!data) return;
 }
 
-let navbarrendered = false;
+// let navbarrendered = false;
 
 export function setupAppLayout() {
   const app = document.getElementById('app');
   if (!app) throw new Error('#app root element not found');
-  if (!navbarrendered) {
+//   if (!navbarrendered) {
   app.innerHTML = '';
 
   if (!document.getElementById('global-background')) {
@@ -244,15 +244,15 @@ export function setupAppLayout() {
   app.appendChild(root);
 
 	const token = localStorage.getItem("token");
-	if (token && !navbarrendered) {
-	navbarrendered = true;
+	if (token/* && !navbarrendered*/) {
+	//navbarrendered = true;
   	renderNavBar(navContainer);
     connectNotifications();
-  }
-  return { contentContainer };
-	} else {
-	const contentContainer = document.getElementById('content-container') as HTMLDivElement;
-	contentContainer.innerHTML = '';
-	return { contentContainer};
-	}
+   }
+//   return { contentContainer };
+// 	} else {
+// 	const contentContainer = document.getElementById('content-container') as HTMLDivElement;
+// 	contentContainer.innerHTML = '';
+ 	return { contentContainer};
+// 	}
 }
