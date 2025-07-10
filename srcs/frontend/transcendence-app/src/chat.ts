@@ -1,28 +1,13 @@
 import { openSidebarChat } from "./sidebarChat";
+import { setupAppLayout } from "./setUpLayout";
 
 export function renderChat(): void {
   const token = localStorage.getItem('token');
-  const root = document.getElementById('app');
+  const root = setupAppLayout().contentContainer;
   if (!root) return;
 
   root.innerHTML = `
     <div class="flex flex-col min-h-screen bg-[#11294d]">
-      <!-- Navbar -->
-      <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-white text-sm font-semibold">
-        <div class="flex items-center gap-6">
-          <div class="text-xl font-bold">🌊</div>
-          <a href="#">Dashboard</a>
-          <a href="#">Games</a>
-          <a href="#">Tournament</a>
-          <a href="#">Leaderboard</a>
-          <a href="#">Chat</a>
-        </div>
-        <div class="flex items-center gap-4">
-          <span class="text-xl">USERRR</span>
-          <span class="text-xl">🔔</span>
-          <div id="avatar" class="w-8 h-8 rounded-full overflow-hidden bg-white"></div>
-        </div>
-      </nav>
       <!-- Main content -->
       <main class="flex-1 flex justify-center items-center">
         <div class="flex gap-20 w-full max-w-6xl mt-16">
@@ -130,18 +115,18 @@ async function loadGroups(token: string | null) {
 }
 
 async function loadDMs(token: string | null) {
-  const dmList = document.getElementById('dm-list')
+  const dmList = document.getElementById('dm-list');
   if (!dmList) return;
 
   dmList.innerHTML = `<div class="text-gray-400 text-center">Loading...</div>`;
 
-  const result = await getFriends(token)
+  const result = await getFriends(token);
   if (!result.success) {
     dmList.innerHTML = `<div class="text-red-400 text-center">Error while searching DMs</div>`;
     return;
   }
 
-  const dms: { id: number, username: string }[] = result.data;
+  const dms: { id: number, username: string, avatar: string }[] = result.data.data;
   if (!dms || dms.length === 0) {
     dmList.innerHTML = `<div class="text-gray-400 text-center">No DM found.</div>`;
     return;
@@ -152,25 +137,27 @@ async function loadDMs(token: string | null) {
     const divDM = document.createElement("div");
     divDM.className = "flex items-center justify-between bg-[#18376b] rounded-xl px-6 py-4";
     divDM.innerHTML = `
-      <span class="text-lg text-[#f8f8e7] font-semibold">${dm.username}</span>
+      <div class="flex items-center gap-4">
+        <img src="${dm.avatar}" alt="avatar" class="w-10 h-10 rounded-full border-2 border-gray-400">
+        <span class="text-lg text-[#f8f8e7] font-semibold">${dm.username}</span>
+      </div>
       <div class="flex gap-2">
-        <button id="join-dm-btn-${dm.id} class="join-dm-btn bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
-        <button id="block-dm-btn-${dm.id} class="block-dm-btn bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-bold">Block</button>
+        <button class="join-dm-btn bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
+        <button class="block-dm-btn bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-bold">Block</button>
       </div>
     `;
     dmList.appendChild(divDM);
 
-    const joinBtn = document.getElementById(`join-dm-btn-${dm.id}`);
+    const joinBtn = divDM.querySelector('.join-dm-btn');
     if (joinBtn) {
       joinBtn.addEventListener('click', () => {
         openSidebarChat(dm.id, dm.username);
       });
     }
 
-    const blockBtn = document.getElementById(`block-dm-btn-${dm.id}`);
+    const blockBtn = divDM.querySelector('.block-dm-btn');
     if (blockBtn) {
       blockBtn.addEventListener('click', async () => {
-
         const res = await fetch('/chat/block-user', {
           method: 'PUT',
           headers: {
