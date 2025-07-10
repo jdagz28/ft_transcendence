@@ -81,7 +81,6 @@ export async function openSidebarChat(groupId: number, groupName: string) {
     </div>
   `;
 
-  // const ws = new WebSocket(`ws://${window.location.host}/chat`);
   currentWs = new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`);
 
   currentWs.onopen = () => {

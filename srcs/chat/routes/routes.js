@@ -224,6 +224,27 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     }
   }),
 
+  fastify.get('/chat/dm/:id/history', async (request,reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const chatId = Number(request.params.id);
+
+    if (!Number.isInteger(chatId) || chatId <= 0) {
+      return reply.status(400).send({ error: "Invalid chat id" });
+    }
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/dm/${chatId}/history/${userId}`)
+      reply.send(response.data)
+    } catch (err) {
+      console.error(`error: ${err.response.err}`)
+      return reply.status(500).send({error: `${err.response.data.error}`})
+    }
+  }),
+
   fastify.put('/chat/block-user', async (request, reply) => {
     const data = await fastify.authenticate(request, reply)
     if (reply.sent)

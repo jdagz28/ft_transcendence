@@ -569,6 +569,40 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return messages;
     },
 
+    async getDmHistory(chatId, userId) {
+      const chatQuery = fastify.db.prepare(`
+        SELECT id FROM conversations
+        WHERE id = ? AND type = 'direct'
+        LIMIT 1
+      `);
+      const chat = chatQuery.get(chatId);
+      if (!chat || !chat.id) {
+        throw new Error(`DM ${chatId} not found`);
+      }
+
+      const memberQuery = fastify.db.prepare(`
+        SELECT 1 FROM convo_members
+        WHERE conversation_id = ? AND user_id = ?
+        LIMIT 1
+      `);
+      const isMember = memberQuery.get(chatId, userId);
+      if (!isMember) {
+        throw new Error('User is not a member of this DM');
+      }
+
+      const messagesQuery = fastify.db.prepare(`
+        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created,
+              (SELECT avatar FROM user_avatars WHERE user_id = u.id LIMIT 1) as avatar
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = ?
+        ORDER BY m.created ASC
+      `);
+      const messages = messagesQuery.all(chatId);
+
+      return messages;
+    },
+
     async blockUser(userId, blockedUserId) {
       if (!(await this.userExist(blockedUserId))) {
         throw new Error(`Blocked user ${blockedUserId} does not exist`);

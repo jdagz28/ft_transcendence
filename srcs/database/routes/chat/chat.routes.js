@@ -148,6 +148,18 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
     }
   }),
 
+  fastify.get('/chat/dm/:chatId/history/:userId', async (request, reply) => {
+    const chatId = Number(request.params.chatId)
+    const userId = Number(request.params.userId)
+
+    try {
+      const response = await fastify.dbChat.getDmHistory(chatId, userId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
   fastify.put('/chat/block-user', async (request, reply) => {
     const { userId, blockedUserId } = request.body;
 
