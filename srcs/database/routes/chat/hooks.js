@@ -589,10 +589,9 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       if (!isMember) {
         throw new Error('User is not a member of this DM');
       }
-
+ 
       const messagesQuery = fastify.db.prepare(`
-        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created,
-              (SELECT avatar FROM user_avatars WHERE user_id = u.id LIMIT 1) as avatar
+        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = ?
