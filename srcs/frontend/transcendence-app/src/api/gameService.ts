@@ -40,3 +40,19 @@ export async function sendStatus(
     body: json
   });
 }
+
+export async function setInGameStatus(gameId: number): Promise<void> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`/games/${gameId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include',
+    body: JSON.stringify({ status: 'in-game' })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to set in-game status for game ${gameId}`);
+  }
+}

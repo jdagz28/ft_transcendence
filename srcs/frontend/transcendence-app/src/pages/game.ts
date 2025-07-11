@@ -1,6 +1,6 @@
 import  { type RouteParams, DEFAULT } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
-import { getConfig, sendStatus } from "../api/gameService";
+import { getConfig, sendStatus, setInGameStatus } from "../api/gameService";
 import { AIOpponent } from "../class/AiOpponent";
 import { StatsTracker } from "../class/StatsTracker";
 import type { GameStatusUpdate } from "../types/game_api";
@@ -58,6 +58,12 @@ export async function renderGamePage(params: RouteParams) {
     }
   }
 
+  console.log('Players:', players);
+  console.log('User ID:', userId);
+  console.log('Authorize:', authorize);
+  
+
+
   const config: GameDetails = await getConfig(gameId);
   const mode = config.settings.mode;
   if (mode === "tournament") {
@@ -68,6 +74,16 @@ export async function renderGamePage(params: RouteParams) {
         return;
       }
     }
+  }
+  console.log('Config:', config);
+
+  if (config.status !== "active") {
+    window.location.hash = '#/403';
+    return;
+  }
+
+  if (config.status === "active") {
+    await setInGameStatus(gameId);
   }
 
   const { canvas, leftNames, rightNames } = setupDom(contentContainer);

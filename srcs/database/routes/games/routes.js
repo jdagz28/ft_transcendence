@@ -238,6 +238,7 @@ module.exports = fp(
           const { gameId } = request.params
           const userId  = request.user.id
           const gameDetails = await fastify.dbGames.getGameDetails(gameId, userId)
+          console.log('Game details retrieved:', gameDetails) //! DELETE
           if (!gameDetails) {
             reply.status(404).send({ error: 'Game not found' })
             return

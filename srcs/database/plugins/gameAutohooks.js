@@ -335,8 +335,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             WHERE game_settings.game_id = ?
         `)
         const settingsRow = settingsQuery.get(gameId)
+        const status = fastify.db.prepare('SELECT * FROM games WHERE id = ?').get(gameId)
         return {
           gameId,
+          status: status.status,
           matchId: settingsRow.matchId,
           settings: {
             mode:        settingsRow.mode,

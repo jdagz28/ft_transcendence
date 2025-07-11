@@ -324,7 +324,7 @@ async function databaseConnector(fastify) {
         started DATETIME DEFAULT NULL,
         ended DATETIME DEFAULT NULL,
         status TEXT NOT NULL
-          CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
+          CHECK (status IN ('pending', 'active', 'in-game', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
