@@ -55,7 +55,7 @@ export function renderNavBar(root: HTMLElement) {
     const user = data.data.username;
 	localStorage.setItem("userName", data.data.username);
 	localStorage.setItem("userID", data.data.id.toString());
-	let notificationCount = 333;
+	let notificationCount = 333; // This should be replaced with the actual notification count from the server
 	let notifString:string = notificationCount.toString();
 	if (notifString.length > 1)
 		notifString = '9+';
@@ -73,6 +73,19 @@ export function renderNavBar(root: HTMLElement) {
 		<div id="notifBtn" class="relative">
 			<img src="/icons8-bell.svg" class="w-8 h-8 invert"/>
 			<span id="notification-badge" class="absolute top-0 right-0 items-center justify-center text-[10px] font-bold text-white h-4 w-4 rounded-full bg-red-600 border-2 border-white hidden">${notifString}</span>
+			<div id="notifModal" class="z-index pointer-events-none absolute right-0 mt-2 max-h-40 w-64 scale-95 overflow-y-auto rounded-md bg-white opacity-0 shadow-lg ring-1 ring-black/5 transition duration-150 ease-in scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        		<div class="p-4 text-gray-700">
+          			<p class="mb-2 font-semibold">Notifications</p>
+          			<!-- Example notification items -->
+          			<div class="mb-2">Notification 1</div>
+          			<div class="mb-2">Notification 2</div>
+          			<div class="mb-2">Notification 3</div>
+          			<div class="mb-2">Notification 4</div>
+          			<div class="mb-2">Notification 5</div>
+          			<div class="mb-2">Notification 6</div>
+          			<div class="mb-2">Notification 7</div>
+        		</div>
+      		</div>
 		</div>
           <span class="text-xl">${user}</span>
           <div class="relative ml-3">
@@ -92,6 +105,7 @@ export function renderNavBar(root: HTMLElement) {
         </div>
     </nav>`;
 
+	//web socket cheat sheet
 	//friend request friend.request
 	//game invite game.invite.game.ready 
 	//tournament invite tournament.invite
@@ -108,6 +122,20 @@ export function renderNavBar(root: HTMLElement) {
       userAvatar.innerHTML = '';
       userAvatar.appendChild(img);
     }
+
+	const notifBtn = document.getElementById('notifBtn');
+	const notifModal = document.getElementById('notifModal');
+	if (notifBtn && notifModal) {
+		notifBtn.addEventListener('click', () => {
+			if (notifModal.classList.contains('opacity-0')) {
+    			notifModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+    			notifModal.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
+    		} else {
+    			notifModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+    			notifModal.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
+			}
+		});
+	}
 
     const userDropDownBtn = document.getElementById('user-menu-button');
     const menu = document.getElementById('user-menu');
@@ -138,6 +166,12 @@ export function renderNavBar(root: HTMLElement) {
           menu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
         }
       }
+	  if (notifBtn && notifModal) {
+	  	if (!notifBtn.contains(event.target as Node) && !notifModal.contains(event.target as Node)) {
+			notifModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+    		notifModal.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
+	  	}
+	  }
     });
 	}
 		const logoutBtn = document.getElementById('user-menu-item-2');
@@ -161,12 +195,6 @@ export function renderNavBar(root: HTMLElement) {
 				}
 			});
 		}
-		const notifBtn = document.getElementById('notifBtn');
-	if (notifBtn) {
-		notifBtn.addEventListener('click', () => {
-			alert("Notifications are not implemented yet, but will be soon!");
-		});
-	}
 
 	const badge = document.getElementById('notification-badge');
 
@@ -185,10 +213,12 @@ export function renderNavBar(root: HTMLElement) {
 	if (!data) return;
 }
 
+// let navbarrendered = false;
+
 export function setupAppLayout() {
   const app = document.getElementById('app');
   if (!app) throw new Error('#app root element not found');
-
+//   if (!navbarrendered) {
   app.innerHTML = '';
 
   if (!document.getElementById('global-background')) {
@@ -214,10 +244,15 @@ export function setupAppLayout() {
   app.appendChild(root);
 
 	const token = localStorage.getItem("token");
-	if (token) {
+	if (token/* && !navbarrendered*/) {
+	//navbarrendered = true;
   	renderNavBar(navContainer);
     connectNotifications();
-  }
-
-  return { contentContainer };
+   }
+//   return { contentContainer };
+// 	} else {
+// 	const contentContainer = document.getElementById('content-container') as HTMLDivElement;
+// 	contentContainer.innerHTML = '';
+ 	return { contentContainer};
+// 	}
 }
