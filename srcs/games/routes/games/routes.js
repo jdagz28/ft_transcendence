@@ -287,6 +287,23 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/games/:gameId/in-game', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:updateInGameStatus')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateInGameStatusHandler(request, reply) {
+        const { gameId } = request.params
+        const { status } = request.body
+        const result = await fastify.gameService.updateInGameStatus(request, gameId, status)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']

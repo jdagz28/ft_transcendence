@@ -207,6 +207,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('Game invites retrieved:', data) //! DELETE
       return data
+    },
+
+    async updateInGameStatus(request, gameId) {
+      const { status } = request.body
+      const { data } = await dbApi.patch(`/games/${gameId}/in-game`,
+        { status },
+        { headers: internalHeaders(request) },
+      )
+      console.log('In-game status updated:', data) //! DELETE
+      return data
     }
     
   })

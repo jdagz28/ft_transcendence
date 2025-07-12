@@ -410,6 +410,31 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/games/:gameId/in-game', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:updateInGameStatus')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateInGameStatusHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const { status } = request.body
+          const userId = request.user.id
+          console.log('Updating in-game status for gameId:', gameId, 'to status:', status) //! DELETE
+          const result = await fastify.dbGames.updateInGameStatus(userId, gameId, status)
+          if (!result) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',

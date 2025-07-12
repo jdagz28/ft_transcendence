@@ -43,7 +43,7 @@ export async function sendStatus(
 
 export async function setInGameStatus(gameId: number): Promise<void> {
   const token = localStorage.getItem('token');
-  const response = await fetch(`/games/${gameId}/status`, {
+  const response = await fetch(`/games/${gameId}/in-game`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
