@@ -106,6 +106,7 @@ async function databaseConnector(fastify) {
         user_id INTEGER NOT NULL,
         mfa_secret TEXT NOT NULL,
         mfa_token TEXT,
+        mfa_type TEXT NOT NULL DEFAULT 'totp',
         mfa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
         qr_code TEXT,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

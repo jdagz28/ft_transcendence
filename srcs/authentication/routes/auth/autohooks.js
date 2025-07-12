@@ -176,7 +176,26 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         fastify.log.error(`setMfaQrCode error: ${err.message}`)
         throw new Error('Failed to set MFA QR code')
       }
+    },
+
+    async setMfaType(userId, mfaType, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        await axios.patch(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/type`,
+          { mfa_type: mfaType },
+          {
+            headers: {
+              Authorization: rawAuth,
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+      } catch (err) {
+        fastify.log.error(`setMfaType error: ${err.message}`)
+        throw new Error('Failed to set MFA type')
+      }
     }
+
   }),
 
 

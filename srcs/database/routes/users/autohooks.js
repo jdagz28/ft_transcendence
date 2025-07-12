@@ -409,7 +409,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async setMfaSecret(userId, secret) { 
+    async setMfaSecret(userId, secret, mfaType = 'totp') { 
       try {
         const check = fastify.db.prepare(`
           SELECT * FROM user_mfa WHERE user_id = ?
@@ -419,16 +419,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         let result;
         if (!user) {
           query = fastify.db.prepare(`
-            INSERT INTO user_mfa (user_id, mfa_secret, mfa_enabled)
-            VALUES (?, ?, ?)
+            INSERT INTO user_mfa (user_id, mfa_secret, mfa_enabled, mfa_type)
+            VALUES (?, ?, ?, ?)
           `)
-          result = query.run(userId, secret, 1)
+          result = query.run(userId, secret, 1, mfaType)
         }
         else {
           query = fastify.db.prepare(`
-            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled = ? WHERE user_id = ?
+            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled = ?, mfa_type = ? WHERE user_id = ?
           `)
-          result = query.run(secret, 1, userId)
+          result = query.run(secret, 1, mfaType, userId)
         }
         if (result.changes === 0) {
           fastify.log.error(`Failed to set MFA secret for user ${userId}`)
@@ -443,19 +443,21 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async getUserMfa(userId) {
       const query = fastify.db.prepare(`
-        SELECT mfa_secret, mfa_enabled FROM user_mfa WHERE user_id = ?
+        SELECT mfa_secret, mfa_enabled, mfa_type FROM user_mfa WHERE user_id = ?
       `)
       const row = query.get(userId)
       if (!row) {
         fastify.log.error(`User not found: ${userId}`)
         return {
           mfa_secret: null,
-          mfa_enabled: false
+          mfa_enabled: false,
+          mfa_type: 'totp'
         }
       }
       return { 
         mfa_secret: row.mfa_secret,
-        mfa_enabled: row.mfa_enabled
+        mfa_enabled: row.mfa_enabled,
+        mfa_type: row.mfa_type
       }
     },
 
@@ -529,17 +531,36 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         `)
         const row = query.get(userId)
         if (!row) {
-          return { mfa_enabled: false, qr_code: null }
+          return { mfa_enabled: false, qr_code: null, mfa_type: 'totp' }
         }
         return { 
           mfa_enabled: row.mfa_enabled,
-          qr_code: row.qr_code
+          qr_code: row.qr_code,
+          mfa_type: row.mfa_type
         }
       } catch (err) {
         fastify.log.error(`getMfaDetails error: ${err.message}`)
         throw new Error('Get MFA details failed')
       }
     },
+
+    async setMfaType(userId, mfaType) {
+      try {
+        const query = fastify.db.prepare(`
+          UPDATE user_mfa SET mfa_type = ? WHERE user_id = ?
+        `)
+        const result = query.run(mfaType, userId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA type for user ${userId}`)
+          throw new Error('Set MFA type failed')
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`setMfaType error: ${err.message}`)
+        throw new Error('Set MFA type failed')
+      }
+    },
+    
 
     async getMatchHistory(userId) {
       try {

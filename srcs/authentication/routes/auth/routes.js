@@ -394,7 +394,7 @@ module.exports = fp(
         const userId = request.user.id
         try {
           const check = await fastify.usersDataSource.getMfaDetails(userId, request)
-          if (!check.qr_code) {
+          if (!check.qr_code && check.mfa_type === 'totp') {
             const username = request.user.username
             const secret = speakeasy.generateSecret({
               name: `ft_transcendence (${username})`
@@ -477,7 +477,25 @@ module.exports = fp(
         }
       }
     })
-
+    
+    fastify.patch('/auth/:userId/mfa/type', {
+      onRequest: fastify.authenticate,
+      schema: {
+        body: fastify.getSchema('schema:auth:mfaType')
+      },
+      handler: async function setMfaTypeHandler(request, reply) {
+        const userId = request.params.userId
+        const { mfa_type } = request.body
+        try {
+          await fastify.usersDataSource.setMfaType(userId, mfa_type, request)
+          return reply.send({ success: true, message: 'MFA type updated successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to set mfa type for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to set mfa type' })
+        }
+      }
+    }
+    )
   }, {
     name: 'auth-routes',
     dependencies: [ 'authAutoHooks']

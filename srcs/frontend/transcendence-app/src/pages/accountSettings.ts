@@ -105,6 +105,31 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   `; 
   mfaSection.appendChild(toggleLabel);
 
+  const mfaTypeRow = document.createElement("div");
+  mfaTypeRow.className = "flex items-center mt-4"; 
+
+  const mfaTypeLabel = document.createElement("label");
+  mfaTypeLabel.textContent = "Select MFA Type:";
+  mfaTypeLabel.className = "ml-3 text-lg font-medium text-white"; 
+
+  const mfaTypeSelect = document.createElement("select");
+  mfaTypeSelect.id = "mfa-type-select";
+  mfaTypeSelect.className =
+    "ml-2 text-lg font-medium text-white bg-gray-800 border border-gray-600 rounded px-3 py-1"; 
+
+  const optionTotp = document.createElement("option");
+  optionTotp.value = "totp";
+  optionTotp.textContent = "Authenticator App";
+  const optionEmail = document.createElement("option");
+  optionEmail.value = "email";
+  optionEmail.textContent = "Email";
+  mfaTypeSelect.appendChild(optionTotp);
+  mfaTypeSelect.appendChild(optionEmail);
+
+  mfaTypeRow.appendChild(mfaTypeLabel);
+  mfaTypeRow.appendChild(mfaTypeSelect);
+  mfaSection.appendChild(mfaTypeRow);
+
   const qrContainer = document.createElement("div");
   qrContainer.className = "flex flex-col items-center mt-6";
 

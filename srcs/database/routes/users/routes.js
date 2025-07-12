@@ -416,19 +416,25 @@ module.exports = fp(
       }
     })
 
-    // fastify.get('/users/:userId/matches', {
-    //   onRequest: [fastify.authenticate, fastify.checkInternalKey],
-    //   handler: async function getMatchHistoryHandler(request, reply) {
-    //     const { userId } = request.params
-    //     try {
-    //       const matches = await fastify.dbUsers.getMatchHistory(userId)
-    //       return reply.send(matches)
-    //     } catch (err) {
-    //       fastify.log.error(`Error retrieving match history: ${err.message}`)
-    //       reply.code(500).send({ error: 'Failed to retrieve match history' })
-    //     }
-    //   }
-    // })
+    fastify.patch('/users/:userId/mfa/type', {
+      schema: {
+        body: fastify.getSchema('schema:users:mfaType'),
+        params: fastify.getSchema('schema:users:getUserById')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function setMfaTypeHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          const { mfa_type } = request.body
+          console.log('Setting MFA type for user ID:', userId, 'to', mfa_type) //! DELETE
+          await fastify.dbUsers.setMfaType(userId, mfa_type)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA type: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA type' })
+        }
+      }
+    })
 
     fastify.get('/users/:username/matches', {
       schema: {
