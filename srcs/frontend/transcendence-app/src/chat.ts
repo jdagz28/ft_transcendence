@@ -107,7 +107,7 @@ async function loadGroups(token: string | null) {
           alert(json.error || "Impossible de rejoindre le groupe");
           return;
         }
-        openSidebarChat(group.id, group.name);
+        openSidebarChat(group.id, group.name, "group");
       });
     }
     groupsList.appendChild(divGroup);
@@ -122,7 +122,7 @@ async function loadDMs(token: string | null) {
 
   const result = await getFriends(token);
   if (!result.success) {
-    dmList.innerHTML = `<div class="text-red-400 text-center">Error while searching DMs</div>`;
+    dmList.innerHTML = `<div class="text-white text-center">Add friends for starting dm!</div>`;
     return;
   }
 
@@ -150,8 +150,14 @@ async function loadDMs(token: string | null) {
 
     const joinBtn = divDM.querySelector('.join-dm-btn');
     if (joinBtn) {
-      joinBtn.addEventListener('click', () => {
-        openSidebarChat(dm.id, dm.username);
+      joinBtn.addEventListener('click', async () => {
+        const canJoin = await canIJoinDm(dm.id, token);
+        console.log(`canJoin = ${ JSON.stringify(canJoin) }`);
+        if (!canJoin.success) {
+          alert("Cannot join this DM: " + (canJoin.error?.error || "Unknown error"));
+          return;
+        }
+        openSidebarChat(canJoin.data.Room, dm.username, "dm", dm.id);
       });
     }
 
@@ -209,6 +215,29 @@ async function getFriends(token: string | null) {
     const json = await response.json();
     if (!response.ok) {
       console.error('Get friends request failed', json);
+      return { success: false, error: json };
+    }
+    return { success: true, data: json };
+  } catch (err) {
+    console.error('Fetch error:', err);
+    return { success: false, error: err };
+  }
+}
+
+async function canIJoinDm(userId: number, token: string | null) {
+  try {
+    console.log(`userId = ${userId} and type = ${typeof userId}`); // REMOVE THIS COMMENT
+    const response = await fetch(`https://localhost:4242/chat/can-join/dm`, {
+      method: 'POST',
+      body: JSON.stringify({ userId: userId }),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
+    const json = await response.json();
+    if (!response.ok) {
+      console.error('Can I join DM request failed', json);
       return { success: false, error: json };
     }
     return { success: true, data: json };

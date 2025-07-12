@@ -53,17 +53,20 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     const data = await fastify.authenticate(request, reply);
     if (reply.sent)
       return;
-
+    console.log(`request.body = `, request.body) // REMOVE THIS COMMENT
     const fromUserId = data.user.id
     const { userId } = request.body
-    if (typeof userId !== 'number' || userId <= 0 || !Number.isInteger(userId)) {
+    const intUserId = Number(userId);
+    console.log("userId (raw) =", userId, "typeof:", typeof userId);  // REMOVE THIS COMMENT
+    console.log("intUserId =", intUserId, "typeof:", typeof intUserId); // REMOVE THIS COMMENT
+    if (typeof intUserId !== 'number' || intUserId <= 0 || !Number.isInteger(intUserId)) {
       return reply.status(400).send({error: `Invalid field 'userId' must be number`})
     }
 
     try {
       const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/can-join/dm`, {
         fromUserId: fromUserId,
-        toUserId: userId
+        toUserId: intUserId
       })
       reply.send(response.data)
     } catch(err) {

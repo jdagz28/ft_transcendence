@@ -1,6 +1,6 @@
 let currentWs: WebSocket | null = null;
 
-export async function openSidebarChat(groupId: number, groupName: string) {
+export async function openSidebarChat(chatId: number, chatName: string, type: 'group' | 'dm' = 'group', userId: number | null = null) {
   const sidebar = document.getElementById('sidebar-chat');
   if (!sidebar) return;
 
@@ -22,7 +22,14 @@ export async function openSidebarChat(groupId: number, groupName: string) {
     currentWs = null;
   }
 
-  fetch(`/chat/group/${groupId}/history`, {
+  const historyUrl =
+    type === 'group'
+      ? `/chat/group/${chatId}/history`
+      : `/chat/dm/${chatId}/history`;
+
+  console.log(`historyUrl = ${historyUrl}`)
+
+  fetch(historyUrl, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -50,7 +57,7 @@ export async function openSidebarChat(groupId: number, groupName: string) {
     .catch(() => {
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (messagesDiv)
-        messagesDiv.innerHTML += `<div class="text-red-400 mb-2">Erreur lors du chargement de l'historique.</div>`;
+        messagesDiv.innerHTML += `<div class="text-red-400 mb-2">Error while displaying history.</div>`;
     });
 
   sidebar.innerHTML = `
@@ -61,7 +68,7 @@ export async function openSidebarChat(groupId: number, groupName: string) {
       bg-[#1a2740] shadow-2xl rounded-xl flex flex-col border border-gray-700
     ">
       <div class="px-4 py-2 border-b border-gray-700 flex justify-between items-center rounded-t-xl">
-        <span class="text-lg font-bold text-white truncate">Chat: ${groupName}</span>
+        <span class="text-lg font-bold text-white truncate">Chat: ${chatName}</span>
         <div class="flex items-center gap-2">
           <button id="chatMenuBtn" class="text-white text-xl hover:text-gray-400 px-2" title="Menu">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,16 +92,26 @@ export async function openSidebarChat(groupId: number, groupName: string) {
 
   currentWs.onopen = () => {
     setTimeout(() => {
-      if (currentWs) {
-        currentWs.send(JSON.stringify({
-          action: 'join',
-          scope: 'group',
-          room: groupId
-        }));
+      if (type === 'group') {
+        if (currentWs) {
+          currentWs.send(JSON.stringify({
+            action: 'join',
+            scope: 'group',
+            room: chatId
+          }));
+        }
+      }
+      if (type === 'dm') {
+        if (currentWs) {
+          currentWs.send(JSON.stringify({
+            action: 'join',
+            scope: 'dm',
+            userId: userId
+          }));
+        }
       }
     }, 100);
   };
-
   currentWs.onmessage = (event) => {
     const messagesDiv = document.getElementById('sidebar-chat-messages');
     if (!messagesDiv) return;
@@ -167,7 +184,7 @@ export async function openSidebarChat(groupId: number, groupName: string) {
       </button>
     `;
     document.getElementById('openSidebarChatMini')?.addEventListener('click', () => {
-      openSidebarChat(groupId, groupName);
+      openSidebarChat(chatId, chatName);
     });
   });
 
@@ -175,12 +192,12 @@ export async function openSidebarChat(groupId: number, groupName: string) {
     e.preventDefault();
     const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
     if (input && input.value.trim() !== '' && currentWs) {
-      currentWs.send(JSON.stringify({
-        action: 'send',
-        scope: 'group',
-        room: groupId,
-        message: input.value
-      }));
+        currentWs.send(JSON.stringify({
+          action: 'send',
+          scope: type,
+          room: chatId,
+          message: input.value
+        }));
 
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (messagesDiv) {

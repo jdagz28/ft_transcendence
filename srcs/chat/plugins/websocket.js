@@ -74,6 +74,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
             console.log("in case JOIN") //REMOVE THIS LOG
             result = await fastify.chat.joinChat(parsed, userId);//CHANGE PARAM 
             if (result.valid) {
+              console.log(`my parsed.room = ${parsed.room} end typeof = ${typeof parsed.room}`) //REMOVE THIS LOG
               addSocketToRoom(parsed.room, socket)
               socket.send(JSON.stringify({ type: 'info', message: 'Room joined' }));
             } else {
@@ -86,6 +87,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
                 socket.send('You must join the room before sending messages');
                 break;
               }
+            console.log(`Before sendMessage funtion check what is in parsed: ${parsed}`) //REMOVE THIS LOG
             result = await fastify.chat.sendMessage(parsed, userId);
             console.log('Result sendMessage:', result); // REMOVE THIS LOG
             if (result.valid === true) {

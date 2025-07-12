@@ -570,6 +570,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
     },
 
     async getDmHistory(chatId, userId) {
+      console.log(`in dmHistory chatId and typeof = ${chatId} ${typeof chatId}/ userId and typeof = ${userId} ${typeof userId}`)
       const chatQuery = fastify.db.prepare(`
         SELECT id FROM conversations
         WHERE id = ? AND type = 'direct'
