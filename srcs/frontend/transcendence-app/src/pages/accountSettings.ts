@@ -92,8 +92,9 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   mfaSection.appendChild(mfaHeader);
 
 
-  let { mfa_enabled: mfaEnabled, qr_code } = await getMfaDetails(userId);
+  let { mfa_enabled: mfaEnabled, qr_code, mfa_type } = await getMfaDetails(userId);
   let qrImg: HTMLImageElement | null = null;
+  void mfa_type; 
 
   const toggleLabel = document.createElement("label");
   toggleLabel.className = "relative inline-flex items-center cursor-pointer";
@@ -237,10 +238,10 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
       toggleInput.checked = true;
       regenerateBtn.disabled = false;
       if (qrImg) {
-        qrImg.src = qr_code;
+        qrImg.src = qr_code ?? "";
       } else {
         qrImg = document.createElement("img");
-        qrImg.src = qr_code;
+        qrImg.src = qr_code ?? "";
         qrImg.alt = "MFA QR Code";
         qrImg.className = "w-full h-full object-cover rounded";
         qrBox.innerHTML = "";

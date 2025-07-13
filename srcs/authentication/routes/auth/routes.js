@@ -476,7 +476,6 @@ module.exports = fp(
     })
     
     fastify.get('/auth/:userId/mfa/details', {
-      onRequest: fastify.authenticate,
       handler: async function getMfaDetailsHandler(request, reply) {
         const userId = request.params.userId
         try {
@@ -511,7 +510,7 @@ module.exports = fp(
       }
     })
 
-    fastify.post('/auth/:userId/mfa/emailgenerate', {
+    fastify.post('/auth/:userId/mfa/emailGenerate', {
       schema: {
         params: fastify.getSchema('schema:auth:userId')
       },
