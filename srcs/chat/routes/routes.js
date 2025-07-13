@@ -255,7 +255,6 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
 
     const userId = data.user.id;
     const { blockedUserId } = request.body;
-    console.log(`userId: ${userId}, blockedUserId: ${blockedUserId}`)
     if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
       return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
     }
@@ -268,6 +267,66 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data);
     } catch (err) {
       console.error(`error blocking user: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
+    }
+  }),
+
+  fastify.put('/chat/unblock-user', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const { blockedUserId } = request.body;
+    if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
+      return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
+    }
+
+    try {
+      const response = await axios.put(`http://database:${process.env.DB_PORT}/chat/unblock-user`, {
+        userId: Number(userId),
+        blockedUserId: blockedUserId
+      })
+      reply.send(response.data);
+    } catch (err) {
+      console.error(`error unblocking user: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
+    }
+  }),
+
+  fastify.get('/chat/blocked-users', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/blocked-users/${userId}`)
+      reply.send(response.data)
+    } catch (err) {
+      console.error(`error fetching blocked users: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
+    }
+  }),
+
+  fastify.get('/chat/isBlocked/:userId', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const blockedUserId = Number(request.params.userId);
+
+    if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
+      return reply.status(400).send({ error: "Invalid 'blockeduserId'" });
+    }
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/isBlocked/${userId}/${blockedUserId}`)
+      reply.send(response.data)
+    } catch (err) {
+      console.error(`error checking if user is blocked: ${err.message}`)
       return reply.status(500).send({ error: `${err.response.data.error}` })
     }
   })

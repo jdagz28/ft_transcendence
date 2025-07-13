@@ -629,6 +629,119 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       insertBlockQuery.run(userId, blockedUserId);
 
       return { success: true, blocker: userId, blocked: blockedUserId };
+    },
+
+    async unblockUser(userId, blockedUserId) {
+      if (!(await this.userExist(blockedUserId))) {
+        throw new Error(`Blocked user ${blockedUserId} does not exist`);
+      }
+
+      if (userId === blockedUserId) {
+        throw new Error('Cannot unblock yourself');
+      }
+
+      const existingBlockQuery = fastify.db.prepare(`
+        SELECT 1 FROM user_blocks
+        WHERE blocker_id = ? AND blocked_user_id = ?
+        LIMIT 1
+      `);
+      const existingBlock = existingBlockQuery.get(userId, blockedUserId);
+      if (!existingBlock) {
+        return { success: false, reason: 'User is not blocked' };
+      }
+
+      const deleteBlockQuery = fastify.db.prepare(`
+        DELETE FROM user_blocks
+        WHERE blocker_id = ? AND blocked_user_id = ?
+      `);
+      const result = deleteBlockQuery.run(userId, blockedUserId);
+
+      if (result.changes === 0) {
+        return { success: false, reason: 'Failed to unblock user' };
+      }
+
+      return { success: true, blocker: userId, unblocked: blockedUserId };
+    },
+
+    async getBlockedUsers(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`);
+      }
+
+      const blockedUsersQuery = fastify.db.prepare(`
+        SELECT 
+          u.id,
+          u.username,
+          u.email,
+          u.nickname,
+          ub.created as blocked_at
+        FROM user_blocks ub
+        JOIN users u ON ub.blocked_user_id = u.id
+        WHERE ub.blocker_id = ?
+        ORDER BY ub.created DESC
+      `);
+      
+      const blockedUsers = blockedUsersQuery.all(userId);
+      
+      return {
+        success: true,
+        blocker_id: userId,
+        blocked_count: blockedUsers.length,
+        blocked_users: blockedUsers
+      };
+    },
+
+    async isBlocked(userId, targetUserId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`);
+      }
+
+      if (!(await this.userExist(targetUserId))) {
+        throw new Error(`Target user ${targetUserId} does not exist`);
+      }
+
+      if (userId === targetUserId) {
+        return { 
+          isBlocked: false, 
+          reason: 'Cannot check block status with yourself',
+          blocker_id: userId,
+          target_id: targetUserId
+        };
+      }
+
+      // Vérifie si l'un ou l'autre a bloqué (bidirectionnel pour chat DM)
+      const blockQuery = fastify.db.prepare(`
+        SELECT 
+          id,
+          blocker_id,
+          blocked_user_id,
+          created as blocked_at
+        FROM user_blocks
+        WHERE (blocker_id = ? AND blocked_user_id = ?)
+           OR (blocker_id = ? AND blocked_user_id = ?)
+        LIMIT 1
+      `);
+      
+      const blockRecord = blockQuery.get(userId, targetUserId, targetUserId, userId);
+      
+      if (blockRecord) {
+        return {
+          isBlocked: true,
+          blocker_id: blockRecord.blocker_id,
+          blocked_user_id: blockRecord.blocked_user_id,
+          blocked_at: blockRecord.blocked_at,
+          block_id: blockRecord.id,
+          // Indique qui a initié le blocage par rapport à l'utilisateur qui fait la demande
+          user_is_blocker: blockRecord.blocker_id === userId,
+          user_is_blocked: blockRecord.blocked_user_id === userId
+        };
+      }
+
+      return {
+        isBlocked: false,
+        blocker_id: userId,
+        target_id: targetUserId
+      };
     }
 
   })

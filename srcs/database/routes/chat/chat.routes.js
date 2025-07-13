@@ -170,6 +170,41 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
     } catch (err) {
       return reply.status(500).send({error: `${err.message}`})
     }
+  }),
+  
+  fastify.put('/chat/unblock-user', async (request, reply) => {
+    const { userId, blockedUserId } = request.body;
+
+    console.log(`unblocker user ${typeof userId} unblocked user ${typeof blockedUserId}`)
+    try {
+      const response = await fastify.dbChat.unblockUser(userId, blockedUserId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.get('/chat/blocked-users/:userId', async (request, reply) => {
+    const userId = Number(request.params.userId)
+
+    try {
+      const response = await fastify.dbChat.getBlockedUsers(userId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.get('/chat/isBlocked/:userId/:blockedUserId', async (request, reply) => {
+    const userId = Number(request.params.userId)
+    const blockedUserId = Number(request.params.blockedUserId)
+
+    try {
+      const response = await fastify.dbChat.isBlocked(userId, blockedUserId)
+      return reply.send(response)
+    } catch (err) {
+      return reply.status(500).send({error: `${err.message}`})
+    }
   })
 
   }, {

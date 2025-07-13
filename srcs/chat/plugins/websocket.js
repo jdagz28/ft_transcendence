@@ -123,8 +123,15 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
 })
 
 setInterval(() => {
+  const allSockets = new Set();
   for (const room of roomSockets.values()) {
     for (const sock of room) {
+      allSockets.add(sock);
+    }
+  }
+  
+  for (const sock of allSockets) {
+    if (sock.readyState === sock.OPEN) {
       if (sock.isAlive === false) {
         sock.terminate();
       } else {

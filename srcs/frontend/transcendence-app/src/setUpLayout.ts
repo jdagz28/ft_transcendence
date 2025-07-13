@@ -1,5 +1,6 @@
 import { ROUTE_LOGIN } from "./router"
 import { connectNotifications } from "./api/notifications";
+import { initializePermanentChat, disconnectPermanentChat } from "./sidebarChat";
 
 export type userData = {
   id: number;
@@ -154,6 +155,9 @@ export function renderNavBar(root: HTMLElement) {
 					if (!response.ok) {
 						throw new Error('Logout failed');
 					}
+					
+					disconnectPermanentChat();
+					
 					localStorage.removeItem('token');
 					window.location.hash = ROUTE_LOGIN;
 				} catch (err) {
@@ -217,6 +221,7 @@ export function setupAppLayout() {
 	if (token) {
   	renderNavBar(navContainer);
     connectNotifications();
+    initializePermanentChat();
   }
 
   return { contentContainer };
