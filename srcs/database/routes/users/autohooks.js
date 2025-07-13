@@ -33,11 +33,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           username, 
           password, 
           salt, 
-          email,
-          nickname = username
+          email
         } = user
-        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email, nickname) VALUES (?, ?, ?, ?, ?)`)
-        const result = query.run(username, password, salt, email, nickname)
+        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email) VALUES (?, ?, ?, ?)`)
+        const result = query.run(username, password, salt, email)
         fastify.log.debug(`createUser: ${username} -> ID ${result.lastInsertRowid}`) //! DELETE
         return result.lastInsertRowid
       } catch (err) {
@@ -53,11 +52,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           password, 
           salt, 
           email,
-          provider,
-          nickname = username
+          provider
         } = user
-        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email, nickname) VALUES (?, ?, ?, ?, ?)`)
-        const result = query.run(username, password, salt, email, nickname)
+        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email) VALUES (?, ?, ?, ?)`)
+        const result = query.run(username, password, salt, email)
         const userId = result.lastInsertRowid
 
         const oauthQuery = fastify.db.prepare(`INSERT INTO oauth (user_id, provider, provider_uid) VALUES (?, ?, ?)`)
@@ -145,7 +143,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         return {
           id: user.id,
           username: user.username,
-          nickname: user.nickname,
+          nickname: user.nickname || null,
           email: user.email,
           created:user.created,
           avatar: `${baseURL}/users/${user.id}/avatar`,
@@ -392,14 +390,14 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const rows = query.all(userId, userId)
         if (rows.length === 0) {
           fastify.log.error(`No friends found for user ${userId}`)
-          throw new Error('No friends found')
+          return []
         }
 
         const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         const friends = rows.map(row => ({
           id: row.id,
           username: row.username,
-          nickname: row.nickname,
+          nickname: row.nickname || null,
           avatar: `${baseURL}/users/${row.id}/avatar`
         }))
         return friends

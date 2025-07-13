@@ -65,7 +65,7 @@ export async function renderProfilePage(username: string): Promise<any> {
 
     const nicknameEl = document.createElement("p");
     nicknameEl.className = "text-2xl text-gray-300 mt-2 mb-1";
-    nicknameEl.textContent = "No preferred nickname set";
+    nicknameEl.textContent =  profile.nickname || "";
 
     const emailEl = document.createElement("p");
     emailEl.className = "text-gray-400 mb-1";
