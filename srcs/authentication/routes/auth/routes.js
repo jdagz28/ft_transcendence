@@ -394,12 +394,14 @@ module.exports = fp(
         const userId = request.user.id
         try {
           const check = await fastify.usersDataSource.getMfaDetails(userId, request)
-          if (!check.qr_code && check.mfa_type === 'totp') {
+          if (!check.mfa_secret) {
             const username = request.user.username
             const secret = speakeasy.generateSecret({
               name: `ft_transcendence (${username})`
             })
             await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request)
+          }
+          if (!check.qr_code && check.mfa_type === 'totp') {
             const QRCode = await fastify.generateQRCode(secret)
             if (!QRCode) {
               throw new Error('Failed to generate QR code')
@@ -428,16 +430,28 @@ module.exports = fp(
           const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`, {
             headers: { 'x-internal-key': process.env.INTERNAL_KEY }
           })
-          const { mfa_secret, mfa_enabled } = response.data
+          const { mfa_secret, mfa_enabled, mfa_type } = response.data
           if (!mfa_enabled) {
             return reply.status(403).send({ error: 'MFA is not enabled for this user' })
           }
-          const isValid = speakeasy.totp.verify({
-            secret: mfa_secret,
-            encoding: 'base32',
-            token,
-            window: 1
-          })
+          let isValid = false
+          if (mfa_type === 'totp') {
+            isValid = speakeasy.totp.verify({
+              secret: mfa_secret,
+              encoding: 'base32',
+              token,
+              window: 1
+            })
+          } else if (mfa_type === 'email') {
+            const { mfa_token, created } = await fastify.usersDataSource.getMfaToken(userId)
+            const currentTime = Math.floor(Date.now() / 1000)
+            const tokenAge = currentTime - Math.floor(new Date(created).getTime() /
+              1000) 
+            if (tokenAge > 120) {
+              return reply.status(403).send({ error: 'MFA token has expired' })
+            }
+            isValid = mfa_token === token
+          }
           if (!isValid) {
             return reply.status(401).send({ error: 'Invalid MFA token' })
           }
@@ -481,6 +495,7 @@ module.exports = fp(
     fastify.patch('/auth/:userId/mfa/type', {
       onRequest: fastify.authenticate,
       schema: {
+        params: fastify.getSchema('schema:auth:userId'),
         body: fastify.getSchema('schema:auth:mfaType')
       },
       handler: async function setMfaTypeHandler(request, reply) {
@@ -494,8 +509,43 @@ module.exports = fp(
           return reply.status(500).send({ error: 'Auth: Failed to set mfa type' })
         }
       }
-    }
-    )
+    })
+
+    fastify.post('/auth/:userId/mfa/emailgenerate', {
+      schema: {
+        params: fastify.getSchema('schema:auth:userId')
+      },
+      handler: async function generateMFAEmail(request, reply) {
+        const userId = request.params.userId
+        try {
+          const check = await fastify.usersDataSource.getMfaDetails(userId, request)
+          if (check.mfa_type !== 'email') {
+            return reply.status(400).send({ error: 'MFA type is not email' })
+          }
+          const { username, email } = await fastify.usersDataSource.getUserById(userId, request)
+          if (!username || !email) {
+            return reply.status(404).send({ error: 'User not found' })
+          }
+          console.log ('Sending MFA email to:', email) //! DELETE
+
+          const secret = check.mfa_secret;
+          const code = speakeasy.totp({
+            secret: secret,
+            encoding: 'base32',
+            step: 60, 
+            window: 1 
+          })
+          console.log ('Generated MFA code:', code) //! DELETE
+          await fastify.usersDataSource.setMfaToken(userId, code)
+
+          return reply.send({ success: true, message: 'MFA email sent successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to generate mfa email for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to generate mfa email' })
+        }
+      }
+    })
+
   }, {
     name: 'auth-routes',
     dependencies: [ 'authAutoHooks']

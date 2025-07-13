@@ -37,7 +37,7 @@ module.exports = fp(
 
     fastify.get('/users/search/id/:userId', {
       response: { 200: fastify.getSchema('schema:users:getUser')},
-      handler: async function getUserById (request, reply) {
+      handler: async function userId (request, reply) {
         try {
           const { userId } = request.params
           console.log('Looking for user ID:', userId) //! DELETE
@@ -402,10 +402,10 @@ module.exports = fp(
     )
 
     fastify.get('/users/:userId/mfa/details', {
-      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      onRequest: [fastify.checkInternalKey],
       handler: async function getMfaDetailsHandler(request, reply) {
         try {
-          const userId = request.user.id
+          const userId = request.params.userId
           console.log('Fetching MFA details for user ID:', userId) //! DELETE
           const mfaDetails = await fastify.dbUsers.getMfaDetails(userId)
           return reply.send(mfaDetails)
@@ -419,7 +419,7 @@ module.exports = fp(
     fastify.patch('/users/:userId/mfa/type', {
       schema: {
         body: fastify.getSchema('schema:users:mfaType'),
-        params: fastify.getSchema('schema:users:getUserById')
+        params: fastify.getSchema('schema:users:userId')
       },
       onRequest: [fastify.authenticate, fastify.checkInternalKey],
       handler: async function setMfaTypeHandler(request, reply) {
@@ -432,6 +432,43 @@ module.exports = fp(
         } catch (err) {
           fastify.log.error(`Error setting MFA type: ${err.message}`)
           reply.code(500).send({ error: 'Failed to set MFA type' })
+        }
+      }
+    })
+
+    fastify.patch('/users/:userId/mfa/token', {
+      schema: {
+        body: fastify.getSchema('schema:users:mfaToken'),
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function setMfaTokenHandler(request, reply) {
+        try {
+          const userId = request.params.userId
+          const { mfa_token } = request.body
+          console.log('Setting MFA token for user ID:', userId, 'to', mfa_token) //! DELETE
+          await fastify.dbUsers.setMfaToken(userId, mfa_token)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA token: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA token' })
+        }
+      }
+    })
+
+    fastify.get('/users/:userId/mfa/token', {
+      schema: {
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getMfaTokenHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const mfaToken = await fastify.dbUsers.getMfaToken(userId)
+          return reply.send(mfaToken)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA token for user ${userId}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA token' })
         }
       }
     })

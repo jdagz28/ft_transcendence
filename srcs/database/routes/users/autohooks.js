@@ -560,7 +560,43 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         throw new Error('Set MFA type failed')
       }
     },
-    
+
+    async setMfaToken(userId, token) {
+      try {
+        const query = fastify.db.prepare(`
+          UPDATE user_mfa SET mfa_token = ?, created = CURRENT_TIMESTAMP WHERE user_id = ?
+        `)
+        const result = query.run(token, userId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA token for user ${userId}`)
+          throw new Error('Set MFA token failed')
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`setMfaToken error: ${err.message}`)
+        throw new Error('Set MFA token failed')
+      }
+    },
+
+    async getMfaToken(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT mfa_token, created FROM user_mfa WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          fastify.log.error(`User not found: ${userId}`)
+          throw new Error('User not found')
+        }
+        return {
+          mfa_token: row.mfa_token,
+          created: row.created
+        }
+      } catch (err) {
+        fastify.log.error(`getMfaToken error: ${err.message}`)
+        throw new Error('Get MFA token failed')
+      }
+    },
 
     async getMatchHistory(userId) {
       try {

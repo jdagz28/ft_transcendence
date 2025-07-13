@@ -59,7 +59,7 @@ export function renderLoginMFA(userId: number): void {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token: Number(token) }),
       });
 
       if (!response.ok) {
