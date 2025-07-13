@@ -166,6 +166,23 @@ export async function renderProfilePage(username: string): Promise<any> {
     friendsTitle.textContent = "Friends";
     friendsContainer.appendChild(friendsTitle);
 
+    let onlineStatusSet = new Set();
+    try {
+        const token = localStorage.getItem("token");
+        const response = await fetch('/users/online', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const data = await response.json();
+            onlineStatusSet = new Set(data.onlineUsers);
+            console.log("Online users:", onlineStatusSet);
+        }
+    } catch (error) {
+        console.error("Failed to fetch online users:", error);
+    }
+
     if (friends.length === 0) {
         const noFriendsText = document.createElement('p');
         noFriendsText.className = 'text-gray-400 text-center py-8';
@@ -178,9 +195,24 @@ export async function renderProfilePage(username: string): Promise<any> {
             const friendItem = document.createElement("li");
             friendItem.className = "flex justify-between items-center text-gray-300";
             
+            const friendInfo = document.createElement('div');
+            friendInfo.className = 'flex items-center';
+
+            const statusIndicator = document.createElement('span');
+            statusIndicator.className = 'w-3 h-3 rounded-full mr-3 flex-shrink-0';
+
+            if (onlineStatusSet.has(String(friend.id))) {
+                statusIndicator.classList.add('bg-green-500');
+            } else {
+                statusIndicator.classList.add('bg-gray-500');
+            }
             const friendName = document.createElement('span');
             friendName.textContent = friend.username;
-            friendItem.appendChild(friendName);
+            
+            friendInfo.appendChild(statusIndicator);
+            friendInfo.appendChild(friendName);
+            
+            friendItem.appendChild(friendInfo)
 
             if (profile.id === currentUser) {
                 const removeFriendButton = document.createElement("button");
