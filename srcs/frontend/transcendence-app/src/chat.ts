@@ -24,7 +24,7 @@ async function blockUser(userId: number, token: string | null): Promise<{ succes
       return { success: false, error: json };
     }
     
-    // Mettre à jour le cache local
+    
     blockedUsersCache.add(userId);
     return { success: true };
   } catch (err) {
@@ -55,14 +55,14 @@ async function unblockUser(userId: number, token: string | null): Promise<{ succ
 }
 
 async function loadBlockedUsers(token: string | null): Promise<void> {
-  console.log('=== DEBUT loadBlockedUsers ==='); // DEBUG
+  console.log('=== DEBUT loadBlockedUsers ==='); 
   if (!token) {
-    console.log('No token provided to loadBlockedUsers'); // DEBUG
+    console.log('No token provided to loadBlockedUsers'); 
     return;
   }
   
   try {
-    // Obtenir les utilisateurs bloqués directement
+    
     const response = await fetch('/chat/blocked-users', {
       method: 'GET',
       headers: {
@@ -70,30 +70,30 @@ async function loadBlockedUsers(token: string | null): Promise<void> {
       },
     });
     const json = await response.json();
-    console.log('LoadBlockedUsers response:', json); // DEBUG
+    console.log('LoadBlockedUsers response:', json); 
     if (response.ok && json.success) {
       blockedUsersCache.clear();
       if (json.blocked_users && Array.isArray(json.blocked_users)) {
         json.blocked_users.forEach((user: BlockedUser) => {
           blockedUsersCache.add(user.id);
-          console.log('Added to blocked cache:', user.id, user.username); // DEBUG
+          console.log('Added to blocked cache:', user.id, user.username); 
         });
       }
     }
-    console.log('Blocked users cache:', Array.from(blockedUsersCache)); // DEBUG
+    console.log('Blocked users cache:', Array.from(blockedUsersCache)); 
   } catch (err) {
     console.error('Error loading blocked users:', err);
   }
 }
 
-// Fonction pour obtenir les détails du blocage
+
 async function getBlockingDetails(userId: number, token: string | null): Promise<{
   isBlocked: boolean;
   iBlockedThem: boolean;
   theyBlockedMe: boolean;
   details?: any;
 }> {
-  console.log(`=== DEBUT getBlockingDetails for user ${userId} ===`); // DEBUG
+  console.log(`=== DEBUT getBlockingDetails for user ${userId} ===`); 
   try {
     const response = await fetch(`/chat/isBlocked/${userId}`, {
       method: 'GET',
@@ -104,7 +104,7 @@ async function getBlockingDetails(userId: number, token: string | null): Promise
     const json = await response.json();
     
     if (response.ok && json.isBlocked) {
-      // Obtenir l'ID de l'utilisateur actuel pour déterminer qui a bloqué qui
+      
       const userResponse = await fetch('/users/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -113,11 +113,11 @@ async function getBlockingDetails(userId: number, token: string | null): Promise
         const currentUser = await userResponse.json();
         const currentUserId = currentUser.id;
         
-        // Si je suis le blocker_id, c'est que j'ai bloqué l'autre utilisateur
-        console.log(`Current user ID: ${currentUserId}`); // DEBUG
-        console.log(`Blocker ID: ${json.blocker_id}, Blocked User ID: ${json.blocked_user_id}`); // DEBUG
+        
+        console.log(`Current user ID: ${currentUserId}`); 
+        console.log(`Blocker ID: ${json.blocker_id}, Blocked User ID: ${json.blocked_user_id}`); 
         const iBlockedThem = json.blocker_id === currentUserId;
-        // Si je suis le blocked_user_id, c'est que l'autre utilisateur m'a bloqué
+        
         const theyBlockedMe = json.blocked_user_id === currentUserId;
         
         console.log(`Blocking details for user ${userId}:`, {
@@ -126,7 +126,7 @@ async function getBlockingDetails(userId: number, token: string | null): Promise
           blocked_user_id: json.blocked_user_id,
           iBlockedThem,
           theyBlockedMe
-        }); // DEBUG
+        }); 
         
         return {
           isBlocked: true,
@@ -152,23 +152,23 @@ async function getBlockingDetails(userId: number, token: string | null): Promise
   }
 }
 
-// Fonction pour nettoyer le cache lors de la déconnexion
+
 export function clearBlockedUsersCache(): void {
   blockedUsersCache.clear();
 }
 
 export function renderChat(): void {
-  console.log('=== DEBUT renderChat ==='); // DEBUG
+  console.log('=== DEBUT renderChat ==='); 
   const token = localStorage.getItem('token');
-  console.log('Token found:', !!token); // DEBUG
+  console.log('Token found:', !!token); 
   
   const root = setupAppLayout().contentContainer;
   if (!root) {
-    console.log('ERROR: root contentContainer not found'); // DEBUG
+    console.log('ERROR: root contentContainer not found'); 
     return;
   }
 
-  console.log('Setting up HTML...'); // DEBUG
+  console.log('Setting up HTML...'); 
 
   root.innerHTML = `
     <div class="flex flex-col min-h-screen bg-[#11294d]">
@@ -196,14 +196,14 @@ export function renderChat(): void {
   setupCreateGroupButton(token);
   loadGroups(token);
   
-  console.log('Starting loadBlockedUsers...'); // DEBUG
-  // Charger les utilisateurs bloqués puis les DMs
+  console.log('Starting loadBlockedUsers...'); 
+  
   loadBlockedUsers(token).then(() => {
-    console.log('loadBlockedUsers completed, starting loadDMs...'); // DEBUG
+    console.log('loadBlockedUsers completed, starting loadDMs...'); 
     loadDMs(token);
   }).catch(err => {
-    console.error('Error in loadBlockedUsers:', err); // DEBUG
-    loadDMs(token); // Charger les DMs même si loadBlockedUsers échoue
+    console.error('Error in loadBlockedUsers:', err); 
+    loadDMs(token); 
   });
 }
 
@@ -288,74 +288,74 @@ async function loadGroups(token: string | null) {
 }
 
 async function loadDMs(token: string | null) {
-  console.log('=== DEBUT loadDMs ==='); // DEBUG
-  console.log('Token disponible:', !!token); // DEBUG
+  console.log('=== DEBUT loadDMs ==='); 
+  console.log('Token disponible:', !!token); 
   
   const dmList = document.getElementById('dm-list');
   if (!dmList) {
-    console.log('ERROR: dm-list element not found'); // DEBUG
+    console.log('ERROR: dm-list element not found'); 
     return;
   }
 
   dmList.innerHTML = `<div class="text-gray-400 text-center">Loading...</div>`;
 
-  console.log('Fetching friends...'); // DEBUG
+  console.log('Fetching friends...'); 
   const result = await getFriends(token);
-  console.log('getFriends result:', result); // DEBUG
+  console.log('getFriends result:', result); 
   
   if (!result.success) {
-    console.log('getFriends failed:', result.error); // DEBUG
+    console.log('getFriends failed:', result.error); 
     dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
 
   const dms: { id: number, username: string, avatar: string }[] = result.data.data;
-  console.log('Raw DMs data:', dms); // DEBUG
+  console.log('Raw DMs data:', dms); 
   
   if (!dms || dms.length === 0) {
-    console.log('No DMs found'); // DEBUG
+    console.log('No DMs found'); 
     dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
 
-  console.log('Processing DMs:', dms); // DEBUG
+  console.log('Processing DMs:', dms); 
 
-  // Filtrer les utilisateurs bloqués et les séparer
+  
   const unblockedDms = [];
-  const iBlockedThem = []; // Utilisateurs que j'ai bloqués
-  const theyBlockedMe = []; // Utilisateurs qui m'ont bloqué (ne pas afficher du tout)
+  const iBlockedThem = []; 
+  const theyBlockedMe = []; 
   
   for (const dm of dms) {
-    console.log(`Checking user ${dm.username} (ID: ${dm.id})`); // DEBUG
+    console.log(`Checking user ${dm.username} (ID: ${dm.id})`); 
     const blockingDetails = await getBlockingDetails(dm.id, token);
-    console.log(`User ${dm.username} blocking details:`, blockingDetails); // DEBUG
+    console.log(`User ${dm.username} blocking details:`, blockingDetails); 
     
     if (blockingDetails.theyBlockedMe) {
-      // Si ils m'ont bloqué, ne pas afficher du tout
+      
       theyBlockedMe.push(dm);
-      console.log(`User ${dm.username} blocked me - hiding from list`); // DEBUG
+      console.log(`User ${dm.username} blocked me - hiding from list`); 
     } else if (blockingDetails.iBlockedThem) {
-      // Si je les ai bloqués, les afficher dans la section bloquée
+      
       iBlockedThem.push(dm);
     } else {
-      // Pas de blocage, afficher normalement
+      
       unblockedDms.push(dm);
     }
   }
 
-  console.log('Unblocked DMs:', unblockedDms); // DEBUG
-  console.log('I blocked them:', iBlockedThem); // DEBUG
-  console.log('They blocked me (hidden):', theyBlockedMe); // DEBUG
+  console.log('Unblocked DMs:', unblockedDms); 
+  console.log('I blocked them:', iBlockedThem); 
+  console.log('They blocked me (hidden):', theyBlockedMe); 
 
   dmList.innerHTML = "";
   
-  // Vérifier s'il y a des DMs à afficher
+  
   if (unblockedDms.length === 0 && iBlockedThem.length === 0) {
     dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
   
-  // Afficher d'abord les DMs non bloqués
+  
   unblockedDms.forEach((dm) => {
     const divDM = document.createElement("div");
     divDM.className = "flex items-center justify-between bg-[#18376b] rounded-xl px-6 py-4";
@@ -390,7 +390,7 @@ async function loadDMs(token: string | null) {
         const result = await blockUser(dm.id, token);
         if (result.success) {
           alert(`User: ${dm.username} Blocked !`);
-          // Recharger les DMs pour mettre à jour l'affichage
+          
           loadDMs(token);
         } else {
           alert("Not possible to block this user: " + (result.error?.error || "Unknown error"));
@@ -399,7 +399,7 @@ async function loadDMs(token: string | null) {
     }
   });
 
-  // Afficher ensuite les utilisateurs que j'ai bloqués avec option de déblocage
+  
   if (iBlockedThem.length > 0) {
     const separator = document.createElement("div");
     separator.className = "text-gray-500 text-sm text-center py-2 border-t border-gray-600 mt-4";
@@ -426,7 +426,7 @@ async function loadDMs(token: string | null) {
           const result = await unblockUser(dm.id, token);
           if (result.success) {
             alert(`User: ${dm.username} Unblocked !`);
-            // Recharger les DMs pour mettre à jour l'affichage
+            
             loadDMs(token);
           } else {
             alert("Not possible to unblock this user: " + (result.error?.error || "Unknown error"));
@@ -479,7 +479,7 @@ async function getFriends(token: string | null) {
 
 async function canIJoinDm(userId: number, token: string | null) {
   try {
-    console.log(`userId = ${userId} and type = ${typeof userId}`); // REMOVE THIS COMMENT
+    console.log(`userId = ${userId} and type = ${typeof userId}`); 
     const response = await fetch(`https://localhost:4242/chat/can-join/dm`, {
       method: 'POST',
       body: JSON.stringify({ userId: userId }),
