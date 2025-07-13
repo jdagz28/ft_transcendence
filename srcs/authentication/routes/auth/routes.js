@@ -537,6 +537,8 @@ module.exports = fp(
           })
           console.log ('Generated MFA code:', code) //! DELETE
           await fastify.usersDataSource.setMfaToken(userId, code)
+          fastify.sendEmail(email, code)
+          console.log ('MFA email sent successfully') //! DELETE
 
           return reply.send({ success: true, message: 'MFA email sent successfully' })
         } catch (err) {
