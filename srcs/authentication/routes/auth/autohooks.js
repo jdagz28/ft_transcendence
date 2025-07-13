@@ -69,11 +69,11 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       }
     },
 
-    async setMfaSecret(userId, secret, request) {
+    async setMfaSecret(userId, secret, request, mfaType) {
       try {
         const rawAuth = request.headers.authorization
         const response =  axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
-          { mfa_secret: secret },
+          { mfa_secret: secret, mfa_type: mfaType },
           {
             headers: {
               Authorization: rawAuth,                

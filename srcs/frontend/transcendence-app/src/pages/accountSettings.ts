@@ -85,7 +85,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   contentContainer.appendChild(formsContainer);
 
   const mfaSection = document.createElement("div");
-  mfaSection.className = "flex flex-col items-center mt-12"; 
+  mfaSection.className = "flex flex-col items-center mt-12";
   const mfaHeader = document.createElement("h2");
   mfaHeader.textContent = "Multi-Factor Authentication (MFA)";
   mfaHeader.className = "text-2xl font-semibold text-white mb-4";
@@ -94,7 +94,6 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
 
   let { mfa_enabled: mfaEnabled, qr_code, mfa_type } = await getMfaDetails(userId);
   let qrImg: HTMLImageElement | null = null;
-  void mfa_type; 
 
   const toggleLabel = document.createElement("label");
   toggleLabel.className = "relative inline-flex items-center cursor-pointer";
@@ -103,20 +102,21 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
     <div class="w-14 h-8 bg-gray-200 rounded-full peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 transition-colors"></div>
     <div class="absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform peer-checked:translate-x-6"></div>
     <span class="ml-3 text-lg font-medium text-white">Enable MFA</span>
-  `; 
+  `;
   mfaSection.appendChild(toggleLabel);
 
   const mfaTypeRow = document.createElement("div");
-  mfaTypeRow.className = "flex items-center mt-4"; 
+  mfaTypeRow.className = "flex items-center mt-4";
 
   const mfaTypeLabel = document.createElement("label");
   mfaTypeLabel.textContent = "Select MFA Type:";
-  mfaTypeLabel.className = "ml-3 text-lg font-medium text-white"; 
+  mfaTypeLabel.className = "ml-3 text-lg font-medium text-white";
 
   const mfaTypeSelect = document.createElement("select");
   mfaTypeSelect.id = "mfa-type-select";
   mfaTypeSelect.className =
-    "ml-2 text-lg font-medium text-white bg-gray-800 border border-gray-600 rounded px-3 py-1"; 
+    "ml-2 text-lg font-medium text-white bg-gray-800 border border-gray-600 rounded px-3 py-1";
+  mfaTypeSelect.value = mfa_type; 
 
   const optionTotp = document.createElement("option");
   optionTotp.value = "totp";
@@ -137,20 +137,9 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   const qrBox = document.createElement("div");
   qrBox.id = "mfa-qr-box";
   qrBox.className = "w-48 h-48 mb-4 border-2 border-gray-700 rounded flex items-center justify-center text-gray-400";
-  if (qr_code) {
-    qrImg = document.createElement("img");
-    qrImg.src = qr_code;
-    qrImg.alt = "MFA QR Code";
-    qrImg.className = "w-full h-full object-cover rounded";
-    qrBox.appendChild(qrImg);
-  } else {
-    const placeholder = document.createElement("span");
-    placeholder.textContent = "No QR Code";
-    qrBox.appendChild(placeholder);
-  }
   const note = document.createElement("span");
   note.textContent = "Scan during initial setup only";
-  note.className = "text-gray-400 text-sm mt-3 mb-4"; 
+  note.className = "text-gray-400 text-sm mt-3 mb-4";
   qrContainer.appendChild(qrBox);
   qrContainer.appendChild(note);
 
@@ -158,7 +147,6 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   regenerateBtn.id = "regenerate-qr";
   regenerateBtn.textContent = "Regenerate QR Code";
   regenerateBtn.className = "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded";
-  regenerateBtn.disabled = !mfaEnabled; 
   mfaSection.appendChild(qrContainer);
   mfaSection.appendChild(regenerateBtn);
 
@@ -166,113 +154,130 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
 
 
   const toggleInput = document.getElementById("mfa-toggle") as HTMLInputElement;
-  const token = localStorage.getItem("token");
-  toggleInput.addEventListener("change", async () => {
-    if (toggleInput.checked) {
-      const res = await fetch(`/auth/${userId}/mfa/enable`, { 
-        method: "PUT",
-        headers: { 
-          ...(token && { Authorization: `Bearer ${token}` }) 
-        },
-        credentials: "include"
-        });
-      if (!res.ok) {
-        console.error("Failed to enable MFA");
-        toggleInput.checked = false;
-        return;
-      }
-      const data = await res.json();
-      const code = data.qr_code;
-      if (!code)
-        return;
-      qr_code = code;
-      mfaEnabled = true;
-      toggleInput.checked = true;
-      regenerateBtn.disabled = false;
 
-      if (qr_code) {
+  function updateMfaControlsVisibility() {
+    const isMfaEnabled = toggleInput.checked;
+    const selectedMfaType = mfaTypeSelect.value;
+
+    mfaTypeRow.style.display = isMfaEnabled ? "flex" : "none";
+
+    const showTotpElements = isMfaEnabled && selectedMfaType === "totp";
+    qrContainer.style.display = showTotpElements ? "flex" : "none";
+    regenerateBtn.style.display = showTotpElements ? "block" : "none";
+  }
+
+
+  async function refreshMfaUI() {
+    try {
+      const details = await getMfaDetails(userId);
+      mfaEnabled = details.mfa_enabled;
+      qr_code = details.qr_code;
+      mfa_type = details.mfa_type;
+
+      toggleInput.checked = mfaEnabled;
+      regenerateBtn.disabled = !mfaEnabled;
+      mfaTypeSelect.value = mfa_type;
+
+      qrBox.innerHTML = "";
+      if (mfa_type === "totp" && qr_code) {
         qrImg = document.createElement("img");
         qrImg.src = qr_code;
         qrImg.alt = "MFA QR Code";
         qrImg.className = "w-full h-full object-cover rounded";
-        qrBox.innerHTML = "";
         qrBox.appendChild(qrImg);
-        regenerateBtn.disabled = false;
-      }
-    } else {
-      const res = await fetch(`/auth/${userId}/mfa/disable`, { 
-        method: "PUT",
+      } else {
+        const placeholder = document.createElement("span");
+        placeholder.textContent = "No QR Code";
+        qrBox.appendChild(placeholder);
+      } 
+      updateMfaControlsVisibility();
+    } catch (error) {
+      console.error("Failed to refresh MFA UI:", error);
+    }
+  }
+
+  mfaTypeSelect.addEventListener("change", async () => {
+    const token = localStorage.getItem("token")
+    const selectedType = mfaTypeSelect.value
+    try {
+      const res = await fetch(`/auth/${userId}/mfa/type`, {
+        method: "PATCH",
         headers: {
-          ...(token && { Authorization: `Bearer ${token}` })
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
-        credentials: "include"
+        credentials: "include",
+        body: JSON.stringify({ mfa_type: selectedType })
       });
       if (!res.ok) {
-        console.error("Failed to disable MFA");
-        toggleInput.checked = true; 
-        return;
+        throw new Error("Failed to update MFA type.");
       }
-      mfaEnabled = false;
-      regenerateBtn.disabled = true;
-      await refreshMfaUI();
+      selectedType === "totp" ? await refreshMfaUI() : await updateMfaControlsVisibility();
+    } catch (error) {
+      console.error("Error updating MFA type:", error);
     }
   });
 
-  regenerateBtn.addEventListener("click", async () => {
-    const res = await fetch(`/auth/${userId}/mfa/generate`, {
-      method: "POST",
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` })
-      },
-      credentials: "include"
+  
+    if (toggleInput) {
+    toggleInput.addEventListener("change", async () => {
+      console.log("MFA toggle 'change' event fired. New state:", toggleInput.checked);
+
+      const token = localStorage.getItem("token");
+      const originalState = !toggleInput.checked;
+
+      try {
+        let response;
+        if (toggleInput.checked) {
+          response = await fetch(`/auth/${userId}/mfa/enable`, {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include',
+          });
+        } else {
+          response = await fetch(`/auth/${userId}/mfa/disable`, {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include',
+          });
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `Failed to update MFA status`);
+        }
+
+        await refreshMfaUI();
+      } catch (error) {
+        console.error("Error during MFA toggle:", error);
+        alert(`Error: ${error}`);
+        toggleInput.checked = originalState;
+        updateMfaControlsVisibility();
+      }
     });
-    if (res.ok) {
-      const data = await res.json();
-      const code = data.qr_code;
-      if (!code) {
-        toggleInput.checked = false;
-        return;
+  } else {
+    console.error("Fatal Error: MFA toggle input with ID 'mfa-toggle' not found.");
+  }
+
+  regenerateBtn.addEventListener("click", async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/auth/${userId}/mfa/generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`  },
+        credentials: "include"
+      });
+      if (!res.ok) {
+        throw new Error("Failed to regenerate MFA QR code.");
       }
-      qr_code = code;
-      mfaEnabled = true;
-      toggleInput.checked = true;
-      regenerateBtn.disabled = false;
-      if (qrImg) {
-        qrImg.src = qr_code ?? "";
-      } else {
-        qrImg = document.createElement("img");
-        qrImg.src = qr_code ?? "";
-        qrImg.alt = "MFA QR Code";
-        qrImg.className = "w-full h-full object-cover rounded";
-        qrBox.innerHTML = "";
-        qrBox.appendChild(qrImg);
-      }
-      alert("MFA QR Code regenerated successfully!");
-    } else {
-      mfaEnabled = false;
-      console.error("Failed to enable MFA");
-      toggleInput.checked = false;
-      return;
+      await refreshMfaUI();
+    } catch (error) {
+      console.error(error);
+      alert(`Error: ${error}`);
     }
   });
-  
-  async function refreshMfaUI() {
-    const { mfa_enabled: mfaEnabled, qr_code } = await getMfaDetails(userId);
-    toggleInput.checked = mfaEnabled;
-    regenerateBtn.disabled = !mfaEnabled;
-    qrBox.innerHTML = "";
-    if (qr_code) {
-      qrImg = document.createElement("img");
-      qrImg.src = qr_code;
-      qrImg.alt = "MFA QR Code";
-      qrImg.className = "w-full h-full object-cover rounded";
-      qrBox.appendChild(qrImg);
-    } else {
-      const placeholder = document.createElement("span");
-      placeholder.textContent = "No QR Code";
-      qrBox.appendChild(placeholder);
-    }
-  }
+
+  await refreshMfaUI();
 }
 
 function createIndividualForm({ label, value, inputType, inputName, endpoint }: {
@@ -285,11 +290,13 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
   const form = document.createElement("form");
   form.className = "flex flex-col w-full max-w-md overflow-hidden shadow-lg";
 
+
   const labelEl = document.createElement("label");
   labelEl.htmlFor = inputName;
   labelEl.textContent = label;
   labelEl.className = "mb-2 text-lg font-medium text-white self-start";
   form.appendChild(labelEl);
+
 
   const input = document.createElement("input");
   input.type = inputType;
@@ -308,7 +315,7 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
   const btn = document.createElement("button");
   btn.type = "submit";
   btn.textContent = "Set";
-  btn.className = 
+  btn.className =
     "bg-orange-500 hover:bg-orange-600 text-white font-semibold " +
     "px-5 md:px-6 whitespace-nowrap";
   form.appendChild(btn);
@@ -320,33 +327,34 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
       if (inputType === "file") {
         const data = new FormData();
         const fileInput = form.querySelector(`input[name="${inputName}"]`) as HTMLInputElement;
-        if (fileInput.files?.length) 
+        if (fileInput.files?.length)
           data.append(inputName, fileInput.files[0]);
-        const res = await fetch(endpoint, { 
-          method: "PUT", 
-          headers: { 
-            ...(token && { Authorization: `Bearer ${token}` }) 
+        const res = await fetch(endpoint, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}` 
           },
-          body: data, 
-          credentials: "include" 
+          body: data,
+          credentials: "include"
         });
-        if (!res.ok) 
+        if (!res.ok)
           throw new Error(await res.text());
       } else {
         const payload = { [inputName]: (form.querySelector(`input[name="${inputName}"]`) as HTMLInputElement).value };
         const res = await fetch(endpoint, {
           method: "PUT",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }) },
+            Authorization: `Bearer ${token}` 
+          },
           credentials: "include",
           body: JSON.stringify(payload)
         });
-        if (!res.ok) 
+        if (!res.ok)
           throw new Error(await res.text());
       }
       alert(`${label} updated!`);
-      await refreshUserInfo(); 
+      await refreshUserInfo();
     } catch (err) {
       console.error("Update failed:", err);
       alert(`Failed to update ${label}`);

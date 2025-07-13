@@ -337,8 +337,8 @@ module.exports = fp(
       handler: async function setMfaSecretHandler(request, reply) {
         try {
           const userId = request.user.id
-          const { mfa_secret } = request.body
-          await fastify.dbUsers.setMfaSecret(userId, mfa_secret)
+          const { mfa_secret, mfa_type } = request.body
+          await fastify.dbUsers.setMfaSecret(userId, mfa_secret, mfa_type)
           return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error setting MFA secret: ${err.message}`)

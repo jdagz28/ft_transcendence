@@ -484,6 +484,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           UPDATE user_mfa SET mfa_enabled = 1 WHERE user_id = ?
         `)
         const result = query.run(userId)
+        const check = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
+        `).get(userId)
+        console.log(check);
         if (result.changes === 0) {
           fastify.log.error(`Failed to enable MFA for user ${userId}`)
           throw new Error('Enable MFA failed')
@@ -531,7 +535,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         `)
         const row = query.get(userId)
         if (!row) {
-          return { mfa_enabled: false, qr_code: null, mfa_type: 'totp' }
+          return { mfa_enabled: false, qr_code: null, mfa_type }
         }
         return { 
           mfa_enabled: row.mfa_enabled,
