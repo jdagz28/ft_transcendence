@@ -315,6 +315,7 @@ module.exports = fp(
           console.log('Verifying token:', cleanToken)   //! DELETE
           const user = await fastify.jwt.verify(cleanToken)
           console.log('Token verified, user:', user) //! DELETE
+          fastify.updateUserActivity(user.id)
           return { valid: true, user }
         } catch (err) {
           return { valid: false, user: null }
