@@ -312,8 +312,18 @@ module.exports = fp(
           throw new Error('Failed to get match history')
         }
       }
+    })
 
-
+    fastify.get('/users/online', {
+      onRequest: fastify.authenticate,
+      handler: async function getOnlineUsersHandler (request, reply) {
+        const token = request.headers.authorization
+        const onlineUsers = await fastify.getOnlineUsers(token)
+        if (onlineUsers.length === 0) {
+          return reply.status(404).send({ error: 'No users are currently online' })
+        }
+        return reply.send({ onlineUsers })
+      }
     })
 
   }, {

@@ -549,6 +549,17 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/auth/online', {
+      onRequest: fastify.authenticate,
+      handler: async function getOnlineUsersHandler(request, reply) {
+        const onlineUsers = fastify.getOnlineUsers()
+        if (onlineUsers.length === 0) {
+          return reply.status(404).send({ error: 'No users are currently online' })
+        }
+        return reply.send({ onlineUsers })
+      }
+    })
+
   }, {
     name: 'auth-routes',
     dependencies: [ 'authAutoHooks']
