@@ -13,6 +13,7 @@ export interface GameSettings {
 export interface PlayerConfig {
   player_id: number;
   username: string;
+  avatar: string;
   paddle_loc: string;
   paddle_side: 'left' | 'right';
 }

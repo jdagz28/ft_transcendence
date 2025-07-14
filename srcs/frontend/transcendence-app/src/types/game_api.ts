@@ -20,5 +20,5 @@ export interface TourPlayer {
   username: string;
   alias?: string;
   paddle_loc: string;
-  avatarUrl: string;
+  avatar: string;
 }

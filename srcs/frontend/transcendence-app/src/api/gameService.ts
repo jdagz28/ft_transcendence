@@ -73,5 +73,6 @@ export async function getTournamentId(gameId: number): Promise<number> {
     throw new Error(`Failed to fetch tournament ID for game ${gameId}`);
   }
   const data = await response.json();
-  return data.id;
+  
+  return data.tournamentId;
 }
