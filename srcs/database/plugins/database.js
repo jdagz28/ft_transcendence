@@ -79,7 +79,7 @@ async function databaseConnector(fastify) {
         salt TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        nickname TEXT UNIQUE
+        nickname TEXT DEFAULT NULL
       );
     `);
   }

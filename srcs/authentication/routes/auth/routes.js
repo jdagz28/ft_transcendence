@@ -315,6 +315,7 @@ module.exports = fp(
           console.log('Verifying token:', cleanToken)   //! DELETE
           const user = await fastify.jwt.verify(cleanToken)
           console.log('Token verified, user:', user) //! DELETE
+          fastify.updateUserActivity(user.id)
           return { valid: true, user }
         } catch (err) {
           return { valid: false, user: null }
@@ -545,6 +546,17 @@ module.exports = fp(
           fastify.log.error(`Auth: failed to generate mfa email for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to generate mfa email' })
         }
+      }
+    })
+
+    fastify.get('/auth/online', {
+      onRequest: fastify.authenticate,
+      handler: async function getOnlineUsersHandler(request, reply) {
+        const onlineUsers = fastify.getOnlineUsers()
+        if (onlineUsers.length === 0) {
+          return reply.status(404).send({ error: 'No users are currently online' })
+        }
+        return reply.send({ onlineUsers })
       }
     })
 
