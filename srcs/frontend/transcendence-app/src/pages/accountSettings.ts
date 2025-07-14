@@ -348,6 +348,26 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
         if (!res.ok)
           throw new Error(await res.text());
       } else {
+        if (inputName === "newUsername" || inputName === "newNickname") {
+          if (!/^[a-zA-Z0-9_!$#-]+$/.test(input.value)) {
+            alert("Username/Nickname can only contain alphanumeric characters and special characters (!, $, #, -, _)");
+            return;
+          }
+          if (input.value.length < 3 || input.value.length > 15) {
+            alert("Username/Nickname must be between 3 and 15 characters");
+            return;
+          }
+        } else if (inputName === "password") {
+          if (input.value.length < 8 || input.value.length > 20) {
+            alert("Password must at least be 8 characters and 20 characters max with at least one uppercase letter, one number, and one special character.");
+            return;
+          }
+          if (!/(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(input.value)) {
+            alert("Password must contain at least one uppercase letter, one number, and one special character.");
+            return;
+          }
+        }
+
         const payload = { [inputName]: (form.querySelector(`input[name="${inputName}"]`) as HTMLInputElement).value };
         const res = await fetch(endpoint, {
           method: "PUT",

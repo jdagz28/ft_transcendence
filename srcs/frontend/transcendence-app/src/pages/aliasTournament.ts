@@ -79,6 +79,14 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
       alert("Alias cannot be empty");
       return;
     }
+    if (alias.length < 3 || alias.length > 15) {
+      alert("Alias must be between 3 and 15 characters");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_!$#-]+$/.test(alias)) {
+      alert("Alias can only contain alphanumeric characters and special characters (!, $, #, -, _)");
+      return;
+    }
     try {
       const token = localStorage.getItem("token") ?? "";
       const ok = await fetch(`/tournaments/${tournamentId}/alias`, {

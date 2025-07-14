@@ -395,15 +395,17 @@ module.exports = fp(
         const userId = request.user.id
         try {
           const check = await fastify.usersDataSource.getMfaDetails(userId, request)
+          const userSecret = await fastify.usersDataSource.getMfaSecret(userId, request)
           console.log('MFA type:', check.mfa_type) //! DELETE
-          if (!check.mfa_secret) {
+          let secret = userSecret.mfa_secret
+          if (!userSecret.mfa_secret) {
             const username = request.user.username
-            const secret = speakeasy.generateSecret({
+            secret = speakeasy.generateSecret({
               name: `ft_transcendence (${username})`
             })
             await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request, check.mfa_type)
           }
-          if (!check.qr_code && check.mfa_type === 'totp') {
+          if (check.qr_code == null && check.mfa_type === 'totp') {
             const QRCode = await fastify.generateQRCode(secret)
             if (!QRCode) {
               throw new Error('Failed to generate QR code')
