@@ -391,7 +391,7 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
     if (friendsResponse.ok) {
       const friendsData = await friendsResponse.json();
       const friends = friendsData.data || [];
-      
+
       for (const friend of friends) {
         try {
         
@@ -873,7 +873,7 @@ function handleMessageSubmit(): void {
     message: message
   }));
 
-  addMessageToUI('Moi', message, true);
+  addMessageToUI('Me', message, true);
   
   input.value = '';
 }

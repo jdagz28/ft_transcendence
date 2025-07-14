@@ -535,6 +535,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         JOIN convo_members m ON c.id = m.conversation_id
         WHERE m.user_id = ?
           AND c.type = 'group'
+          AND c.is_game = 0
           AND m.banned_at IS NULL
           AND m.kicked_at IS NULL
       `);
@@ -545,6 +546,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         FROM conversations c
         WHERE c.type = 'group'
           AND c.group_type = 'public'
+          AND c.is_game = 0
           AND c.id NOT IN (
             SELECT conversation_id FROM convo_members WHERE user_id = ?
           )
