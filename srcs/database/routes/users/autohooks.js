@@ -700,6 +700,36 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to get match history')
       }
+    },
+
+    async getFriendRequests(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT 
+            friend_requests.id,
+            users.id AS userId,
+            friend_requests.requester_id,
+            users.username, 
+            friend_requests.created
+          FROM friend_requests
+          JOIN users ON friend_requests.requester_id = users.id
+          WHERE friend_requests.recipient_id = ? AND friend_requests.status = 'pending'
+        `)
+        const rows = query.all(userId)
+        if (rows.length === 0) {
+          return []
+        }
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        return rows.map(row => ({
+          id: row.id,
+          requesterUsername: row.username,
+          created: row.created,
+          avatar: `${baseURL}/users/${row.userId}/avatar`
+        }))
+      } catch (err) {
+        fastify.log.error(`getFriendRequests error: ${err.message}`)
+        throw new Error('Get friend requests failed')
+      }
     }
 
 

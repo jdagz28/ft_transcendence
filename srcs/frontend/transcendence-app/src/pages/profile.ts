@@ -61,6 +61,14 @@ export async function renderProfilePage(username: string): Promise<any> {
             alert(`Friend request sent to ${profile.username}`);
         };
         usernameRow.appendChild(addFriendButton);
+    } else {
+        const friendRequestsButton = document.createElement("button");
+        friendRequestsButton.className = "bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
+        friendRequestsButton.textContent = "Friend Requests";
+        friendRequestsButton.onclick = () => {
+            window.location.hash = `#/users/me/friend-requests`;
+        };
+        usernameRow.appendChild(friendRequestsButton);
     }
 
     const nicknameEl = document.createElement("p");
@@ -199,7 +207,7 @@ export async function renderProfilePage(username: string): Promise<any> {
             friendInfo.className = 'flex items-center';
 
             const statusIndicator = document.createElement('span');
-            statusIndicator.className = 'w-3 h-3 rounded-full mr-3 flex-shrink-0';
+            statusIndicator.className = 'w-5 h-5 rounded-full mr-3 flex-shrink-0';
 
             if (onlineStatusSet.has(String(friend.id))) {
                 statusIndicator.classList.add('bg-green-500');
@@ -209,10 +217,16 @@ export async function renderProfilePage(username: string): Promise<any> {
             const friendName = document.createElement('span');
             friendName.textContent = friend.username;
             
+            const friendProfileLink = document.createElement('a');
+            friendProfileLink.href = `#/users/${friend.username}`;
+            friendProfileLink.className = 'hover:underline'; 
+            friendProfileLink.textContent = friend.username;
+
             friendInfo.appendChild(statusIndicator);
-            friendInfo.appendChild(friendName);
-            
-            friendItem.appendChild(friendInfo)
+            friendInfo.appendChild(friendProfileLink);
+
+            friendItem.appendChild(friendInfo);
+            friendsList.appendChild(friendItem);
 
             if (profile.id === currentUser) {
                 const removeFriendButton = document.createElement("button");

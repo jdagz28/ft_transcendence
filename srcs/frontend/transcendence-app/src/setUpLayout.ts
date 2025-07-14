@@ -64,6 +64,7 @@ export function renderNavBar(root: HTMLElement) {
         <div class="flex items-center gap-6">
           <img src="/icons8-tailwindcss.svg" class="w-8 h-8"/>
           <a href="#/main">Dashboard</a>
+					<a href="#/users/${user}">Profile</a>
           <a href="#/games/create">Games</a>
           <a href="#/tournaments">Tournament</a>
           <a href="#/leaderboard">Leaderboard</a>

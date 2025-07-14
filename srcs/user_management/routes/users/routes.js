@@ -236,6 +236,18 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/me/friend-requests', {
+      onRequest: [fastify.authenticate],
+      handler: async function getMeFriendRequestsHandler (request, reply) {
+        const username = request.user.username
+        const friendRequests = await fastify.usersDataSource.getFriendRequests(request, username)
+        if (!friendRequests) {
+          return reply.code(404).send({ error: 'UserMgmt: No friend requests found' })
+        }
+        return reply.send(friendRequests)
+      }
+    })
+
     fastify.get('/users/:username/friends', {
       schema: {
         params: fastify.getSchema('schema:users:getUserByUsername'),
