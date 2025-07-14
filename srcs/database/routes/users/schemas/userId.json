@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:users:userId",
+  "required": ["userId"],
+  "properties": {
+    "userId": { "type": "number" }
+  }
+}

@@ -3,6 +3,6 @@
   "$id": "schema:auth:mfaVerify",
   "required": [ "token" ],
   "properties": {
-    "token": { "type": "string" }
+    "token": { "type": "number" }
   }
 }

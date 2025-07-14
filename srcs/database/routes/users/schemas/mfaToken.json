@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:users:mfaToken",
+  "required": [ "mfa_token" ],
+  "properties": {
+    "mfa_token": { "type": "number" }
+  }
+}
