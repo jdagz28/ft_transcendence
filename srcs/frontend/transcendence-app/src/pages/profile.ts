@@ -141,7 +141,7 @@ export async function renderProfilePage(username: string): Promise<any> {
 
         table.innerHTML = `
             <thead>
-                <tr class="border-b border-gray-600">s
+                <tr class="border-b border-gray-600">
                     <th class="p-3 font-semibold">Opponent</th>
                     <th class="p-3 font-semibold">Total Score</th>
                     <th class="p-3 font-semibold">Game Scores</th>

@@ -1,5 +1,5 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
-import { getTournamentPlayers, getTournamentName, getTournamentBrackets} from "../api/tournament";
+import { getTournamentPlayers, getTournamentDetails, getTournamentBrackets} from "../api/tournament";
 import { type Player, type SlotState, buildPlayerSlot } from "@/components/playerSlots";
 
 
@@ -8,7 +8,10 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   contentContainer.className =
     "flex-grow flex flex-col gap-8 px-8 py-10 text-white overflow-x-auto";
 
-  const tournamentName = await getTournamentName(tournamentId);
+  const { name: tournamentName, status } = await getTournamentDetails(tournamentId);
+  if (status !== "active") {
+    window.location.hash = `#/400`;
+  }
   const slots = await getTournamentBrackets(tournamentId)
   const players = await getTournamentPlayers(tournamentId);
   const userData = await whoAmI();

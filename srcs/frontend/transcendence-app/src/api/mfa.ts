@@ -5,12 +5,12 @@ export async function getMfaDetails(userId: number): Promise<MfaDetails> {
   const res = await fetch(`/auth/${userId}/mfa/details`, { 
     method: "GET", 
     headers: { 
-      ...(token && { Authorization: `Bearer ${token}` }) 
+      Authorization: `Bearer ${token}` 
     },
     credentials: "include" 
   });
   if (!res.ok) {
-    return { mfa_enabled: false, qr_code: "", mfa_type: "" };
+    return { mfa_enabled: false, qr_code: "", mfa_type: "totp" };
   }
   const data = await res.json();
 

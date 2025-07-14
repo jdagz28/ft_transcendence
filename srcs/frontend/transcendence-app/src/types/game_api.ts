@@ -9,7 +9,7 @@ export interface StatsPayload {
 }
 
 export interface GameStatusUpdate {
-  status: 'active' | 'paused' | 'aborted' | 'finished';
+  status: 'active' | 'paused' | 'in-game' | 'aborted' | 'finished';
   gameId: number;
   matchId?: number;
   stats?: StatsPayload;

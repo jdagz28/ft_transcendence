@@ -15,6 +15,12 @@ export async function renderOptionsTournamentPage(tournamentId: number): Promise
   const { contentContainer } = setupAppLayout();
 
   const created_by = await getTournamentCreator(tournamentId);
+  if (created_by === -1) {
+    console.error("Failed to retrieve tournament creator ID.");
+    window.location.hash = "#/400";
+    return;
+  }
+
   const isAdmin = await isTournamentAdmin(created_by);
   if (!isAdmin) {
     window.location.hash = '#/403';

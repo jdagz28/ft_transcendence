@@ -80,6 +80,11 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
 
   const creatorId = await getTournamentCreator(tournamentId);
   console.log("Tournament creator ID:", creatorId); //!DELTE
+  if (creatorId === -1) {
+    console.error("Failed to retrieve tournament creator ID.");
+    window.location.hash = "#/400";
+    return;
+  }
   
   const players: TourPlayer[] = await getGamePlayers(gameId);
   console.log("Game players:", players); //!DELETE

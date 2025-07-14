@@ -873,6 +873,11 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     window.location.hash = DEFAULT;
     return; 
   }
+  if (gameSettings.status !== "pending") {
+    window.location.hash = '#/403';
+    return;
+  }
+
 	if (gameSettings.mode === "training") {
 		const body = { options : [
 				{

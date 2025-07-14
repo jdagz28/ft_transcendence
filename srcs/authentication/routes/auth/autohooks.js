@@ -88,6 +88,22 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       }
     },
 
+    async getMfaSecret(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/secret`, {
+          headers: {
+            Authorization: rawAuth,
+            'x-internal-key': process.env.INTERNAL_KEY
+          }
+        })
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getMfaSecret error: ${err.message}`)
+        throw new Error('Failed to get MFA secret')
+      }
+    },
+
     async readUserMfa(userId, request) {
       try {
         const rawAuth = request.headers.authorization

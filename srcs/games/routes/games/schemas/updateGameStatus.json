@@ -5,7 +5,7 @@
   "properties": {
     "status": {
       "type": "string",
-      "enum": ["active", "paused", "aborted", "finished"]
+      "enum": ["active", "paused", "in-game", "aborted", "finished"]
     },
     "matchId": {
       "type": "integer"

@@ -473,6 +473,24 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/:userId/mfa/secret', {
+      schema: {
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getMfaSecretHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const mfaSecret = await fastify.dbUsers.getMfaSecret(userId)
+          return reply.send(mfaSecret)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA secret for user ${userId}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA secret' })
+        }
+      }
+    }
+    )
+
     fastify.get('/users/:username/matches', {
       schema: {
         params: fastify.getSchema('schema:users:getUserByUsername')

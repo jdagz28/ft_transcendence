@@ -533,7 +533,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         `)
         const row = query.get(userId)
         if (!row) {
-          return { mfa_enabled: false, qr_code: null, mfa_type }
+          return { mfa_enabled: false, qr_code: null, mfa_type: 'totp' }
         }
         return { 
           mfa_enabled: row.mfa_enabled,
@@ -543,6 +543,23 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(`getMfaDetails error: ${err.message}`)
         throw new Error('Get MFA details failed')
+      }
+    },
+
+    async getMfaSecret(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT mfa_secret FROM user_mfa WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          fastify.log.error(`User mfa secret not found: ${userId}`)
+          return {}
+        }
+        return { mfa_secret: row.mfa_secret }
+      } catch (err) {
+        fastify.log.error(`getMfaSecret error: ${err.message}`)
+        throw new Error('Get MFA secret failed')
       }
     },
 

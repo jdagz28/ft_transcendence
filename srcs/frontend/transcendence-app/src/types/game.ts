@@ -19,6 +19,7 @@ export interface PlayerConfig {
 
 export interface GameDetails {
   gameId: number;
+  status: string;
   matchId: number;
   settings: GameSettings;
   players: PlayerConfig[];
