@@ -265,13 +265,13 @@ async function databaseConnector(fastify) {
   function createTournamentAliasesTable() {
     db.exec(`
       CREATE TABLE IF NOT EXISTS tournament_aliases (
-        tournament_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
-        alias TEXT NOT NULL,
-        PRIMARY KEY (tournament_id, user_id),
-        UNIQUE(alias),
-        FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      tournament_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      alias TEXT NOT NULL,
+      PRIMARY KEY (tournament_id, user_id),
+      UNIQUE(tournament_id, alias),
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
