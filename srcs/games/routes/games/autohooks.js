@@ -217,7 +217,15 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       )
       console.log('In-game status updated:', data) //! DELETE
       return data
-    }
+    },
+
+    async getTournamentId(request, gameId) {
+      const { data } = await dbApi.get(`/games/${gameId}/tournament`, 
+        { headers: internalHeaders(request) }
+      )
+      console.log('Tournament ID retrieved:', data) //! DELETE
+      return data
+    },
     
   })
 }, {

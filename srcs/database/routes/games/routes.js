@@ -435,6 +435,26 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/:gameId/tournament', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID')
+      },
+      handler: async function getTournamentIdHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const tournamentId = await fastify.dbGames.getTournamentId(gameId)
+          if (!tournamentId) {
+            reply.status(404).send({ error: 'Game not found' })
+            return
+          }
+          reply.status(200).send(tournamentId)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
   },
   {
     name: 'gameRoutes',

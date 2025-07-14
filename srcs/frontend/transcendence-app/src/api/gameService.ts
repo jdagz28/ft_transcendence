@@ -56,3 +56,22 @@ export async function setInGameStatus(gameId: number): Promise<void> {
     throw new Error(`Failed to set in-game status for game ${gameId}`);
   }
 }
+
+export async function getTournamentId(gameId: number): Promise<number> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`/games/${gameId}/tournament`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    if (response.status === 404) {
+      return -1; 
+    }
+    throw new Error(`Failed to fetch tournament ID for game ${gameId}`);
+  }
+  const data = await response.json();
+  return data.id;
+}

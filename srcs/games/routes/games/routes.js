@@ -304,6 +304,18 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/games/:gameId/tournament', {
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentHandler(request, reply) {
+        const { gameId } = request.params
+        const tournamentId = await fastify.gameService.getTournamentId(request, gameId)
+        if (tournamentId === -1) {
+          return reply.code(404).send({ error: 'No tournament associated with this game' })
+        }
+        return reply.send({ tournamentId })
+      }
+    })
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']

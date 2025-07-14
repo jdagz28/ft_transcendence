@@ -262,7 +262,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         for (const player of players) {
-          player.avatarUrl = `${baseURL}/users/${player.player_id}/avatar`
+          player.avatar = `${baseURL}/users/${player.player_id}/avatar`
           if (check.mode === 'tournament') {
             player.alias = player.alias || player.username
           }
@@ -948,6 +948,23 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to update in-game status')
+      }
+    },
+
+    async getTournamentId(gameId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT tournament_id FROM tournament_games WHERE game_id = ?
+        `)
+        const result = query.get(gameId)
+        if (!result) {
+          console.log('No tournament found for game ID:', gameId) //! DELETE
+          return null
+        }
+        return result.tournament_id
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament ID')
       }
     }
 
