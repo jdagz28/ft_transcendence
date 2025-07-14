@@ -49,7 +49,7 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
           <h2 class="text-center text-3xl font-bold text-white mb-6">Enter Your Alias</h2>
           <p class="text-center text-gray-300 mb-6 text-sm">You must set an alias for this tournament.</p>
           <form id="local-alias-form" class="space-y-5">
-            <input id="local-alias-input" class="w-full bg-[#081a37] text-white rounded px-4 py-2 placeholder-gray-400" placeholder="The Transcender" required />
+            <input id="local-alias-input" class="w-full bg-[#081a37] text-white rounded px-4 py-2 placeholder-gray-400" placeholder="" required />
             <button class="w-full bg-gradient-to-r from-orange-600 to-orange-400 py-3 rounded font-semibold text-xl text-white">Confirm Alias</button>
             <div id="local-alias-error" class="text-red-400 text-sm text-center hidden mt-3"></div>
           </form>
@@ -67,20 +67,48 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
   cachedAuthFlow = () =>
     new Promise<{token: string, alias: string}>((resolve, reject) => { 
       
-      const handleAuthSuccess = (token: string) => {
+      const handleAuthSuccess = async (token: string) => {
         loginModal.classList.add("hidden");
         mfaModal.classList.add("hidden");
         aliasModal.classList.remove("hidden");
+
+        const response = await fetch("/users/me", {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${token}` },
+          credentials: "include"
+        });
+        if (!response) {
+          reject("Failed to fetch user data");
+          return;
+        }
+        const userData = await response.json();
+
+        const nickname = userData.nickname || userData.username;
+        // console.log("Nickname:", nickname);
 
         const aliasInput = $("local-alias-input") as HTMLInputElement;
         const aliasForm = $("local-alias-form");
         const aliasError = $("local-alias-error");
         
+        aliasInput.placeholder = nickname;
+        aliasInput.value = nickname;  
         aliasInput.focus();
 
         aliasForm.onsubmit = (e) => {
           e.preventDefault();
           const alias = aliasInput.value.trim();
+          if (!alias) {
+            alert("Alias cannot be empty");
+            return;
+          }
+          if (alias.length < 3 || alias.length > 15) {
+            alert("Alias must be between 3 and 15 characters");
+            return;
+          }
+          if (!/^[a-zA-Z0-9_!$#-]+$/.test(alias)) {
+            alert("Alias can only contain alphanumeric characters and special characters (!, $, #, -, _)");
+            return;
+          }
           if (alias) {
             aliasModal.classList.add("hidden");
             resolve({ token, alias });
