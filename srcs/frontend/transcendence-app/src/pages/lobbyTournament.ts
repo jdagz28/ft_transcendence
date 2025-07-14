@@ -1,8 +1,6 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
-// MODIFIED: Added createTournamentAlias to the import list
-import { getTournamentPlayers, getTournamentName, getTournamentSettings, getAvailablePlayers, 
-  invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
+import { getTournamentPlayers, getTournamentDetails, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
 import { ROUTE_MAIN } from "../router";
 
 
@@ -166,16 +164,17 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
 
 
 export async function renderTournamentLobby(tournamentId: number): Promise<void> {
-  const token = localStorage.getItem("token") || "" ;
-  if (!token) {
-    console.error("No token found, redirecting to login");
-    window.location.hash = "#/login";
-  }
   const { contentContainer } = setupAppLayout();
   contentContainer.className = 
     "flex-grow flex flex-col items-center gap-8 px-8 py-10 text-white";
 
-  const tournamentName = await getTournamentName(tournamentId);
+  const tournamentDetails = await getTournamentDetails(tournamentId);
+  if (tournamentDetails.status !== "pending" && tournamentDetails.status !== "active") {
+    window.location.hash = `#/403`;
+  } else if (tournamentDetails.status === "active") {
+    window.location.hash = `#/tournaments/${tournamentId}/bracket`;
+  }
+  const tournamentName = tournamentDetails.name;
 
   const header = document.createElement("div");
   header.className = "text-center py-4";
@@ -209,6 +208,13 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     window.location.hash = "/403"; 
     return;
   }
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    window.location.hash = '#/403';
+    return;
+  }
+  
 
   const settings = await getTournamentSettings(tournamentId);
   const maxPlayers = Number(settings.max_players);

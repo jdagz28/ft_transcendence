@@ -36,7 +36,7 @@ export async function getTournamentCreator(tournamentId: number): Promise<number
   return result.created_by;
 }
 
-export async function getTournamentName(tournamentId: number): Promise<any> {
+export async function getTournamentDetails(tournamentId: number): Promise<any> {
   const token = localStorage.getItem("token") ?? "";
   const response = await fetch(`/tournaments/${tournamentId}`, {
     method: 'GET',
@@ -52,7 +52,7 @@ export async function getTournamentName(tournamentId: number): Promise<any> {
   const result =  await response.json();
   console.log(result);
 
-  return result.name;
+  return result;
 }
 
 export async function getTournamentSettings(tournamentId: number): Promise<any> {

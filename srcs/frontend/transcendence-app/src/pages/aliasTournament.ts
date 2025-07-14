@@ -1,12 +1,12 @@
 import { setupAppLayout } from "../setUpLayout";
-import { getTournamentName } from "@/api/tournament";
+import { getTournamentDetails } from "@/api/tournament";
 
 export async function renderAliasTournamentPage(tournamentId: number): Promise<void> {
   const token = localStorage.getItem("token");
   console.log("Token from localStorage:", token);
   console.log("Token exists:", !!token);
   console.log("Token length:", token?.length);
-  const tournamentName = await getTournamentName(tournamentId);
+  const { name: tournamentName } = await getTournamentDetails(tournamentId);
   console.log("Tournament name:", tournamentName);
 
   const { contentContainer } = setupAppLayout();
