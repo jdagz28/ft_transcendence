@@ -1,6 +1,6 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { buildPlayerSlot, type Player, type SlotState, type SlotOptions } from "../components/playerSlots";
-import { getTournamentPlayers, getTournamentDetails, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot, getTournamentCreator, isTournamentAdmin } from "../api/tournament";
+import { getTournamentPlayers, getTournamentDetails, getTournamentSettings, getAvailablePlayers, invitePlayerToSlot, getTournamentCreator, getTournamentAlias, isTournamentAdmin } from "../api/tournament";
 import { ROUTE_MAIN } from "../router";
 
 
@@ -176,6 +176,19 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const tournamentName = tournamentDetails.name;
 
+  const created_by = await getTournamentCreator(tournamentId);
+  if (created_by === -1) {
+    console.error("Failed to retrieve tournament creator ID.");
+    window.location.hash = "#/400";
+    return;
+  }
+  const creatorAlias = await getTournamentAlias(tournamentId, created_by);
+  if (!creatorAlias) {
+    console.log("Failed to retrieve tournament creator alias.");
+    window.location.hash = `#/tournaments/${tournamentId}/alias`;
+    return;
+  }
+
   const header = document.createElement("div");
   header.className = "text-center py-4";
   const title = document.createElement("h1");
@@ -199,7 +212,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const userId = userData.data.id;
   let authorized = false;
-  const created_by = await getTournamentCreator(tournamentId);
+
   if (players.some(p => p.id === userId) || created_by === userId) {
     authorized = true;
   }

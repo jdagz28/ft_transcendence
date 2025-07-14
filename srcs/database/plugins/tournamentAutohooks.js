@@ -368,7 +368,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const tournament = query.get(tournamentId)
         if (!tournament) {
-          throw new Error('Tournament not found')
+          fastify.log.info('Tournament not found with ID:', tournamentId)
+          return {}
         }
         return tournament
       } catch (err) {
@@ -384,7 +385,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const settings = query.get(tournamentId)
         if (!settings) {
-          throw new Error('Tournament settings not found')
+          fastify.log.info('Tournament settings not found for ID:', tournamentId)
+          return {}
         }
         return settings
       } catch (err) {
@@ -660,7 +662,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const aliases = query.all(tournamentId)
         if (!aliases) {
-          throw new Error('Failed to retrieve tournament aliases')
+         fastify.log.info('No aliases found for this tournament')
+          return []
         }
         return aliases
       } catch (err) {

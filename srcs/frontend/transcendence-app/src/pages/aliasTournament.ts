@@ -1,17 +1,31 @@
-import { setupAppLayout } from "../setUpLayout";
-import { getTournamentDetails } from "@/api/tournament";
+import { setupAppLayout, whoAmI } from "../setUpLayout";
+import { getTournamentDetails, getTournamentAlias } from "@/api/tournament";
 
 export async function renderAliasTournamentPage(tournamentId: number): Promise<void> {
-  const token = localStorage.getItem("token");
-  console.log("Token from localStorage:", token);
-  console.log("Token exists:", !!token);
-  console.log("Token length:", token?.length);
-  const { name: tournamentName } = await getTournamentDetails(tournamentId);
-  console.log("Tournament name:", tournamentName);
-
   const { contentContainer } = setupAppLayout();
   contentContainer.className =
     "flex-grow flex flex-col text-white";
+  const { name: tournamentName } = await getTournamentDetails(tournamentId);
+  console.log("Tournament name:", tournamentName);
+  if (!tournamentName) {
+    console.error("Tournament name is not available");
+    window.location.hash = '#/400';
+    return;
+  }
+
+  const userData = await whoAmI();
+  if (!userData.success) {
+    window.location.hash = "#/login";
+    return;
+  }
+  const nickname = userData.data.nickname || "";
+
+  const userAlias = await getTournamentAlias(tournamentId, userData.data.id);
+  if (userAlias) {
+    console.log("Tournament Alias has already been set. User alias:", userAlias); //! DELETE
+    window.location.hash = `#/tournaments/${tournamentId}/lobby`;
+    return;
+  }
 
   const header = document.createElement("div");
   header.className = "text-center py-6";
@@ -36,17 +50,16 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
   form.className =
     "flex w-full max-w-md lg:max-w-lg rounded-lg overflow-hidden shadow-lg";
 
-  // Alias Input
   const input = document.createElement("input");
   input.type = "text";
   input.name = "alias";
-  input.placeholder = "The Transcender";
+  input.placeholder = nickname;
+  input.value = nickname;
   input.className =
     "flex-grow px-4 py-3 bg-white text-gray-900 " +
     "placeholder-gray-400 focus:outline-none";
   form.appendChild(input);
 
-  // Submit
   const btn = document.createElement("button");
   btn.type = "submit";
   btn.textContent = "Set alias";
@@ -54,9 +67,6 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
     "bg-orange-500 hover:bg-orange-600 text-white font-semibold " +
     "px-5 md:px-6 whitespace-nowrap";
   form.appendChild(btn);
-
-  // contentContainer.appendChild(form);
-  // contentContainer.appendChild(mainContent);
 
   mainContent.appendChild(form);
   contentContainer.appendChild(mainContent);
@@ -75,7 +85,7 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` })
+          Authorization: `Bearer ${token}`
         },
         credentials: "include",
         body: JSON.stringify({ alias })
