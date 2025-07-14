@@ -104,7 +104,12 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
           })
           console.log(`RESPONSE AXIOS SUCCESS: ${response.data.success}`) // REMOVE THIS LOG
           if (response.data && response.data.success === true) 
-            return { valid: true, messageId: response.data.messageId }
+            return { 
+              valid: true, 
+              messageId: response.data.messageId,
+              fromUserId: response.data.fromUserId,
+              fromUsername: response.data.fromUsername
+            }
         } catch (err) {
           return {valid: false, reason: err.response.data.error}
         }
@@ -118,7 +123,12 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
 
           })
           if (response.data && response.data.success === true) 
-            return { valid: true, messageId: response.data.messageId }
+            return { 
+              valid: true, 
+              messageId: response.data.messageId,
+              fromUserId: response.data.fromUserId,
+              fromUsername: response.data.fromUsername
+            }
         } catch (err) {
           return {valid: false, reason: err.response.data.error}
         }

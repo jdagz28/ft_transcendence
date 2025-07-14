@@ -7,6 +7,10 @@ const roomSockets = new Map()
 function addSocketToRoom(roomId, socket) {
   if (!roomSockets.has(roomId)) roomSockets.set(roomId, new Set());
   roomSockets.get(roomId).add(socket);
+  
+  if (!socket.rooms) socket.rooms = new Set();
+  socket.rooms.add(roomId);
+
   socket.roomId = roomId;
 }
 
@@ -27,7 +31,6 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
 
   fastify.get('/chat', {websocket: true}, async (socket, req) => {
 
-    // const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
     const url = require('url');
     const parsedUrl = url.parse(req.url, true);
     const token = parsedUrl.query.token;
@@ -55,7 +58,7 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
       socket.on('message', async message => {
         try {
           var parsed = JSON.parse(message.toString())
-          console.log('Message reçu:', parsed); // REMOVE LOG
+          console.log('Message received:', parsed); // REMOVE LOG
         } catch {
           console.error('Error parsing JSON:', message.toString())
           socket.send('Need to send a valid JSON object')
@@ -64,7 +67,6 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
 
         let result = await fastify.chat.checkFields(parsed);
         if (result.valid === false) {
-          console.log('checkFields failed:', result.reason);// REMOVE LOG
           socket.send(`${result.reason}`)
           return
         }
@@ -74,7 +76,6 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
             console.log("in case JOIN") //REMOVE THIS LOG
             result = await fastify.chat.joinChat(parsed, userId);//CHANGE PARAM 
             if (result.valid) {
-              console.log(`my parsed.room = ${parsed.room} end typeof = ${typeof parsed.room}`) //REMOVE THIS LOG
               addSocketToRoom(parsed.room, socket)
               socket.send(JSON.stringify({ type: 'info', message: 'Room joined' }));
             } else {
@@ -83,16 +84,15 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
             break;
           case 'send':
             console.log("in case SEND") //REMOVE THIS LOG
-              if (!socket.roomId || socket.roomId !== parsed.room) {
+            if (!socket.rooms || !socket.rooms.has(parsed.room)) {
                 socket.send('You must join the room before sending messages');
                 break;
-              }
-            console.log(`Before sendMessage funtion check what is in parsed: ${parsed}`) //REMOVE THIS LOG
+            }
             result = await fastify.chat.sendMessage(parsed, userId);
-            console.log('Result sendMessage:', result); // REMOVE THIS LOG
             if (result.valid === true) {
               broadcastToRoom(parsed.room, JSON.stringify({
-                from: userId,
+                from: result.fromUsername || `User${userId}`,
+                fromId: result.fromUserId || userId,
                 message: parsed.message
               }), socket);
             } else {
@@ -103,15 +103,25 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
       })
 
       socket.on('close', (code, reason) => {
-        console.log("INSIDE THE CLOSE EVENT!!!!!!") // REMOVE THIS LOG
-        if (socket.roomId && roomSockets.has(socket.roomId)) {
-          roomSockets.get(socket.roomId).delete(socket);
-          console.log(`Socket removed from room ${socket.roomId}`); // REMOVE THIS LOG
-          if (roomSockets.get(socket.roomId).size === 0) {
-            roomSockets.delete(socket.roomId);
-            console.log(`Room ${socket.roomId} deleted as it is empty`); // REMOVE THIS LOG
+        if (socket.rooms) {
+          for (const roomId of socket.rooms) {
+            if (roomSockets.has(roomId)) {
+              roomSockets.get(roomId).delete(socket);
+              if (roomSockets.get(roomId).size === 0) {
+                roomSockets.delete(roomId);
+              }
+            }
           }
         }
+        
+        // Fallback pour la compatibilité avec l'ancien code
+        if (socket.roomId && roomSockets.has(socket.roomId)) {
+          roomSockets.get(socket.roomId).delete(socket);
+          if (roomSockets.get(socket.roomId).size === 0) {
+            roomSockets.delete(socket.roomId);
+          }
+        }
+        
         console.log(`Client disconnected. IP: ${req.ip}, Code: ${code}, Reason: ${reason.toString()}`)
       })
     } catch (err) {

@@ -382,7 +382,6 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
         }));
       }
     }
-
   
     const friendsResponse = await fetch('https://localhost:4242/users/me/friends', {
       method: 'GET',
@@ -405,13 +404,11 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
           } else if (!isBlockedAPI && isBlockedLocal) {
             blockedUsernames.delete(friend.username);
           }
-          
         
           if (isBlockedAPI) {
             console.log(`Skipping DM join with blocked user: ${friend.username}`);
             continue;
           }
-          
         
           const canJoinResponse = await fetch('https://localhost:4242/chat/can-join/dm', {
             method: 'POST',
@@ -501,12 +498,12 @@ async function loadChatSwitcher(): Promise<void> {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    
+
     const groupsList = document.getElementById('groupsList');
     if (groupsList && groupsResponse.ok) {
       const groups = await groupsResponse.json();
       groupsList.innerHTML = '';
-      
+
       groups.forEach((group: any) => {
         const isActive = currentChatType === 'group' && currentChatId === group.id;
         const groupItem = document.createElement('button');
@@ -530,7 +527,7 @@ async function loadChatSwitcher(): Promise<void> {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    
+
     const dmsList = document.getElementById('dmsList');
     if (dmsList && friendsResponse.ok) {
       const friendsData = await friendsResponse.json();
@@ -868,7 +865,7 @@ function handleMessageSubmit(): void {
   if (!input || !input.value.trim() || !currentWs || !currentChatId) return;
 
   const message = input.value.trim();
-
+  console.log(`scope = ${currentChatType}, room = ${currentChatId}, message = ${message}`);
   currentWs.send(JSON.stringify({
     action: 'send',
     scope: currentChatType,

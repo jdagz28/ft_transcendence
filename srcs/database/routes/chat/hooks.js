@@ -16,6 +16,14 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return false;
     },
 
+    async getUsernameById(userId) {
+      const userQuery = fastify.db.prepare(`
+        SELECT username FROM users WHERE id = ? LIMIT 1
+      `);
+      const user = userQuery.get(userId);
+      return user ? user.username : null;
+    },
+
     async groupExist(groupId) {
       const groupQuery = fastify.db.prepare(`
         SELECT id FROM conversations
@@ -171,8 +179,17 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         VALUES (?, ?, ?)
       `);
       const result = insertQuery.run(fromUserId, groupId, message);
+      
+      // Récupérer le nom d'utilisateur pour le retourner
+      const username = await this.getUsernameById(fromUserId);
+      
       console.log(`success in sendDirectMessage`)
-      return { success: true, messageId: result.lastInsertRowid }
+      return { 
+        success: true, 
+        messageId: result.lastInsertRowid,
+        fromUserId: fromUserId,
+        fromUsername: username || `User${fromUserId}`
+      }
     },
 
     async sendGroupMessage(fromUserId, room, message) {
@@ -216,7 +233,15 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const result = insertQuery.run(fromUserId, room, message);
 
-      return { success: true, messageId: result.lastInsertRowid };
+      // Récupérer le nom d'utilisateur pour le retourner
+      const username = await this.getUsernameById(fromUserId);
+
+      return { 
+        success: true, 
+        messageId: result.lastInsertRowid,
+        fromUserId: fromUserId,
+        fromUsername: username || `User${fromUserId}`
+      };
     },
 
     async canJoinGroup(userId, roomId) {

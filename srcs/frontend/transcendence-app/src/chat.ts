@@ -264,7 +264,7 @@ async function loadGroups(token: string | null) {
     if (joinBtn) {
       joinBtn.addEventListener('click', async () => {
         if (!token) {
-          alert("Vous devez être connecté pour rejoindre un groupe.");
+          alert("You should be logged in to join a group.");
           return;
         }
         const res = await fetch('/chat/join/group', {
@@ -277,7 +277,7 @@ async function loadGroups(token: string | null) {
         });
         const json = await res.json();
         if (!res.ok) {
-          alert(json.error || "Impossible de rejoindre le groupe");
+          alert(json.error || "Impossible to join the group");
           return;
         }
         openSidebarChat(group.id, group.name, "group");
@@ -425,8 +425,6 @@ async function loadDMs(token: string | null) {
         unblockBtn.addEventListener('click', async () => {
           const result = await unblockUser(dm.id, token);
           if (result.success) {
-            alert(`User: ${dm.username} Unblocked !`);
-            
             loadDMs(token);
           } else {
             alert("Not possible to unblock this user: " + (result.error?.error || "Unknown error"));
