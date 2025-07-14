@@ -4,6 +4,7 @@ import { connectNotifications } from "./api/notifications";
 export type userData = {
   id: number;
 	username: string;
+	nickname?: string;
 	email:string;
 	created: string;
 	avatar: string;

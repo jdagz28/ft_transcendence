@@ -170,7 +170,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
 
   const tournamentDetails = await getTournamentDetails(tournamentId);
   if (tournamentDetails.status !== "pending" && tournamentDetails.status !== "active") {
-    window.location.hash = `#/403`;
+    window.location.hash = `#/400`;
   } else if (tournamentDetails.status === "active") {
     window.location.hash = `#/tournaments/${tournamentId}/bracket`;
   }

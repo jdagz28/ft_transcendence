@@ -8,7 +8,10 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   contentContainer.className =
     "flex-grow flex flex-col gap-8 px-8 py-10 text-white overflow-x-auto";
 
-  const { name: tournamentName } = await getTournamentDetails(tournamentId);
+  const { name: tournamentName, status } = await getTournamentDetails(tournamentId);
+  if (status !== "active") {
+    window.location.hash = `#/400`;
+  }
   const slots = await getTournamentBrackets(tournamentId)
   const players = await getTournamentPlayers(tournamentId);
   const userData = await whoAmI();

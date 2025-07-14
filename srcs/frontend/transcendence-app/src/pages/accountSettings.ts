@@ -19,7 +19,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
     contentContainer.textContent = "Error loading user data.";
     return;
   }
-  const { id: userId, email: userEmail, avatar, created } = userData.data;
+  const { id: userId, email: userEmail, avatar, created, nickname } = userData.data;
 
   const userInfoSection = document.createElement("div");
   userInfoSection.className = "flex flex-col items-center space-y-4";
@@ -56,6 +56,14 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
     inputType: "text",
     inputName: "newUsername",
     endpoint: '/users/me/settings/changeUsername'
+  }));
+
+  formsContainer.appendChild(createIndividualForm({
+    label: "Preferred Alias / Nickname",
+    value: nickname || "",
+    inputType: "text",
+    inputName: "newNickname",
+    endpoint: '/users/me/settings/changeNickname'
   }));
 
   formsContainer.appendChild(createIndividualForm({
