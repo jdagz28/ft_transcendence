@@ -61,11 +61,19 @@ export async function renderProfilePage(username: string): Promise<any> {
             alert(`Friend request sent to ${profile.username}`);
         };
         usernameRow.appendChild(addFriendButton);
+    } else {
+        const friendRequestsButton = document.createElement("button");
+        friendRequestsButton.className = "bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
+        friendRequestsButton.textContent = "Friend Requests";
+        friendRequestsButton.onclick = () => {
+            window.location.hash = `#/users/me/friend-requests`;
+        };
+        usernameRow.appendChild(friendRequestsButton);
     }
 
     const nicknameEl = document.createElement("p");
     nicknameEl.className = "text-2xl text-gray-300 mt-2 mb-1";
-    nicknameEl.textContent = "No preferred nickname set";
+    nicknameEl.textContent =  profile.nickname || "";
 
     const emailEl = document.createElement("p");
     emailEl.className = "text-gray-400 mb-1";
@@ -166,6 +174,23 @@ export async function renderProfilePage(username: string): Promise<any> {
     friendsTitle.textContent = "Friends";
     friendsContainer.appendChild(friendsTitle);
 
+    let onlineStatusSet = new Set();
+    try {
+        const token = localStorage.getItem("token");
+        const response = await fetch('/users/online', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const data = await response.json();
+            onlineStatusSet = new Set(data.onlineUsers);
+            console.log("Online users:", onlineStatusSet);
+        }
+    } catch (error) {
+        console.error("Failed to fetch online users:", error);
+    }
+
     if (friends.length === 0) {
         const noFriendsText = document.createElement('p');
         noFriendsText.className = 'text-gray-400 text-center py-8';
@@ -178,9 +203,30 @@ export async function renderProfilePage(username: string): Promise<any> {
             const friendItem = document.createElement("li");
             friendItem.className = "flex justify-between items-center text-gray-300";
             
+            const friendInfo = document.createElement('div');
+            friendInfo.className = 'flex items-center';
+
+            const statusIndicator = document.createElement('span');
+            statusIndicator.className = 'w-5 h-5 rounded-full mr-3 flex-shrink-0';
+
+            if (onlineStatusSet.has(String(friend.id))) {
+                statusIndicator.classList.add('bg-green-500');
+            } else {
+                statusIndicator.classList.add('bg-gray-500');
+            }
             const friendName = document.createElement('span');
             friendName.textContent = friend.username;
-            friendItem.appendChild(friendName);
+            
+            const friendProfileLink = document.createElement('a');
+            friendProfileLink.href = `#/users/${friend.username}`;
+            friendProfileLink.className = 'hover:underline'; 
+            friendProfileLink.textContent = friend.username;
+
+            friendInfo.appendChild(statusIndicator);
+            friendInfo.appendChild(friendProfileLink);
+
+            friendItem.appendChild(friendInfo);
+            friendsList.appendChild(friendItem);
 
             if (profile.id === currentUser) {
                 const removeFriendButton = document.createElement("button");

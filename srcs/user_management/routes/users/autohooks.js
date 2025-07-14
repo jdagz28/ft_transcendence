@@ -130,6 +130,14 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       )
       console.log('Match history retrieved successfully:', data) //! DELETE
       return data
+    },
+
+    async getFriendRequests(request, username) {
+      const { data } = await dbApi.get(`/users/${encodeURIComponent(username)}/friend-requests`,
+        { headers: internalHeaders(request) },
+      )
+      console.log('Friend requests retrieved successfully:', data) //! DELETE
+      return data
     }
 
   })

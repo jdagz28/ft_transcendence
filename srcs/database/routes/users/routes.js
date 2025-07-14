@@ -491,6 +491,25 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/:username/friend-requests', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getFriendRequestsHandler (request, reply) {
+        const username = request.params.username
+        const userId = await fastify.getUserId(username)
+        try {
+          const friendRequests = await fastify.dbUsers.getFriendRequests(userId)
+          return reply.send(friendRequests)
+        } catch (err) {
+          fastify.log.error(`Error retrieving friend requests for user ${username}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve friend requests' })
+        }
+      }
+    })
+    
+
   }, {
     name: 'user',
     dependencies: [ 'userAutoHooks', 'database', 'defaultAssets']
