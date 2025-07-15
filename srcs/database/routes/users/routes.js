@@ -526,7 +526,23 @@ module.exports = fp(
         }
       }
     })
-    
+
+    fastify.get('/users/:userId/remote', {
+      schema: {
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getRemoteUserHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const remoteUser = await fastify.dbUsers.getRemoteUser(userId)
+          return reply.send(remoteUser)
+        } catch (err) {
+          fastify.log.error(`Error retrieving remote user for ID ${userId}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve remote user' })
+        }
+      }
+    })
 
   }, {
     name: 'user',
