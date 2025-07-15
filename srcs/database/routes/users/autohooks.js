@@ -747,8 +747,39 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(`getFriendRequests error: ${err.message}`)
         throw new Error('Get friend requests failed')
       }
-    }
+    },
 
+    async getRemoteUser(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT
+            users.id,
+            users.username,
+            users.nickname,
+            oauth.provider,
+            oauth.provider_uid,
+            oauth.created
+          FROM users
+          JOIN oauth ON users.id = oauth.user_id
+          WHERE users.id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          return {}
+        }
+        return {
+          id: row.id,
+          username: row.username,
+          nickname: row.nickname,
+          provider: row.provider,
+          providerUid: row.provider_uid,
+          created: row.created
+        }
+      } catch (err) {
+        fastify.log.error(`getRemoteUser error: ${err.message}`)
+        throw new Error('Get remote user failed')
+      }
+    }
 
   })
 }, {

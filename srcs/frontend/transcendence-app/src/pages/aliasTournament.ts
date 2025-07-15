@@ -55,6 +55,7 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
   input.name = "alias";
   input.placeholder = nickname;
   input.value = nickname;
+  input.title = "Alias must be between 3 and 15 characters long, can contain alphanumeric characters and special characters (!, $, #, -, _)";
   input.className =
     "flex-grow px-4 py-3 bg-white text-gray-900 " +
     "placeholder-gray-400 focus:outline-none";
@@ -100,8 +101,8 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
       });
 
       if (!ok.ok) {
-        const err = await ok.json();
-        throw new Error(err.message ?? "Failed to save alias");
+        alert("Failed to set alias. Please try again.");
+        return;
       }
       window.location.hash = `#/tournaments/${tournamentId}/lobby`;
     } catch (err) {

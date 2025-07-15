@@ -13,7 +13,7 @@ function buildPlayerCard(player: TourPlayer, playerNumber: number): HTMLDivEleme
   avatarWrap.id = `avatar${playerNumber}`;
   avatarWrap.className = "h-48 w-48 rounded-full bg-white mx-auto overflow-hidden";
   const img = document.createElement("img");
-  img.src = player.avatarUrl;
+  img.src = player.avatar;
   img.alt = player.username;
   img.className = "w-full h-full object-cover";
   avatarWrap.appendChild(img);

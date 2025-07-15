@@ -338,6 +338,26 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/:userId/remote', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserById')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getRemoteUserHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const remoteUser = await fastify.usersDataSource.getRemoteUser(request, userId)
+          if (!remoteUser) {
+            return reply.code(404).send({ error: 'Remote user not found' })
+          }
+          return reply.send(remoteUser)
+        } catch (err) {
+          fastify.log.error(err)
+          return reply.code(500).send({ error: 'Failed to fetch remote user' })
+        }
+      }
+    })
+
   }, {
     name: 'userRoutes',
     dependencies: [ 'userAutoHooks']

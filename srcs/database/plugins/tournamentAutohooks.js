@@ -618,7 +618,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const result = insertAlias.run(tournamentId, userId, alias)
         if (result.changes === 0) {
-          throw new Error('Failed to create tournament alias')
+          console.error('Failed to create tournament alias')
+          return { error: 'Failed to create tournament alias' }
         }
         fastify.db.exec('COMMIT')
         return { message: 'Tournament alias created successfully' }

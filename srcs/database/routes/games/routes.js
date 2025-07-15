@@ -442,7 +442,9 @@ module.exports = fp(
       handler: async function getTournamentIdHandler(request, reply) {
         try {
           const { gameId } = request.params
+          console.log('Fetching tournament ID for gameId:', gameId) //! DELETE
           const tournamentId = await fastify.dbGames.getTournamentId(gameId)
+          console.log('Fetched tournament ID for gameId:', gameId, 'is tournamentId:', tournamentId) //! DELETE
           if (!tournamentId) {
             reply.status(404).send({ error: 'Game not found' })
             return

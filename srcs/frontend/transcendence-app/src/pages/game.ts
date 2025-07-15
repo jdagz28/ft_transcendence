@@ -1,6 +1,6 @@
-import  { type RouteParams, DEFAULT } from "../router";
+import  { type RouteParams, DEFAULT, ROUTE_MAIN } from "../router";
 import type { PlayerConfig, GameDetails, GamePageElements, LocalPlayer, Controller, GameState } from "../types/game";
-import { getConfig, sendStatus, setInGameStatus } from "../api/gameService";
+import { getConfig, sendStatus, setInGameStatus, getTournamentId } from "../api/gameService";
 import { AIOpponent } from "../class/AiOpponent";
 import { StatsTracker } from "../class/StatsTracker";
 import type { GameStatusUpdate } from "../types/game_api";
@@ -13,12 +13,16 @@ function setupDom(root: HTMLElement): GamePageElements {
 
   const container = document.createElement('main');
   container.id = 'game-container';
-  container.className = "relative flex justify-center items-center w-full max-w-7xl mx-auto";
+  container.className = "relative flex flex-col items-center gap-4 w-full max-w-7xl mx-auto";
 
   const canvas = document.createElement('canvas');
   canvas.id = 'pong-canvas';
   canvas.className = "bg-black rounded shadow-lg";
   container.appendChild(canvas);
+
+  const abortBtn = document.createElement('button');
+  abortBtn.textContent = "Abort Game";
+  abortBtn.className = "bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition-colors w-full max-w-xs";
 
   const leftNames = document.createElement('div');
   leftNames.id = 'paddle-left-names';
@@ -30,9 +34,60 @@ function setupDom(root: HTMLElement): GamePageElements {
   rightNames.className = "absolute top-4 right-4 flex flex-col space-y-1 text-white font-sans text-lg";
   container.appendChild(rightNames);
 
+  container.appendChild(abortBtn);
   root.appendChild(container);
-  return { container, canvas, leftNames, rightNames}
+  return { container, canvas, leftNames, rightNames, abortBtn}
 }
+
+function winnerPromptBox(state: GameState, players: PlayerConfig[], totalGames: number, tournamentId: number, cleanup: () => void) {
+  let winner;
+  if (state.totalScore.left >= totalGames) {
+    winner = players.find(p => p.paddle_loc === 'left');
+  } else if (state.totalScore.right >= totalGames) {
+    winner = players.find(p => p.paddle_loc === 'right');
+  }
+
+  const container = document.getElementById('game-container');
+  if (!container) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+  
+  const box = document.createElement('div');
+  box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
+  
+  const h = document.createElement("h1");
+  h.textContent = "Winner";
+  h.className = "text-2xl font-bold text-center";
+  box.appendChild(h);
+
+  const avatar = document.createElement('img');
+  avatar.src = winner?.avatar || "";
+  avatar.alt = `${winner?.username || 'Unknown'}'s avatar`;
+  avatar.className = "w-32 h-32 rounded-full items-center mx-auto mb-4 object-cover";
+  box.appendChild(avatar);
+
+  let buttonLabel = "Return to Main Menu";
+  let navigateTo = ROUTE_MAIN; 
+  if (tournamentId > 0) {
+    buttonLabel = "Return to Tournament Bracket";
+    navigateTo = `#/tournaments/${tournamentId}/bracket`; 
+  }
+  
+  const btn = document.createElement("button");
+  btn.textContent = buttonLabel;
+  btn.className = "w-full py-3 rounded-md text-lg font-semibold bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90 transition";
+
+  btn.onclick = () => {
+    cleanup();
+    window.location.hash = navigateTo;
+  };
+  box.appendChild(btn);
+
+  overlay.appendChild(box);
+  container.appendChild(overlay);
+}
+
 
 export async function renderGamePage(params: RouteParams) {
   const { contentContainer } = setupAppLayout();
@@ -62,8 +117,6 @@ export async function renderGamePage(params: RouteParams) {
   console.log('User ID:', userId);
   console.log('Authorize:', authorize);
   
-
-
   const config: GameDetails = await getConfig(gameId);
   const mode = config.settings.mode;
   if (mode === "tournament") {
@@ -77,6 +130,11 @@ export async function renderGamePage(params: RouteParams) {
   }
   console.log('Config:', config);
 
+  let tournamentId = 0;
+  if (mode === "tournament") {
+    tournamentId = await getTournamentId(gameId);
+  }
+  console.log('Tournament ID:', tournamentId);
   if (config.status !== "active") {
     window.location.hash = '#/403';
     return;
@@ -86,7 +144,7 @@ export async function renderGamePage(params: RouteParams) {
     await setInGameStatus(gameId);
   }
 
-  const { canvas, leftNames, rightNames } = setupDom(contentContainer);
+  const { canvas, leftNames, rightNames, abortBtn } = setupDom(contentContainer);
   const ctx = canvas.getContext("2d")!;
 
   
@@ -397,6 +455,21 @@ export async function renderGamePage(params: RouteParams) {
 
   canvas.onclick = () => localGameState.gameStarted = true;
 
+  abortBtn.addEventListener('click', () => {
+    if (localGameState.gameOver) return;
+    if (confirm("Are you sure you want to abort the game?")) {
+      localGameState.gameOver = true;
+      sendStatus(gameId, {
+        status: 'aborted',
+        gameId: gameId,
+        matchId: currMatchId,
+        stats: statsTracker.finishSession()
+      });
+      cleanup();
+    }
+    window.location.hash = ROUTE_MAIN;
+  });
+
   function render(state:any) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
     drawCenterLine(ctx, canvasWidth, canvasHeight);
@@ -409,7 +482,8 @@ export async function renderGamePage(params: RouteParams) {
     drawPaddles(ctx, state.players);
     if (!state.gameStarted) drawStartMessage(ctx, canvasWidth, canvasHeight);
     if ((state.totalScore.left == totalGames || state.totalScore.right == totalGames) && mode != "training")
-      drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
+      winnerPromptBox(state, players, totalGames, tournamentId, cleanup);
+      // drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
   }
 
   function drawStartMessage(ctx:CanvasRenderingContext2D, w:number, h:number) {
@@ -490,24 +564,24 @@ export async function renderGamePage(params: RouteParams) {
     drawRow(score.right, canvasWidth / 2 + 50 + radius);
   }
 
-  function drawWinner(
-    ctx:CanvasRenderingContext2D, 
-    w:number, 
-    h:number, 
-    score: { left:number, right:number }
-  ) {
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
-    ctx.fillRect(0,0,w,h);
-    ctx.fillStyle = 'white'; 
-    ctx.font = '80px sans-serif'; 
-    ctx.textAlign = 'center'; 
-    let winner;
-    if (score.left >= totalGames)
-      winner = "Left paddle wins!";
-    else
-      winner = "Right paddle wins!";
-    ctx.fillText(winner, w / 2, h / 2);
-  }
+  // function drawWinner(
+  //   ctx:CanvasRenderingContext2D, 
+  //   w:number, 
+  //   h:number, 
+  //   score: { left:number, right:number }
+  // ) {
+  //   ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+  //   ctx.fillRect(0,0,w,h);
+  //   ctx.fillStyle = 'white'; 
+  //   ctx.font = '80px sans-serif'; 
+  //   ctx.textAlign = 'center'; 
+  //   let winner;
+  //   if (score.left >= totalGames)
+  //     winner = "Left paddle wins!";
+  //   else
+  //     winner = "Right paddle wins!";
+  //   ctx.fillText(winner, w / 2, h / 2);
+  // }
 
   function togglePause() {
     if (localGameState.gameOver) return;
@@ -544,7 +618,11 @@ export async function renderGamePage(params: RouteParams) {
   });
 
   const handleClickOutside = (e: MouseEvent) => {
-    if (!canvas.contains(e.target as Node)) togglePause();
+    const target = e.target as Node;
+    if (abortBtn.contains(target)) {
+      return;
+    }
+    togglePause();
   };
 
   const handleBeforeUnload = () => {

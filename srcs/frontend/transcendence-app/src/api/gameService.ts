@@ -22,14 +22,6 @@ export async function sendStatus(
   const json = JSON.stringify(body);
   const token = localStorage.getItem('token');
 
-
-  if (body.status == 'aborted' && navigator.sendBeacon) {
-    navigator.sendBeacon(`/games/${gameId}/status`,
-       new Blob([json], { type: 'application/json' })
-    );
-    return;
-  }
-
   await fetch(`/games/${gameId}/status`, {
     method: 'PATCH',
     headers: { 
@@ -73,5 +65,6 @@ export async function getTournamentId(gameId: number): Promise<number> {
     throw new Error(`Failed to fetch tournament ID for game ${gameId}`);
   }
   const data = await response.json();
-  return data.id;
+  
+  return data.tournamentId;
 }
