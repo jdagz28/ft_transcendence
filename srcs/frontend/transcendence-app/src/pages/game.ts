@@ -13,12 +13,16 @@ function setupDom(root: HTMLElement): GamePageElements {
 
   const container = document.createElement('main');
   container.id = 'game-container';
-  container.className = "relative flex justify-center items-center w-full max-w-7xl mx-auto";
+  container.className = "relative flex flex-col items-center gap-4 w-full max-w-7xl mx-auto";
 
   const canvas = document.createElement('canvas');
   canvas.id = 'pong-canvas';
   canvas.className = "bg-black rounded shadow-lg";
   container.appendChild(canvas);
+
+  const abortBtn = document.createElement('button');
+  abortBtn.textContent = "Abort Game";
+  abortBtn.className = "bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition-colors w-full max-w-xs";
 
   const leftNames = document.createElement('div');
   leftNames.id = 'paddle-left-names';
@@ -30,8 +34,9 @@ function setupDom(root: HTMLElement): GamePageElements {
   rightNames.className = "absolute top-4 right-4 flex flex-col space-y-1 text-white font-sans text-lg";
   container.appendChild(rightNames);
 
+  container.appendChild(abortBtn);
   root.appendChild(container);
-  return { container, canvas, leftNames, rightNames}
+  return { container, canvas, leftNames, rightNames, abortBtn}
 }
 
 function winnerPromptBox(state: GameState, players: PlayerConfig[], totalGames: number, tournamentId: number, cleanup: () => void) {
@@ -139,7 +144,7 @@ export async function renderGamePage(params: RouteParams) {
     await setInGameStatus(gameId);
   }
 
-  const { canvas, leftNames, rightNames } = setupDom(contentContainer);
+  const { canvas, leftNames, rightNames, abortBtn } = setupDom(contentContainer);
   const ctx = canvas.getContext("2d")!;
 
   
@@ -450,6 +455,21 @@ export async function renderGamePage(params: RouteParams) {
 
   canvas.onclick = () => localGameState.gameStarted = true;
 
+  abortBtn.addEventListener('click', () => {
+    if (localGameState.gameOver) return;
+    if (confirm("Are you sure you want to abort the game?")) {
+      localGameState.gameOver = true;
+      sendStatus(gameId, {
+        status: 'aborted',
+        gameId: gameId,
+        matchId: currMatchId,
+        stats: statsTracker.finishSession()
+      });
+      cleanup();
+    }
+    window.location.hash = ROUTE_MAIN;
+  });
+
   function render(state:any) {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
     drawCenterLine(ctx, canvasWidth, canvasHeight);
@@ -598,7 +618,11 @@ export async function renderGamePage(params: RouteParams) {
   });
 
   const handleClickOutside = (e: MouseEvent) => {
-    if (!canvas.contains(e.target as Node)) togglePause();
+    const target = e.target as Node;
+    if (abortBtn.contains(target)) {
+      return;
+    }
+    togglePause();
   };
 
   const handleBeforeUnload = () => {

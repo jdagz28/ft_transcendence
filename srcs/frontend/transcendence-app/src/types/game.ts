@@ -32,6 +32,7 @@ export interface GamePageElements {
   canvas: HTMLCanvasElement;
   leftNames: HTMLElement;
   rightNames: HTMLElement;
+  abortBtn: HTMLButtonElement;
 }
 
 export interface LocalPlayer {

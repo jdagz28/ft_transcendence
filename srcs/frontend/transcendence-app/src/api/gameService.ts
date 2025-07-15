@@ -22,14 +22,6 @@ export async function sendStatus(
   const json = JSON.stringify(body);
   const token = localStorage.getItem('token');
 
-
-  if (body.status == 'aborted' && navigator.sendBeacon) {
-    navigator.sendBeacon(`/games/${gameId}/status`,
-       new Blob([json], { type: 'application/json' })
-    );
-    return;
-  }
-
   await fetch(`/games/${gameId}/status`, {
     method: 'PATCH',
     headers: { 
