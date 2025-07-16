@@ -116,19 +116,27 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       return data
     },
 
-    // async getMatchHistory(request, userId) {
-    //   const { data } = await dbApi.get(`/users/${encodeURIComponent(userId)}/matches`,
-    //     { headers: internalHeaders(request) },
-    //   )
-    //   console.log('Match history retrieved successfully:', data) //! DELETE
-    //   return data
-    // },
-
     async getMatchHistory(request, username) {
       const { data } = await dbApi.get(`/users/${encodeURIComponent(username)}/matches`,
         { headers: internalHeaders(request) },
       )
       console.log('Match history retrieved successfully:', data) //! DELETE
+      return data
+    },
+
+    async getFriendRequests(request, username) {
+      const { data } = await dbApi.get(`/users/${encodeURIComponent(username)}/friend-requests`,
+        { headers: internalHeaders(request) },
+      )
+      console.log('Friend requests retrieved successfully:', data) //! DELETE
+      return data
+    },
+
+    async getRemoteUser(request, userId) {
+      const { data } = await dbApi.get(`/users/${userId}/remote`,
+        { headers: internalHeaders(request) },
+      )
+      console.log('Remote user retrieved successfully:', data) //! DELETE
       return data
     }
 

@@ -7,6 +7,28 @@ const QRCode = require('qrcode')
 
 module.exports = fp(async function authenticationPlugin (fastify, opts) {
   const revokedTokens = new Map()
+  const onlineUsers = new Map() 
+  const FIVE_MINUTES = 5 * 60 * 1000
+
+  setInterval(() => {
+    const now = Date.now()
+    for (const [userId, lastSeen] of onlineUsers.entries()) {
+      if (now - lastSeen > FIVE_MINUTES) {
+        onlineUsers.delete(userId)
+      }
+    }
+  }, 60 * 1000) 
+
+  fastify.decorate('updateUserActivity', (userId) => {
+    if (userId) {
+      onlineUsers.set(userId, Date.now())
+    }
+  })
+
+  fastify.decorate('getOnlineUsers', function () {
+    return Array.from(onlineUsers.keys())
+  })
+
 
   fastify.register(jwt, {
     secret: process.env.JWT_SECRET,
@@ -18,6 +40,7 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
   fastify.decorate('authenticate', async function authenticate (request, reply) {
     try {
       await request.jwtVerify()
+      onlineUsers.set(request.user.id, Date.now())
     } catch (err) {
       reply.send(err)
     }
@@ -25,6 +48,7 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
 
   fastify.decorateRequest('revokeToken', function() {
     revokedTokens.set(this.user.jti, true)
+    onlineUsers.delete(this.user.id)
   })
 
 
@@ -39,7 +63,6 @@ module.exports = fp(async function authenticationPlugin (fastify, opts) {
 
     return token
   })
-
 
   fastify.decorate('generateHash', async function generateHash (password) {
     const salt = await bcrypt.genSalt(10)

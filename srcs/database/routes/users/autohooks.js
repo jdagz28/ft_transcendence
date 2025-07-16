@@ -33,11 +33,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           username, 
           password, 
           salt, 
-          email,
-          nickname = username
+          email
         } = user
-        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email, nickname) VALUES (?, ?, ?, ?, ?)`)
-        const result = query.run(username, password, salt, email, nickname)
+        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email) VALUES (?, ?, ?, ?)`)
+        const result = query.run(username, password, salt, email)
         fastify.log.debug(`createUser: ${username} -> ID ${result.lastInsertRowid}`) //! DELETE
         return result.lastInsertRowid
       } catch (err) {
@@ -53,11 +52,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           password, 
           salt, 
           email,
-          provider,
-          nickname = username
+          provider
         } = user
-        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email, nickname) VALUES (?, ?, ?, ?, ?)`)
-        const result = query.run(username, password, salt, email, nickname)
+        const query = fastify.db.prepare(`INSERT INTO users (username, password, salt, email) VALUES (?, ?, ?, ?)`)
+        const result = query.run(username, password, salt, email)
         const userId = result.lastInsertRowid
 
         const oauthQuery = fastify.db.prepare(`INSERT INTO oauth (user_id, provider, provider_uid) VALUES (?, ?, ?)`)
@@ -145,7 +143,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         return {
           id: user.id,
           username: user.username,
-          nickname: user.nickname,
+          nickname: user.nickname || null,
           email: user.email,
           created:user.created,
           avatar: `${baseURL}/users/${user.id}/avatar`,
@@ -392,14 +390,14 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const rows = query.all(userId, userId)
         if (rows.length === 0) {
           fastify.log.error(`No friends found for user ${userId}`)
-          throw new Error('No friends found')
+          return []
         }
 
         const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         const friends = rows.map(row => ({
           id: row.id,
           username: row.username,
-          nickname: row.nickname,
+          nickname: row.nickname || null,
           avatar: `${baseURL}/users/${row.id}/avatar`
         }))
         return friends
@@ -409,7 +407,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async setMfaSecret(userId, secret) { 
+    async setMfaSecret(userId, secret, mfaType = 'totp') { 
       try {
         const check = fastify.db.prepare(`
           SELECT * FROM user_mfa WHERE user_id = ?
@@ -419,16 +417,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         let result;
         if (!user) {
           query = fastify.db.prepare(`
-            INSERT INTO user_mfa (user_id, mfa_secret, mfa_enabled)
-            VALUES (?, ?, ?)
+            INSERT INTO user_mfa (user_id, mfa_secret, mfa_enabled, mfa_type)
+            VALUES (?, ?, ?, ?)
           `)
-          result = query.run(userId, secret, 1)
+          result = query.run(userId, secret, 1, mfaType)
         }
         else {
           query = fastify.db.prepare(`
-            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled = ? WHERE user_id = ?
+            UPDATE user_mfa SET mfa_secret = ?, mfa_enabled = ?, mfa_type = ? WHERE user_id = ?
           `)
-          result = query.run(secret, 1, userId)
+          result = query.run(secret, 1, mfaType, userId)
         }
         if (result.changes === 0) {
           fastify.log.error(`Failed to set MFA secret for user ${userId}`)
@@ -443,19 +441,21 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
     async getUserMfa(userId) {
       const query = fastify.db.prepare(`
-        SELECT mfa_secret, mfa_enabled FROM user_mfa WHERE user_id = ?
+        SELECT mfa_secret, mfa_enabled, mfa_type FROM user_mfa WHERE user_id = ?
       `)
       const row = query.get(userId)
       if (!row) {
         fastify.log.error(`User not found: ${userId}`)
         return {
           mfa_secret: null,
-          mfa_enabled: false
+          mfa_enabled: false,
+          mfa_type: 'totp'
         }
       }
       return { 
         mfa_secret: row.mfa_secret,
-        mfa_enabled: row.mfa_enabled
+        mfa_enabled: row.mfa_enabled,
+        mfa_type: row.mfa_type
       }
     },
 
@@ -482,6 +482,10 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           UPDATE user_mfa SET mfa_enabled = 1 WHERE user_id = ?
         `)
         const result = query.run(userId)
+        const check = fastify.db.prepare(`
+          SELECT * FROM user_mfa WHERE user_id = ?
+        `).get(userId)
+        console.log(check);
         if (result.changes === 0) {
           fastify.log.error(`Failed to enable MFA for user ${userId}`)
           throw new Error('Enable MFA failed')
@@ -529,15 +533,87 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         `)
         const row = query.get(userId)
         if (!row) {
-          return { mfa_enabled: false, qr_code: null }
+          return { mfa_enabled: false, qr_code: null, mfa_type: 'totp' }
         }
         return { 
           mfa_enabled: row.mfa_enabled,
-          qr_code: row.qr_code
+          qr_code: row.qr_code,
+          mfa_type: row.mfa_type
         }
       } catch (err) {
         fastify.log.error(`getMfaDetails error: ${err.message}`)
         throw new Error('Get MFA details failed')
+      }
+    },
+
+    async getMfaSecret(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT mfa_secret FROM user_mfa WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          fastify.log.error(`User mfa secret not found: ${userId}`)
+          return {}
+        }
+        return { mfa_secret: row.mfa_secret }
+      } catch (err) {
+        fastify.log.error(`getMfaSecret error: ${err.message}`)
+        throw new Error('Get MFA secret failed')
+      }
+    },
+
+    async setMfaType(userId, mfaType) {
+      try {
+        const query = fastify.db.prepare(`
+          UPDATE user_mfa SET mfa_type = ? WHERE user_id = ?
+        `)
+        const result = query.run(mfaType, userId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA type for user ${userId}`)
+          throw new Error('Set MFA type failed')
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`setMfaType error: ${err.message}`)
+        throw new Error('Set MFA type failed')
+      }
+    },
+
+    async setMfaToken(userId, token) {
+      try {
+        const query = fastify.db.prepare(`
+          UPDATE user_mfa SET mfa_token = ?, created = CURRENT_TIMESTAMP WHERE user_id = ?
+        `)
+        const result = query.run(token, userId)
+        if (result.changes === 0) {
+          fastify.log.error(`Failed to set MFA token for user ${userId}`)
+          throw new Error('Set MFA token failed')
+        }
+        return true
+      } catch (err) {
+        fastify.log.error(`setMfaToken error: ${err.message}`)
+        throw new Error('Set MFA token failed')
+      }
+    },
+
+    async getMfaToken(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT mfa_token, created FROM user_mfa WHERE user_id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          fastify.log.error(`User not found: ${userId}`)
+          throw new Error('User not found')
+        }
+        return {
+          mfa_token: row.mfa_token,
+          created: row.created
+        }
+      } catch (err) {
+        fastify.log.error(`getMfaToken error: ${err.message}`)
+        throw new Error('Get MFA token failed')
       }
     },
 
@@ -641,8 +717,69 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to get match history')
       }
-    }
+    },
 
+    async getFriendRequests(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT 
+            friend_requests.id,
+            users.id AS userId,
+            friend_requests.requester_id,
+            users.username, 
+            friend_requests.created
+          FROM friend_requests
+          JOIN users ON friend_requests.requester_id = users.id
+          WHERE friend_requests.recipient_id = ? AND friend_requests.status = 'pending'
+        `)
+        const rows = query.all(userId)
+        if (rows.length === 0) {
+          return []
+        }
+        const baseURL = "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
+        return rows.map(row => ({
+          id: row.id,
+          requesterUsername: row.username,
+          created: row.created,
+          avatar: `${baseURL}/users/${row.userId}/avatar`
+        }))
+      } catch (err) {
+        fastify.log.error(`getFriendRequests error: ${err.message}`)
+        throw new Error('Get friend requests failed')
+      }
+    },
+
+    async getRemoteUser(userId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT
+            users.id,
+            users.username,
+            users.nickname,
+            oauth.provider,
+            oauth.provider_uid,
+            oauth.created
+          FROM users
+          JOIN oauth ON users.id = oauth.user_id
+          WHERE users.id = ?
+        `)
+        const row = query.get(userId)
+        if (!row) {
+          return {}
+        }
+        return {
+          id: row.id,
+          username: row.username,
+          nickname: row.nickname,
+          provider: row.provider,
+          providerUid: row.provider_uid,
+          created: row.created
+        }
+      } catch (err) {
+        fastify.log.error(`getRemoteUser error: ${err.message}`)
+        throw new Error('Get remote user failed')
+      }
+    }
 
   })
 }, {

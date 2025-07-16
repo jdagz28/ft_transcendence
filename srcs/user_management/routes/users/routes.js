@@ -236,6 +236,18 @@ module.exports = fp(
       }
     })
 
+    fastify.get('/users/me/friend-requests', {
+      onRequest: [fastify.authenticate],
+      handler: async function getMeFriendRequestsHandler (request, reply) {
+        const username = request.user.username
+        const friendRequests = await fastify.usersDataSource.getFriendRequests(request, username)
+        if (!friendRequests) {
+          return reply.code(404).send({ error: 'UserMgmt: No friend requests found' })
+        }
+        return reply.send(friendRequests)
+      }
+    })
+
     fastify.get('/users/:username/friends', {
       schema: {
         params: fastify.getSchema('schema:users:getUserByUsername'),
@@ -312,8 +324,38 @@ module.exports = fp(
           throw new Error('Failed to get match history')
         }
       }
+    })
 
+    fastify.get('/users/online', {
+      onRequest: fastify.authenticate,
+      handler: async function getOnlineUsersHandler (request, reply) {
+        const token = request.headers.authorization
+        const onlineUsers = await fastify.getOnlineUsers(token)
+        if (onlineUsers.length === 0) {
+          return reply.status(404).send({ error: 'No users are currently online' })
+        }
+        return reply.send({ onlineUsers })
+      }
+    })
 
+    fastify.get('/users/:userId/remote', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserById')
+      },
+      onRequest: [fastify.authenticate],
+      handler: async function getRemoteUserHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const remoteUser = await fastify.usersDataSource.getRemoteUser(request, userId)
+          if (!remoteUser) {
+            return reply.code(404).send({ error: 'Remote user not found' })
+          }
+          return reply.send(remoteUser)
+        } catch (err) {
+          fastify.log.error(err)
+          return reply.code(500).send({ error: 'Failed to fetch remote user' })
+        }
+      }
     })
 
   }, {

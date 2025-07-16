@@ -23,6 +23,7 @@
     "fastify": "^5.0.0",
     "fastify-cli": "^7.4.0",
     "fastify-plugin": "^5.0.0",
+    "nodemailer": "^7.0.5",
     "qrcode": "^1.5.4",
     "querystring": "^0.2.1",
     "speakeasy": "^2.0.0"

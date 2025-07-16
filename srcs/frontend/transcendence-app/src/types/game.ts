@@ -13,12 +13,14 @@ export interface GameSettings {
 export interface PlayerConfig {
   player_id: number;
   username: string;
+  avatar: string;
   paddle_loc: string;
   paddle_side: 'left' | 'right';
 }
 
 export interface GameDetails {
   gameId: number;
+  status: string;
   matchId: number;
   settings: GameSettings;
   players: PlayerConfig[];
@@ -30,6 +32,7 @@ export interface GamePageElements {
   canvas: HTMLCanvasElement;
   leftNames: HTMLElement;
   rightNames: HTMLElement;
+  abortBtn: HTMLButtonElement;
 }
 
 export interface LocalPlayer {

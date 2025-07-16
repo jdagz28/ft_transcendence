@@ -4,6 +4,7 @@
   "required": ["gameId", "settings"],
   "properties": {
     "gameId": { "type": "number" },
+    "status": { "type": "string" },
     "matchId": { "type": "number" },
     "settings": {
       "type": "object",

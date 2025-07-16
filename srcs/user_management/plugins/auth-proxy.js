@@ -30,6 +30,18 @@ module.exports = fp(async function authProxy (fastify) {
     }
   })
 
+  fastify.decorate('getOnlineUsers', async function (token) {
+    try {
+      const { data } = await authApi.get('/auth/online', {
+        headers: { Authorization: token }
+      })
+      return data.onlineUsers || []
+    } catch (err) {
+      fastify.log.error('Error fetching online users:', err)
+      throw new Error('UserMgmt: Unable to fetch online users')
+    }
+  })
+
   fastify.decorateRequest('user', null)
 }, {
   name: 'authProxy'

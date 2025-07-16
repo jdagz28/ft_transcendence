@@ -13,7 +13,7 @@ function buildPlayerCard(player: TourPlayer, playerNumber: number): HTMLDivEleme
   avatarWrap.id = `avatar${playerNumber}`;
   avatarWrap.className = "h-48 w-48 rounded-full bg-white mx-auto overflow-hidden";
   const img = document.createElement("img");
-  img.src = player.avatarUrl;
+  img.src = player.avatar;
   img.alt = player.username;
   img.className = "w-full h-full object-cover";
   avatarWrap.appendChild(img);
@@ -80,6 +80,11 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
 
   const creatorId = await getTournamentCreator(tournamentId);
   console.log("Tournament creator ID:", creatorId); //!DELTE
+  if (creatorId === -1) {
+    console.error("Failed to retrieve tournament creator ID.");
+    window.location.hash = "#/400";
+    return;
+  }
   
   const players: TourPlayer[] = await getGamePlayers(gameId);
   console.log("Game players:", players); //!DELETE
