@@ -55,10 +55,6 @@ export function renderNavBar(root: HTMLElement) {
     const user = data.data.username;
 	localStorage.setItem("userName", data.data.username);
 	localStorage.setItem("userID", data.data.id.toString());
-	let notificationCount = 333; // This should be replaced with the actual notification count from the server
-	let notifString:string = notificationCount.toString();
-	if (notifString.length > 1)
-		notifString = '9+';
     root.innerHTML = /*html*/`
     <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-sm font-semibold text-white">
         <div class="flex items-center gap-6">
@@ -72,29 +68,28 @@ export function renderNavBar(root: HTMLElement) {
         <div class="flex items-center gap-6">
 		<div id="notifBtn" class="relative">
 			<img src="/icons8-bell.svg" class="w-8 h-8 invert"/>
-			<span id="notification-badge" class="absolute top-0 right-0 items-center justify-center text-[10px] font-bold text-white h-4 w-4 rounded-full bg-red-600 border-2 border-white hidden">${notifString}</span>
-			<div id="notifModal" class="z-index pointer-events-none absolute right-0 mt-2 max-h-40 w-64 scale-95 overflow-y-auto rounded-md bg-white opacity-0 shadow-lg ring-1 ring-black/5 transition duration-150 ease-in scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        		<div class="p-4 text-gray-700">
-          			<p class="mb-2 font-semibold">Notifications</p>
-          			<!-- Example notification items -->
-          			<div class="mb-2">Notification 1</div>
-          			<div class="mb-2">Notification 2</div>
-          			<div class="mb-2">Notification 3</div>
-          			<div class="mb-2">Notification 4</div>
-          			<div class="mb-2">Notification 5</div>
-          			<div class="mb-2">Notification 6</div>
-          			<div class="mb-2">Notification 7</div>
+			<span id="notification-badge" class="absolute top-0 right-0 items-center justify-center text-[10px] font-bold text-white h-4 w-4 rounded-full bg-red-600 border-2 border-white hidden"></span>
+			<div id="notifModal" class="z-50 pointer-events-none absolute right-0 mt-2 h-64 w-64 scale-95 overflow-hidden rounded-md bg-white hidden shadow-lg ring-1 ring-black/5 transition duration-150 ease-in">
+        		<div class="flex h-full flex-col">
+
+          			<div class="sticky z-60 border-b border-gray-200 bg-white p-4 text-gray-700">
+            			<p class="text-center font-semibold">Notifications</p>
+          			</div>
+
+          			<div id="notifContainer" class="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-1 space-y-2 overflow-y-auto p-4">
+            			<span class="text-xs text-gray-400 absolute inset-0 flex items-center justify-center">No Notifications</span>
+          			</div>
         		</div>
       		</div>
 		</div>
-          <span class="text-xl">${user}</span>
-          <div class="relative ml-3">
-            <div>
-              <button type="button" class="relative flex rounded-full bg-gray-800 text-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
-                <span class="absolute -inset-1.5"></span>
-                <span class="sr-only">Open user menu</span>
-                <div id="avatar" class="h-8 w-8 overflow-hidden rounded-full bg-white"></div>
-              </button>
+        <span class="text-xl">${user}</span>
+        <div class="relative ml-3">
+        	<div>
+            	<button type="button" class="relative flex rounded-full bg-gray-800 text-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800" id="user-menu-button" aria-expanded="false" aria-haspopup="true">
+                	<span class="absolute -inset-1.5"></span>
+                	<span class="sr-only">Open user menu</span>
+                	<div id="avatar" class="h-8 w-8 overflow-hidden rounded-full bg-white"></div>
+            	</button>
             </div>
             <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-hidden opacity-0 scale-95 pointer-events-none transition ease-in duration-75" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
               <a href="#/users/${user}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#2DB9FF] transition-colors duration-150" role="menuitem" tabindex="-1" id="user-menu-item-0">My Profile</a>
@@ -111,7 +106,6 @@ export function renderNavBar(root: HTMLElement) {
 	//tournament invite tournament.invite
 	//tournament update tournament.update
 
-
     const userAvatar = document.getElementById('avatar');
     if (userAvatar) {
       const img = document.createElement('img');
@@ -122,20 +116,6 @@ export function renderNavBar(root: HTMLElement) {
       userAvatar.innerHTML = '';
       userAvatar.appendChild(img);
     }
-
-	const notifBtn = document.getElementById('notifBtn');
-	const notifModal = document.getElementById('notifModal');
-	if (notifBtn && notifModal) {
-		notifBtn.addEventListener('click', () => {
-			if (notifModal.classList.contains('opacity-0')) {
-    			notifModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
-    			notifModal.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
-    		} else {
-    			notifModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-    			notifModal.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
-			}
-		});
-	}
 
     const userDropDownBtn = document.getElementById('user-menu-button');
     const menu = document.getElementById('user-menu');
@@ -166,12 +146,6 @@ export function renderNavBar(root: HTMLElement) {
           menu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
         }
       }
-	  if (notifBtn && notifModal) {
-	  	if (!notifBtn.contains(event.target as Node) && !notifModal.contains(event.target as Node)) {
-			notifModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-    		notifModal.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
-	  	}
-	  }
     });
 	}
 		const logoutBtn = document.getElementById('user-menu-item-2');
@@ -195,18 +169,6 @@ export function renderNavBar(root: HTMLElement) {
 				}
 			});
 		}
-
-	const badge = document.getElementById('notification-badge');
-
-	if (badge) {
-		if (notificationCount > 0) {
-			badge.classList.remove('hidden');
-			badge.classList.add('flex');
-		} else {
-			badge.classList.add('hidden');
-			badge.classList.remove('flex');
-		}
-	}
 
   });
 	data = false;
@@ -247,6 +209,7 @@ export function setupAppLayout() {
 	if (token/* && !navbarrendered*/) {
 	//navbarrendered = true;
   	renderNavBar(navContainer);
+	console.log("about to connect notifications");
     connectNotifications();
    }
 //   return { contentContainer };
