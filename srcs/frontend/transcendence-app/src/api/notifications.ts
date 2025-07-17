@@ -104,6 +104,15 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 		}
 	}
 	denyBtn.onclick = async () => {
+		await fetch(`/users/me/friends`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify({ friend: `${sender}`, action: "decline" })
+		});
 		const response = await fetch(`/users/me/friends`, {
 			method: 'POST',
 			headers: {
@@ -242,6 +251,15 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		}
 	}
 	blockBtn.onclick = async () => {
+		await fetch(`/games/invites/respond`, {
+			method: 'PATCH',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify({ gameId: gameId, response: "decline" })
+		});
 		const response = await fetch(`/chat/block-user`, {
 			method: 'PUT',
 			headers: {
@@ -351,6 +369,15 @@ function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tourname
 		}
 	}
 	blockBtn.onclick = async () => {
+		await fetch(`/tournaments/invites/respond`, {
+			method: 'PATCH',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify({ tournamentId: tournamentId, response: "decline" })
+		});
 		const response = await fetch(`/chat/block-user`, {
 			method: 'PUT',
 			headers: {
@@ -382,7 +409,7 @@ function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tourname
 }
 
 
-function generateNotifDiv(notif: wsNotif): HTMLDivElement {
+/*function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDivElement {
 	/*`<div class="notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:bg-gray-50">
         <div class="notif-icon flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[rgb(18,22,68)]  text-white">
            <img src="/icons8-google.svg" class="w-6 h-6" alt="Google logo" />
@@ -391,7 +418,7 @@ function generateNotifDiv(notif: wsNotif): HTMLDivElement {
             <p class="text-[10px] font-semibold text-gray-800">Friend Request</p>
             <p class="text-[10px] text-gray-600">Test has sent you a friend request</p>
         </div>
-    </div>` */
+    </div>` *
 
 	const notifItem = document.createElement("div");
 	notifItem.className = "notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:blue-300";
@@ -435,11 +462,29 @@ function generateNotifDiv(notif: wsNotif): HTMLDivElement {
 	contentWrapper.appendChild(desc);
 	contentWrapper.appendChild(timeStamp);
 
+	if (notif.type !== "game.invite" && notif.type !== "tournament.invite" && notif.type !== "friend.request") {
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+     				'Authorization': `Bearer ${token}`,
+     				'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		}).then((res) => {
+			if (!res.ok) {
+				console.error(`Failed to mark notification ${notif_id} as read`);
+			}
+		}).catch((err) => {
+			console.error(`Error marking notification ${notif_id} as read:`, err);
+		});
+	}
+
 	notifItem.appendChild(iconWrapper);
 	notifItem.appendChild(contentWrapper);
 
 	return notifItem;
-}
+}*/
 
 function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDivElement {
 	console.log("Generating notification div for:", notif);
@@ -472,8 +517,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 
 	if (notif.type === "friend.request") {
 		notif.title = "Friend Request";
-	}
-	else if (notif.type === "game.invite") {
+	} else if (notif.type === "game.invite") {
 		notif.title = "Game Invitation";
 	} else if (notif.type === "tournament.invite") {
 		notif.title = "Tournament Invitation";
@@ -695,9 +739,9 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 				badge.classList.remove('flex');
 				badge.textContent = '';
 			}
-			if (open && notifContainer) {
+			/*if (open && notifContainer) {
 				notifContainer.prepend(generateNotifDiv(msg));
-			}
+			}*/
 		}
       console.log('WebSocket message received:', msg);
     };
