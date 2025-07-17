@@ -3,6 +3,7 @@
 const fp = require('fastify-plugin')
 const axios = require('axios')
 const roomSockets = new Map()
+const userSockets = new Map()
 
 function addSocketToRoom(roomId, socket) {
   if (!roomSockets.has(roomId)) roomSockets.set(roomId, new Set());
@@ -21,6 +22,19 @@ function broadcastToRoom(roomId, message, exceptSocket = null) {
   }
 }
 
+
+function sendMessageToUser(userId, message) {
+  const socket = userSockets.get(userId);
+  if (socket && socket.readyState === socket.OPEN) {
+    socket.send(JSON.stringify(message));
+    console.log(`Sent notification to user ${userId}:`, message);
+    return true;
+  } else {
+    console.log(`User ${userId} not connected or connection not open`);
+    return false;
+  }
+}
+
 const authApi = axios.create({
   baseURL: `http://authentication:${process.env.AUTH_PORT}`,
   timeout: 2000
@@ -28,6 +42,9 @@ const authApi = axios.create({
 
 module.exports = fp(async function chatPlugin (fastify, opts) {
   await fastify.register(require('@fastify/websocket'))
+
+  // Décorer fastify avec la fonction sendMessageToUser
+  fastify.decorate('sendMessageToUser', sendMessageToUser)
 
   fastify.get('/chat', {websocket: true}, async (socket, req) => {
 
@@ -48,6 +65,8 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
         return
       }
       const userId = Number(data.user.id);
+      socket.userId = userId;
+      userSockets.set(userId, socket);
       socket.send(JSON.stringify({ type: 'info', message: `User: ${userId} successfully connected` }));
 
       socket.isAlive = true;
@@ -103,6 +122,11 @@ module.exports = fp(async function chatPlugin (fastify, opts) {
       })
 
       socket.on('close', (code, reason) => {
+        // Nettoyer la Map des utilisateurs
+        if (socket.userId) {
+          userSockets.delete(socket.userId);
+        }
+        
         if (socket.rooms) {
           for (const roomId of socket.rooms) {
             if (roomSockets.has(roomId)) {

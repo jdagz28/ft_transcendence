@@ -13,11 +13,6 @@ interface ChatHistory {
   error?: string;
 }
 
-interface WebSocketMessage {
-  message: string;
-  from: string;
-}
-
 interface BlockedUser {
   id: number;
   username: string;
@@ -80,7 +75,18 @@ export async function initializePermanentChat(): Promise<void> {
     return;
   }
   
+  const token = getAuthToken();
+  if (!token) {
+    console.warn('Cannot initialize chat: no authentication token');
+    return;
+  }
+  
   await loadBlockedUsers();
+
+  if (!currentWs || currentWs.readyState !== WebSocket.OPEN) {
+    initializeWebSocket(token);
+  }
+  
   renderPermanentMiniButton();
   isInitialized = true;
 }
@@ -235,11 +241,6 @@ export async function openSidebarChat(
   renderSidebarUI(chatName);
 
   await loadChatHistory(chatId, type, token, currentUser);
-
-  if (!currentWs || currentWs.readyState !== WebSocket.OPEN) {
-    initializeWebSocket(token);
-  }
-
 
   setupEventListeners(chatId, chatName);
 }
@@ -452,7 +453,18 @@ function initializeWebSocket(token: string): void {
 
   currentWs.onmessage = (event) => {
     try {
-      const data: WebSocketMessage = JSON.parse(event.data);
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'user_blocked') {
+        handleUserBlocked(data.blocked_by_user_id, data.blocked_by_username);
+        return;
+      }
+      
+      if (data.type === 'user_unblocked') {
+        handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username);
+        return;
+      }
+      
       if (data.message && data.from) {
         const isMe = data.from === currentUser;
         addMessageToUI(data.from, data.message, isMe);
@@ -804,7 +816,6 @@ function createChatMenuDropdown(): HTMLDivElement {
         }
       });
     }
-    
   
     const blockBtn = dropdownDiv.querySelector('#blockUserBtn');
     const unblockBtn = dropdownDiv.querySelector('#unblockUserBtn');
@@ -997,4 +1008,40 @@ function isMessageBlocked(username: string): boolean {
     return false;
   }
   return blockedUsernames.has(username);
+}
+
+function handleUserBlocked(blockedByUserId: number, blockedByUsername: string): void {
+  blockedUsernames.add(blockedByUsername);
+  
+  if (currentChatType === 'dm' && currentUserId === blockedByUserId) {
+    showErrorMessage(`Vous avez été bloqué par ${blockedByUsername}`);
+    
+    setTimeout(async () => {
+      await openDefaultMainGroup();
+    }, 2000);
+  }
+  
+  const dropdown = document.getElementById('chatSwitcherDropdown');
+  if (dropdown && !dropdown.classList.contains('hidden')) {
+    loadChatSwitcher();
+  }
+}
+
+function handleUserUnblocked(_unblockedByUserId: number, unblockedByUsername: string): void {
+  blockedUsernames.delete(unblockedByUsername);
+  
+  showErrorMessage(`You have been blocked by ${unblockedByUsername}`);
+  
+  const dropdown = document.getElementById('chatSwitcherDropdown');
+  if (dropdown && !dropdown.classList.contains('hidden')) {
+    loadChatSwitcher();
+  }
+}
+
+export function getCurrentWebSocket(): WebSocket | null {
+  return currentWs;
+}
+
+export function isWebSocketConnected(): boolean {
+  return currentWs !== null && currentWs.readyState === WebSocket.OPEN;
 }

@@ -264,6 +264,19 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
         userId: Number(userId),
         blockedUserId: blockedUserId
       })
+      
+      if (response.data.success) {
+        const notificationMessage = {
+          type: 'user_blocked',
+          blocked_by_user_id: userId,
+          blocked_by_username: data.user.username,
+          message: `You have been blocked by ${data.user.username}`
+        };
+        
+        const notificationSent = fastify.sendMessageToUser(blockedUserId, notificationMessage);
+        console.log(`Block notification sent to user ${blockedUserId}: ${notificationSent}`);
+      }
+      
       reply.send(response.data);
     } catch (err) {
       console.error(`error blocking user: ${err.message}`)
@@ -287,6 +300,19 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
         userId: Number(userId),
         blockedUserId: blockedUserId
       })
+      
+      if (response.data.success) {
+        const notificationMessage = {
+          type: 'user_unblocked',
+          unblocked_by_user_id: userId,
+          unblocked_by_username: data.user.username,
+          message: `You have been unblocked by ${data.user.username}`
+        };
+        
+        const notificationSent = fastify.sendMessageToUser(blockedUserId, notificationMessage);
+        console.log(`Unblock notification sent to user ${blockedUserId}: ${notificationSent}`);
+      }
+      
       reply.send(response.data);
     } catch (err) {
       console.error(`error unblocking user: ${err.message}`)
