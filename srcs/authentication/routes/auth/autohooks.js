@@ -69,11 +69,11 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       }
     },
 
-    async setMfaSecret(userId, secret, request) {
+    async setMfaSecret(userId, secret, request, mfaType) {
       try {
         const rawAuth = request.headers.authorization
         const response =  axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`,
-          { mfa_secret: secret },
+          { mfa_secret: secret, mfa_type: mfaType },
           {
             headers: {
               Authorization: rawAuth,                
@@ -85,6 +85,22 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(`getUser error: ${err.message}`)
         throw new Error('Failed to set mfa')
+      }
+    },
+
+    async getMfaSecret(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/secret`, {
+          headers: {
+            Authorization: rawAuth,
+            'x-internal-key': process.env.INTERNAL_KEY
+          }
+        })
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getMfaSecret error: ${err.message}`)
+        throw new Error('Failed to get MFA secret')
       }
     },
 
@@ -144,11 +160,8 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
 
     async getMfaDetails(userId, request) {
       try {
-        const rawAuth = request.headers.authorization
-        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/details`,
-          {
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/details`, {
             headers: {
-              Authorization: rawAuth,
               'x-internal-key': process.env.INTERNAL_KEY
             }
           }
@@ -176,7 +189,73 @@ module.exports = fp(async function authAutoHooks (fastify, opts) {
         fastify.log.error(`setMfaQrCode error: ${err.message}`)
         throw new Error('Failed to set MFA QR code')
       }
+    },
+
+    async setMfaType(userId, mfaType, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        await axios.patch(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/type`,
+          { mfa_type: mfaType },
+          {
+            headers: {
+              Authorization: rawAuth,
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+      } catch (err) {
+        fastify.log.error(`setMfaType error: ${err.message}`)
+        throw new Error('Failed to set MFA type')
+      }
+    },
+
+    async setMfaToken(userId, mfaToken) {
+      try {
+        const response = await axios.patch(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/token`,
+          { mfa_token: mfaToken },
+          {
+            headers: {
+              'x-internal-key': process.env.INTERNAL_KEY
+            }
+          }
+        )
+        return response.data
+      } catch (err) {
+        fastify.log.error(`setMfaToken error: ${err.message}`)
+        throw new Error('Failed to set MFA token')
+      }
+    },
+
+    async getMfaToken(userId) {
+      try {
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa/token`, {
+          headers: {
+            'x-internal-key': process.env.INTERNAL_KEY
+          }
+        })
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getMfaToken error: ${err.message}`)
+        throw new Error('Failed to get MFA token')
+      }
+    },
+
+    async getUserById(userId, request) {
+      try {
+        const rawAuth = request.headers.authorization
+        const response = await axios.get(`http://database:${process.env.DB_PORT}/users/search/id/${userId}`, {
+          headers: {
+            Authorization: rawAuth,
+            'x-internal-key': process.env.INTERNAL_KEY
+          }
+        })
+        return response.data
+      } catch (err) {
+        fastify.log.error(`getUserById error: ${err.message}`)
+        throw new Error('Failed to get user by ID')
+      }
     }
+
   }),
 
 

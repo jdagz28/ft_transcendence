@@ -35,7 +35,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     },
 
     async updateNotificationStatus (request, userId, notificationId, status) {
-      const response = await dbApi.put(`/notifications/${userId}/${notificationId}`, {
+      const response = await dbApi.patch(`/notifications/${userId}/${notificationId}`, {
         status
       }, {
         headers: internalHeaders(request)

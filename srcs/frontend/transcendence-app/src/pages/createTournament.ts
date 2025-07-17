@@ -6,7 +6,7 @@ export const createTournamentSpec: FormBoxSpec = {
   submitLabel: "Create",
   fields: [
     { type: "text",  label: "Tournament Name", name: "tournamentName", placeholder: "Tournament Name" },
-    { type: "select", label: "Number of players", name: "numPlayers", options: ["4", "8", "16"] },
+    { type: "select", label: "Number of players", name: "numPlayers", options: ["4"] },
     { type: "select", label: "Type",             name: "type",        options: ["Singles", "Doubles"] },
     { type: "select", label: "Game mode",        name: "gameMode",    options: ["Public", "Private"] },
   ],
@@ -40,7 +40,7 @@ export function renderCreateTournamentPage(): void {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` })
+          Authorization: `Bearer ${token}`
         },
         credentials: "include",
         body: JSON.stringify(payload)

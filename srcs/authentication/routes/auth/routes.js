@@ -315,6 +315,7 @@ module.exports = fp(
           console.log('Verifying token:', cleanToken)   //! DELETE
           const user = await fastify.jwt.verify(cleanToken)
           console.log('Token verified, user:', user) //! DELETE
+          fastify.updateUserActivity(user.id)
           return { valid: true, user }
         } catch (err) {
           return { valid: false, user: null }
@@ -394,12 +395,17 @@ module.exports = fp(
         const userId = request.user.id
         try {
           const check = await fastify.usersDataSource.getMfaDetails(userId, request)
-          if (!check.qr_code) {
+          const userSecret = await fastify.usersDataSource.getMfaSecret(userId, request)
+          console.log('MFA type:', check.mfa_type) //! DELETE
+          let secret = userSecret.mfa_secret
+          if (!userSecret.mfa_secret) {
             const username = request.user.username
-            const secret = speakeasy.generateSecret({
+            secret = speakeasy.generateSecret({
               name: `ft_transcendence (${username})`
             })
-            await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request)
+            await fastify.usersDataSource.setMfaSecret(userId, secret.base32, request, check.mfa_type)
+          }
+          if (check.qr_code == null && check.mfa_type === 'totp') {
             const QRCode = await fastify.generateQRCode(secret)
             if (!QRCode) {
               throw new Error('Failed to generate QR code')
@@ -428,16 +434,28 @@ module.exports = fp(
           const response = await axios.get(`http://database:${process.env.DB_PORT}/users/${userId}/mfa`, {
             headers: { 'x-internal-key': process.env.INTERNAL_KEY }
           })
-          const { mfa_secret, mfa_enabled } = response.data
+          const { mfa_secret, mfa_enabled, mfa_type } = response.data
           if (!mfa_enabled) {
             return reply.status(403).send({ error: 'MFA is not enabled for this user' })
           }
-          const isValid = speakeasy.totp.verify({
-            secret: mfa_secret,
-            encoding: 'base32',
-            token,
-            window: 1
-          })
+          let isValid = false
+          if (mfa_type === 'totp') {
+            isValid = speakeasy.totp.verify({
+              secret: mfa_secret,
+              encoding: 'base32',
+              token,
+              window: 1
+            })
+          } else if (mfa_type === 'email') {
+            const { mfa_token, created } = await fastify.usersDataSource.getMfaToken(userId)
+            const currentTime = Math.floor(Date.now() / 1000)
+            const tokenAge = currentTime - Math.floor(new Date(created).getTime() /
+              1000) 
+            if (tokenAge > 120) {
+              return reply.status(403).send({ error: 'MFA token has expired' })
+            }
+            isValid = mfa_token === token
+          }
           if (!isValid) {
             return reply.status(401).send({ error: 'Invalid MFA token' })
           }
@@ -462,7 +480,6 @@ module.exports = fp(
     })
     
     fastify.get('/auth/:userId/mfa/details', {
-      onRequest: fastify.authenticate,
       handler: async function getMfaDetailsHandler(request, reply) {
         const userId = request.params.userId
         try {
@@ -475,6 +492,73 @@ module.exports = fp(
           fastify.log.error(`Auth: failed to get mfa details for user ${userId}: ${err.message}`)
           return reply.status(500).send({ error: 'Auth: Failed to get mfa details' })
         }
+      }
+    })
+    
+    fastify.patch('/auth/:userId/mfa/type', {
+      onRequest: fastify.authenticate,
+      schema: {
+        params: fastify.getSchema('schema:auth:userId'),
+        body: fastify.getSchema('schema:auth:mfaType')
+      },
+      handler: async function setMfaTypeHandler(request, reply) {
+        const userId = request.params.userId
+        const { mfa_type } = request.body
+        try {
+          await fastify.usersDataSource.setMfaType(userId, mfa_type, request)
+          return reply.send({ success: true, message: 'MFA type updated successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to set mfa type for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to set mfa type' })
+        }
+      }
+    })
+
+    fastify.post('/auth/:userId/mfa/emailGenerate', {
+      schema: {
+        params: fastify.getSchema('schema:auth:userId')
+      },
+      handler: async function generateMFAEmail(request, reply) {
+        const userId = request.params.userId
+        try {
+          const check = await fastify.usersDataSource.getMfaDetails(userId, request)
+          if (check.mfa_type !== 'email') {
+            return reply.status(400).send({ error: 'MFA type is not email' })
+          }
+          const { username, email } = await fastify.usersDataSource.getUserById(userId, request)
+          if (!username || !email) {
+            return reply.status(404).send({ error: 'User not found' })
+          }
+          console.log ('Sending MFA email to:', email) //! DELETE
+
+          const secret = check.mfa_secret;
+          const code = speakeasy.totp({
+            secret: secret,
+            encoding: 'base32',
+            step: 60, 
+            window: 1 
+          })
+          console.log ('Generated MFA code:', code) //! DELETE
+          await fastify.usersDataSource.setMfaToken(userId, code)
+          fastify.sendEmail(email, code)
+          console.log ('MFA email sent successfully') //! DELETE
+
+          return reply.send({ success: true, message: 'MFA email sent successfully' })
+        } catch (err) {
+          fastify.log.error(`Auth: failed to generate mfa email for user ${userId}: ${err.message}`)
+          return reply.status(500).send({ error: 'Auth: Failed to generate mfa email' })
+        }
+      }
+    })
+
+    fastify.get('/auth/online', {
+      onRequest: fastify.authenticate,
+      handler: async function getOnlineUsersHandler(request, reply) {
+        const onlineUsers = fastify.getOnlineUsers()
+        if (onlineUsers.length === 0) {
+          return reply.status(404).send({ error: 'No users are currently online' })
+        }
+        return reply.send({ onlineUsers })
       }
     })
 

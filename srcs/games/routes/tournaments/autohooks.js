@@ -211,7 +211,7 @@ module.exports = fp(async function tournamentAutoHooks (fastify, opts) {
     },
 
     async getTournamentAlias(request, tournamentId) {
-      const { data } = await dbApi.get(`/tournaments/${tournamentId}/alias`, 
+      const { data } = await dbApi.get(`/tournaments/${tournamentId}/aliases`, 
         { headers: internalHeaders(request) },
       )
       console.log('Tournament alias retrieved:', data) //! DELETE

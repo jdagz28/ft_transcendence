@@ -262,7 +262,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         for (const player of players) {
-          player.avatarUrl = `${baseURL}/users/${player.player_id}/avatar`
+          player.avatar = `${baseURL}/users/${player.player_id}/avatar`
           if (check.mode === 'tournament') {
             player.alias = player.alias || player.username
           }
@@ -335,8 +335,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             WHERE game_settings.game_id = ?
         `)
         const settingsRow = settingsQuery.get(gameId)
+        const status = fastify.db.prepare('SELECT * FROM games WHERE id = ?').get(gameId)
         return {
           gameId,
+          status: status.status,
           matchId: settingsRow.matchId,
           settings: {
             mode:        settingsRow.mode,
@@ -764,8 +766,13 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (!options) {
           throw new Error('Game options not found')
         }
+        const status = fastify.db.prepare(
+          'SELECT status FROM games WHERE id = ?'
+        ).get(gameId)
+
         return {
           mode:        options.mode,
+          status:      status.status,
           game_type:   options.game_type,
           game_mode:   options.game_mode,
           max_players: options.max_players,
@@ -895,7 +902,73 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         fastify.log.error(err)
         throw new Error('Failed to retrieve game invites')
       }
+    },
+
+    async updateInGameStatus(userId, gameId, status) {
+      try {
+        let query
+        const checkTournament = fastify.db.prepare(
+          'SELECT mode FROM game_settings WHERE game_id = ?'
+        ).get(gameId)
+        if (checkTournament.mode !== 'tournament') {
+          const check = fastify.db.prepare(
+            'SELECT * FROM games WHERE id = ? AND created_by = ?'
+          )
+          const checkGame = check.get(gameId, userId)
+          if (!checkGame) {
+            throw new Error('Game not found or user not authorized')
+          }
+        }
+        if (checkTournament.mode === 'tournament') {
+          query = fastify.db.prepare(`
+            SELECT
+              tournaments.created_by AS created_by
+            FROM tournament_games
+            JOIN tournaments ON tournaments.id = tournament_games.tournament_id
+            WHERE tournament_games.game_id = ?
+          `)
+          const creatorId = query.get(gameId)
+          
+          const playerCheck = fastify.db.prepare(`
+            SELECT player_id FROM game_players WHERE game_id = ? AND player_id = ?
+          `).get(gameId, userId)
+          if (creatorId.created_by !== Number(userId) && !playerCheck) {
+            throw new Error('User not authorized')
+          }
+        }
+
+        const updateQuery = fastify.db.prepare(
+          'UPDATE games SET status = ? WHERE id = ?'
+        )
+        const result = updateQuery.run(status, gameId)
+        if (result.changes === 0) {
+          throw new Error('Failed to update in-game status')
+        }
+        return { message: 'In-game status updated successfully' }
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to update in-game status')
+      }
+    },
+
+    async getTournamentId(gameId) {
+      try {
+        const query = fastify.db.prepare(`
+          SELECT tournament_id FROM tournament_games WHERE game_id = ?
+        `)
+        const result = query.get(gameId)
+        if (!result) {
+          console.log('No tournament found for game ID:', gameId) //! DELETE
+          return null
+        }
+        return result.tournament_id
+      } catch (err) {
+        fastify.log.error(err)
+        throw new Error('Failed to retrieve tournament ID')
+      }
     }
+
+
   })
 }, {
   name: 'gameAutoHooks',

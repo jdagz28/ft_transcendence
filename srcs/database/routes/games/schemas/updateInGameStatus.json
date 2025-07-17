@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "$id": "schema:games:updateInGameStatus",
+  "required": ["status"],
+  "properties": {
+    "status": {
+      "const": "in-game",
+      "type": "string"
+    }
+  }
+}

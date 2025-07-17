@@ -79,7 +79,7 @@ async function databaseConnector(fastify) {
         salt TEXT NOT NULL,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        nickname TEXT UNIQUE
+        nickname TEXT DEFAULT NULL
       );
     `);
   }
@@ -105,7 +105,8 @@ async function databaseConnector(fastify) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         mfa_secret TEXT NOT NULL,
-        mfa_token TEXT,
+        mfa_token INTEGER,
+        mfa_type TEXT NOT NULL DEFAULT 'totp',
         mfa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
         qr_code TEXT,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -264,13 +265,13 @@ async function databaseConnector(fastify) {
   function createTournamentAliasesTable() {
     db.exec(`
       CREATE TABLE IF NOT EXISTS tournament_aliases (
-        tournament_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
-        alias TEXT NOT NULL,
-        PRIMARY KEY (tournament_id, user_id),
-        UNIQUE(alias),
-        FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      tournament_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      alias TEXT NOT NULL,
+      PRIMARY KEY (tournament_id, user_id),
+      UNIQUE(tournament_id, alias),
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
   }
@@ -324,7 +325,7 @@ async function databaseConnector(fastify) {
         started DATETIME DEFAULT NULL,
         ended DATETIME DEFAULT NULL,
         status TEXT NOT NULL
-          CHECK (status IN ('pending', 'active', 'paused', 'aborted', 'finished')),
+          CHECK (status IN ('pending', 'active', 'in-game', 'paused', 'aborted', 'finished')),
         winner_id INTEGER DEFAULT NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL

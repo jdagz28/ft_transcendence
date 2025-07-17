@@ -37,7 +37,7 @@ module.exports = fp(
 
     fastify.get('/users/search/id/:userId', {
       response: { 200: fastify.getSchema('schema:users:getUser')},
-      handler: async function getUserById (request, reply) {
+      handler: async function userId (request, reply) {
         try {
           const { userId } = request.params
           console.log('Looking for user ID:', userId) //! DELETE
@@ -337,8 +337,8 @@ module.exports = fp(
       handler: async function setMfaSecretHandler(request, reply) {
         try {
           const userId = request.user.id
-          const { mfa_secret } = request.body
-          await fastify.dbUsers.setMfaSecret(userId, mfa_secret)
+          const { mfa_secret, mfa_type } = request.body
+          await fastify.dbUsers.setMfaSecret(userId, mfa_secret, mfa_type)
           return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error setting MFA secret: ${err.message}`)
@@ -402,10 +402,10 @@ module.exports = fp(
     )
 
     fastify.get('/users/:userId/mfa/details', {
-      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      onRequest: [fastify.checkInternalKey],
       handler: async function getMfaDetailsHandler(request, reply) {
         try {
-          const userId = request.user.id
+          const userId = request.params.userId
           console.log('Fetching MFA details for user ID:', userId) //! DELETE
           const mfaDetails = await fastify.dbUsers.getMfaDetails(userId)
           return reply.send(mfaDetails)
@@ -416,19 +416,80 @@ module.exports = fp(
       }
     })
 
-    // fastify.get('/users/:userId/matches', {
-    //   onRequest: [fastify.authenticate, fastify.checkInternalKey],
-    //   handler: async function getMatchHistoryHandler(request, reply) {
-    //     const { userId } = request.params
-    //     try {
-    //       const matches = await fastify.dbUsers.getMatchHistory(userId)
-    //       return reply.send(matches)
-    //     } catch (err) {
-    //       fastify.log.error(`Error retrieving match history: ${err.message}`)
-    //       reply.code(500).send({ error: 'Failed to retrieve match history' })
-    //     }
-    //   }
-    // })
+    fastify.patch('/users/:userId/mfa/type', {
+      schema: {
+        body: fastify.getSchema('schema:users:mfaType'),
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function setMfaTypeHandler(request, reply) {
+        try {
+          const userId = request.user.id
+          const { mfa_type } = request.body
+          console.log('Setting MFA type for user ID:', userId, 'to', mfa_type) //! DELETE
+          await fastify.dbUsers.setMfaType(userId, mfa_type)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA type: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA type' })
+        }
+      }
+    })
+
+    fastify.patch('/users/:userId/mfa/token', {
+      schema: {
+        body: fastify.getSchema('schema:users:mfaToken'),
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function setMfaTokenHandler(request, reply) {
+        try {
+          const userId = request.params.userId
+          const { mfa_token } = request.body
+          console.log('Setting MFA token for user ID:', userId, 'to', mfa_token) //! DELETE
+          await fastify.dbUsers.setMfaToken(userId, mfa_token)
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error setting MFA token: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to set MFA token' })
+        }
+      }
+    })
+
+    fastify.get('/users/:userId/mfa/token', {
+      schema: {
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getMfaTokenHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const mfaToken = await fastify.dbUsers.getMfaToken(userId)
+          return reply.send(mfaToken)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA token for user ${userId}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA token' })
+        }
+      }
+    })
+
+    fastify.get('/users/:userId/mfa/secret', {
+      schema: {
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getMfaSecretHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const mfaSecret = await fastify.dbUsers.getMfaSecret(userId)
+          return reply.send(mfaSecret)
+        } catch (err) {
+          fastify.log.error(`Error retrieving MFA secret for user ${userId}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve MFA secret' })
+        }
+      }
+    }
+    )
 
     fastify.get('/users/:username/matches', {
       schema: {
@@ -444,6 +505,41 @@ module.exports = fp(
         } catch (err) {
           fastify.log.error(`Error retrieving match history for user ${username}: ${err.message}`)
           reply.code(500).send({ error: 'Failed to retrieve match history' })
+        }
+      }
+    })
+
+    fastify.get('/users/:username/friend-requests', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function getFriendRequestsHandler (request, reply) {
+        const username = request.params.username
+        const userId = await fastify.getUserId(username)
+        try {
+          const friendRequests = await fastify.dbUsers.getFriendRequests(userId)
+          return reply.send(friendRequests)
+        } catch (err) {
+          fastify.log.error(`Error retrieving friend requests for user ${username}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve friend requests' })
+        }
+      }
+    })
+
+    fastify.get('/users/:userId/remote', {
+      schema: {
+        params: fastify.getSchema('schema:users:userId')
+      },
+      onRequest: [fastify.checkInternalKey],
+      handler: async function getRemoteUserHandler (request, reply) {
+        const userId = request.params.userId
+        try {
+          const remoteUser = await fastify.dbUsers.getRemoteUser(userId)
+          return reply.send(remoteUser)
+        } catch (err) {
+          fastify.log.error(`Error retrieving remote user for ID ${userId}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to retrieve remote user' })
         }
       }
     })

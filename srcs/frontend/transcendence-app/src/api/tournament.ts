@@ -6,15 +6,15 @@ export async function getTournamentPlayers(tournamentId: number): Promise<Player
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to fetch tournament players for ${tournamentId}`);
+    console.error("Failed to get tournament players:", response.status, response.statusText);
+    return [];
   }
   const result = await response.json();
-  console.log("tournament players:", result);
 
   return result as Player[];
 }
@@ -25,34 +25,36 @@ export async function getTournamentCreator(tournamentId: number): Promise<number
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to get tournament creator for ${tournamentId}`);
+    console.error("Failed to get tournament creator:", response.status, response.statusText);
+    return -1;
   }
   const result = await response.json();
+
   return result.created_by;
 }
 
-export async function getTournamentName(tournamentId: number): Promise<any> {
+export async function getTournamentDetails(tournamentId: number): Promise<any> {
   const token = localStorage.getItem("token") ?? "";
   const response = await fetch(`/tournaments/${tournamentId}`, {
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to get tournament info for ${tournamentId}`);
+    console.error("Failed to get tournament details:", response.status, response.statusText);
+    return [];
   }
   const result =  await response.json();
-  console.log(result);
 
-  return result.name;
+  return result;
 }
 
 export async function getTournamentSettings(tournamentId: number): Promise<any> {
@@ -61,13 +63,15 @@ export async function getTournamentSettings(tournamentId: number): Promise<any> 
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to get tournament settings for ${tournamentId}`);
+    console.error("Failed to get tournament settings:", response.status, response.statusText);
+    return [];
   }
+
   return await response.json();
 }
 
@@ -78,7 +82,7 @@ export async function getAvailablePlayers(tournamentId: number): Promise<any> {
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
+      Authorization: `Bearer ${token}`,
     },
     credentials: "include",
   });
@@ -86,8 +90,6 @@ export async function getAvailablePlayers(tournamentId: number): Promise<any> {
     throw new Error(`Couldn’t load tournament ${tournamentId}`);
   }
   const availablePlayers: Player[] = await tournamentRes.json();
-
-  console.log("Available players:", availablePlayers);
   
   return availablePlayers;
 }
@@ -102,13 +104,14 @@ export async function invitePlayerToSlot(
     method: 'POST',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include',
     body: JSON.stringify({ userId, slotIndex })
   });
   if (!response.ok) {
-    throw new Error(`Failed to invite player ${userId} to slot ${slotIndex} in tournament ${tournamentId}`);
+    console.error(`Failed to invite player ${userId} to slot ${slotIndex} in tournament ${tournamentId}:`, response.status, response.statusText);
+    return;
   }
 }
 
@@ -118,12 +121,13 @@ export async function isTournamentAdmin(userId: number): Promise<boolean> {
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to check admin status for user ${userId}`);
+    console.error("Failed to check if user is admin:", response.status, response.statusText);
+    return false;
   }
 
   const user = await response.json();
@@ -136,12 +140,13 @@ export async function getPlayerById(userId: number): Promise<Player> {
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to get player by ID ${userId}`);
+    console.error(`Failed to get player with ID ${userId}:`, response.status, response.statusText);
+    return {} as Player;
   }
   return await response.json() as Player;
 }
@@ -152,7 +157,7 @@ export async function getTournamentChatRoom(tournamentId: number): Promise<numbe
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
@@ -160,7 +165,7 @@ export async function getTournamentChatRoom(tournamentId: number): Promise<numbe
     throw new Error(`Failed to get chat room for tournament ${tournamentId}`);
   }
   const result = await response.json();
-  console.log("Tournament chat room:", result.chatRoomId); //!Delete
+
   return Number(result.chatRoomId);
 }
 
@@ -170,12 +175,35 @@ export async function getTournamentBrackets(tournamentId: number): Promise<any> 
     method: 'GET',
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` })
+      Authorization: `Bearer ${token}`
     },
     credentials: 'include'
   });
   if (!response.ok) {
-    throw new Error(`Failed to get brackets for tournament ${tournamentId}`);
+    console.error(`Failed to get brackets for tournament ${tournamentId}:`, response.status, response.statusText);
+    return [];
   }
+
   return await response.json();
 }
+
+export async function getTournamentAlias(tournamentId: number, userId: number): Promise<string> {
+  const token = localStorage.getItem("token") ?? "";
+  const response = await fetch(`/tournaments/${tournamentId}/aliases`, {
+    method: 'GET',
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    console.error(`Failed to get aliases for tournament ${tournamentId}:`, response.status, response.statusText);
+    return "";
+  }
+  const aliases: { user_id: number; alias: string; }[] = await response.json();
+  const userAlias = aliases.find(item => item.user_id === userId);
+
+  return userAlias ? userAlias.alias : "";
+}
+

@@ -287,6 +287,35 @@ module.exports = fp(
       }
     })
 
+    fastify.patch('/games/:gameId/in-game', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:updateInGameStatus')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function updateInGameStatusHandler(request, reply) {
+        const { gameId } = request.params
+        const { status } = request.body
+        const result = await fastify.gameService.updateInGameStatus(request, gameId, status)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
+    fastify.get('/games/:gameId/tournament', {
+      onRequest: fastify.authenticate,
+      handler: async function getTournamentHandler(request, reply) {
+        const { gameId } = request.params
+        const tournamentId = await fastify.gameService.getTournamentId(request, gameId)
+        if (tournamentId === -1) {
+          return reply.code(404).send({ error: 'No tournament associated with this game' })
+        }
+        return reply.send({ tournamentId })
+      }
+    })
+
   }, {
     name: 'gameRoutes',
     dependencies: [ 'gameAutoHooks']
