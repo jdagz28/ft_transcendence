@@ -51,7 +51,14 @@ type APINotif = {
 	}
 */
 
-function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:number, sender:string, token: string) {
+function setAnsweredButtons(contentWrapper:HTMLDivElement) {
+	const div = document.createElement("div");
+	div.className = "mt-1 flex gap-2 text-[8px] text-gray-500 font-semibold";
+	div.textContent = "You have already answered this notification";
+	contentWrapper.appendChild(div);
+}
+
+function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:number, sender:string, token: string, user_id:number, notif_id:number) {
 	const btnDiv = document.createElement("div");
 	btnDiv.className = "mt-1 flex gap-2";
 	const acceptBtn = document.createElement("button");
@@ -78,7 +85,22 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			body: JSON.stringify({ friend: `${sender}`, action: "accept" })
 		});
 		if (response.ok) {
-			btnDiv.remove();
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -92,7 +114,22 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			body: JSON.stringify({ friend: `${sender}`, action: "decline" })
 		});
 		if (response.ok) {
-			btnDiv.remove();
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
 		}
 	}
 	blockBtn.onclick = async () => {
@@ -106,12 +143,27 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			body: JSON.stringify({ blockedUserId: sender_id })
 		});
 		if (response.ok) {
-			btnDiv.remove();
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
 		}
 	}
 }
 
-function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string) {
+function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string, user_id: number, notif_id:number) {
 	if (!gameId) {
 		console.error("Game ID is null, cannot generate game invite buttons");
 		return;
@@ -142,7 +194,22 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			body: JSON.stringify({ gameId: gameId, response: "accept" })
 		});
 		if (response.ok) {
-			btnDiv.remove();
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -156,7 +223,22 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			body: JSON.stringify({ gameId: gameId, response: "decline" })
 		});
 		if (response.ok) {
-			btnDiv.remove();
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
 		}
 	}
 	blockBtn.onclick = async () => {
@@ -170,14 +252,138 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			body: JSON.stringify({ blockedUserId: sender_id })
 		});
 		if (response.ok) {
-			btnDiv.remove();
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
+		}
+	}
+}
+
+function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tournamentId:number | null, sender_id: number, token: string, user_id: number, notif_id:number) {
+	if (!tournamentId) {
+		console.error("Tournament ID is null, cannot generate tournament invite buttons");
+		return;
+	}
+	const btnDiv = document.createElement("div");
+	btnDiv.className = "mt-1 flex gap-2";
+	const acceptBtn = document.createElement("button");
+	acceptBtn.className = "rounded bg-green-500 px-1 py-0.5 text-[8px] font-semibold text-white hover:bg-green-600";
+	acceptBtn.textContent = "Accept";
+	btnDiv.appendChild(acceptBtn);
+	const denyBtn = document.createElement("button");
+	denyBtn.className = "rounded bg-red-500 px-1 py-0.5 text-[8px] font-semibold text-white hover:bg-red-600";
+	denyBtn.textContent = "Deny";
+	btnDiv.appendChild(denyBtn);
+	const blockBtn = document.createElement("button");
+	blockBtn.className = "rounded bg-red-800 px-1 py-0.5 text-[8px] font-semibold text-white hover:bg-red-950";
+	blockBtn.textContent = "Block";
+	btnDiv.appendChild(blockBtn);
+	contentWrapper.appendChild(btnDiv);
+	acceptBtn.onclick = async () => {
+		const response = await fetch(`/tournaments/invites/respond`, {
+			method: 'PATCH',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify({ tournamentId: tournamentId, response: "accept" })
+		});
+		if (response.ok) {
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
+		}
+	}
+	denyBtn.onclick = async () => {
+		const response = await fetch(`/tournaments/invites/respond`, {
+			method: 'PATCH',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify({ tournamentId: tournamentId, response: "decline" })
+		});
+		if (response.ok) {
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
+		}
+	}
+	blockBtn.onclick = async () => {
+		const response = await fetch(`/chat/block-user`, {
+			method: 'PUT',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify({ blockedUserId: sender_id })
+		});
+		if (response.ok) {
+			fetch(`/notifications/${user_id}/${notif_id}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (res.ok) {
+					btnDiv.remove();
+					setAnsweredButtons(contentWrapper);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif_id} as read:`, err);
+			});
 		}
 	}
 }
 
 
 function generateNotifDiv(notif: wsNotif): HTMLDivElement {
-	`<div class="notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:bg-gray-50">
+	/*`<div class="notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:bg-gray-50">
         <div class="notif-icon flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[rgb(18,22,68)]  text-white">
            <img src="/icons8-google.svg" class="w-6 h-6" alt="Google logo" />
         </div>
@@ -185,7 +391,7 @@ function generateNotifDiv(notif: wsNotif): HTMLDivElement {
             <p class="text-[10px] font-semibold text-gray-800">Friend Request</p>
             <p class="text-[10px] text-gray-600">Test has sent you a friend request</p>
         </div>
-    </div>` 
+    </div>` */
 
 	const notifItem = document.createElement("div");
 	notifItem.className = "notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:blue-300";
@@ -236,6 +442,7 @@ function generateNotifDiv(notif: wsNotif): HTMLDivElement {
 }
 
 function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDivElement {
+	console.log("Generating notification div for:", notif);
 	const notifItem = document.createElement("div");
 	notifItem.className = "notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:bg-blue-100";
 
@@ -291,21 +498,23 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 	timeStamp.textContent = date.toLocaleTimeString([], {year: 'numeric', month: 'long' , day: 'numeric' , hour: '2-digit', minute: '2-digit' });
 
 	if (notif.is_read === 0) {
-		fetch(`/notifications/${id.toString()}/${notif.id.toString()}`, {
-    		method: 'PATCH',
-   			headers: {
-      			'Authorization': `Bearer ${token}`,
-      			'Content-Type': 'application/json'
-    		},
-    		credentials: 'include',
-    		body: JSON.stringify({status: "read"})
-		}).then((res) => {
-			if (!res.ok) {
-				console.error(`Failed to mark notification ${notif.id} as read`);
-			}
-		}).catch((err) => {
-			console.error(`Error marking notification ${notif.id} as read:`, err);
-		});
+		if (notif.type !== "game.invite" && notif.type !== "tournament.invite" && notif.type !== "friend.request") {
+			fetch(`/notifications/${id.toString()}/${notif.id.toString()}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			}).then((res) => {
+				if (!res.ok) {
+					console.error(`Failed to mark notification ${notif.id} as read`);
+				}
+			}).catch((err) => {
+				console.error(`Error marking notification ${notif.id} as read:`, err);
+			});
+		}
 	} else {
 		iconWrapper.classList.add("bg-[rgb(27,33,55)]");
 		iconWrapper.classList.remove("bg-blue-950");
@@ -318,10 +527,14 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 	contentWrapper.appendChild(desc);
 	contentWrapper.appendChild(timeStamp);
 
-	if (notif.type === "friend.request") {
-		generateFriendRequestButtons(contentWrapper, notif.sender_id, notif.content.replace(/ .*/,''), token);
-	} else if (notif.type === "game.invite") {
-		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token);
+	if (notif.type === "friend.request" && notif.is_read === 0) {
+		generateFriendRequestButtons(contentWrapper, notif.sender_id, notif.content.replace(/ .*/,''), token, id, notif.id);
+	} else if (notif.type === "game.invite" && notif.is_read === 0) {
+		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
+	} else if (notif.type === "tournament.invite" && notif.is_read === 0) {
+		generateTournamentInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
+	} else if (notif.is_read !== 0 && (notif.type === "game.invite" || notif.type === "tournament.invite" || notif.type === "friend.request")) {
+		setAnsweredButtons(contentWrapper);
 	}
 
 	notifItem.appendChild(iconWrapper);
@@ -352,6 +565,7 @@ async function populateNotifContainer(container: HTMLElement, id: number): Promi
 	}
 	const data = await response.json();
 	if (!data || !data.notifications || data.notifications.length === 0) {
+		console.warn('No notifications found for user:', id);
 		container.innerHTML = '<span class="text-xs text-gray-400 absolute inset-0 flex items-center justify-center">No Notifications</span>';
 		return;
 	}

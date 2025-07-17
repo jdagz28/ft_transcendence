@@ -13,7 +13,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     },
 
     async updateNotificationStatus ( userId, notificationId, status) {
-      const response = await fastify.db.prepare('UPDATE notifications SET status = ? WHERE user_id = ? AND id = ?')
+      const response = await fastify.db.prepare('UPDATE notifications SET is_read = ? WHERE user_id = ? AND id = ?')
       response.run(status, userId, notificationId)
       return { userId, notificationId, status }
     }
