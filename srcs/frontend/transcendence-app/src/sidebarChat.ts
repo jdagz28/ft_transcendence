@@ -340,25 +340,69 @@ function addMessageToUI(username: string, content: string, isCurrentUser: boolea
   const messagesDiv = document.getElementById('sidebar-chat-messages');
   if (!messagesDiv) return;
 
-
-  if (!isCurrentUser && isMessageBlocked(username)) {
-    console.log(`Message from blocked user ${username} filtered out`);
-    return;
-  }
-
   const displayName = isCurrentUser ? 'Me' : username;
-  const messageClass = isCurrentUser ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white';
-  const alignClass = isCurrentUser ? 'justify-end' : 'justify-start';
-
-  messagesDiv.innerHTML += `
-    <div class="mb-2 flex ${alignClass}">
-      <div class="${messageClass} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
-        <b>${displayName}:</b> ${content}
+  const isBlocked = !isCurrentUser && isMessageBlocked(username);
+  
+  if (currentChatType === 'group' && isBlocked) {
+    const messageId = `blocked-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const alignClass = 'justify-start';
+    
+    messagesDiv.innerHTML += `
+      <div class="mb-2 flex ${alignClass}">
+        <div id="${messageId}" class="bg-gray-800 text-gray-500 rounded-lg px-3 py-2 max-w-[60%] cursor-pointer border border-gray-600 hover:opacity-80 transition-opacity opacity-60" 
+             onclick="toggleBlockedMessage('${messageId}')" title="Click to reveal message">
+          <div class="blocked-preview">
+            <span class="text-xs italic">🚫 Message from blocked user (click to reveal)</span>
+          </div>
+          <div class="blocked-content hidden">
+            <b>${displayName}:</b> ${content}
+          </div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  } else if (currentChatType === 'dm' && isBlocked) {
+    return;
+  } else {
+    const messageClass = isCurrentUser ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white';
+    const alignClass = isCurrentUser ? 'justify-end' : 'justify-start';
+
+    messagesDiv.innerHTML += `
+      <div class="mb-2 flex ${alignClass}">
+        <div class="${messageClass} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
+          <b>${displayName}:</b> ${content}
+        </div>
+      </div>
+    `;
+  }
+  
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
+
+(window as any).toggleBlockedMessage = function(messageId: string) {
+  const messageDiv = document.getElementById(messageId);
+  if (!messageDiv) return;
+  
+  const preview = messageDiv.querySelector('.blocked-preview');
+  const contentDiv = messageDiv.querySelector('.blocked-content');
+  
+  if (preview && contentDiv) {
+    if (contentDiv.classList.contains('hidden')) {
+      preview.classList.add('hidden');
+      contentDiv.classList.remove('hidden');
+      messageDiv.classList.remove('opacity-60');
+      messageDiv.classList.add('opacity-100');
+      messageDiv.title = 'Click to hide message';
+      messageDiv.className = messageDiv.className.replace('bg-gray-800 text-gray-500', 'bg-gray-700 text-white');
+    } else {
+      preview.classList.remove('hidden');
+      contentDiv.classList.add('hidden');
+      messageDiv.classList.remove('opacity-100');
+      messageDiv.classList.add('opacity-60');
+      messageDiv.title = 'Click to reveal message';
+      messageDiv.className = messageDiv.className.replace('bg-gray-700 text-white', 'bg-gray-800 text-gray-500');
+    }
+  }
+};
 
 function showErrorMessage(error: string): void {
   const messagesDiv = document.getElementById('sidebar-chat-messages');
@@ -385,10 +429,6 @@ async function loadChatHistory(
     if (Array.isArray(history)) {
       history.forEach((msg: ChatMessage) => {
         const isMe = msg.username === currentUser;
-      
-        if (!isMe && type === 'dm' && isMessageBlocked(msg.username)) {
-          return;
-        }
         addMessageToUI(msg.username, msg.content, isMe);
       });
     } else if ((history as ChatHistory).error) {
@@ -410,8 +450,6 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
     return;
   }
 
-  console.log('Joining all available rooms...');
-
   try {
   
     const groupsResponse = await fetch('/chat/mychats', {
@@ -422,7 +460,6 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
     if (groupsResponse.ok) {
       const groups = await groupsResponse.json();
       for (const group of groups) {
-        console.log(`Joining group: ${group.name} (ID: ${group.id})`);
         currentWs.send(JSON.stringify({
           action: 'join',
           scope: 'group',
@@ -469,7 +506,6 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
           
           if (canJoinResponse.ok) {
             const canJoinData = await canJoinResponse.json();
-            console.log(`Joining DM with: ${friend.username} (Room ID: ${canJoinData.Room})`);
             currentWs.send(JSON.stringify({
               action: 'join',
               scope: 'dm',
@@ -483,7 +519,6 @@ async function joinAllAvailableRooms(token: string): Promise<void> {
       }
     }
 
-    console.log('All available rooms joined!');
   } catch (error) {
     console.error('Error joining all rooms:', error);
   }
@@ -501,26 +536,43 @@ function initializeWebSocket(token: string): void {
   currentWs.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+      console.log('Received WebSocket message:', data);
       
       if (data.type === 'user_blocked') {
-        console.log('Processing user_blocked event:', {
-          blocked_by_user_id: data.blocked_by_user_id,
-          blocked_by_username: data.blocked_by_username,
-          currentUserId: currentUserId,
-          currentChatType: currentChatType
-        });
         handleUserBlocked(data.blocked_by_user_id, data.blocked_by_username);
         return;
       }
       
-      if (data.type === 'user_unblocked') {
-        console.log('Processing user_unblocked event:', {
-          unblocked_by_user_id: data.unblocked_by_user_id,
-          unblocked_by_username: data.unblocked_by_username,
-          currentUserId: currentUserId,
-          currentChatType: currentChatType
+      if (data.type === 'user_blocked_by_me') {
+        loadBlockedUsers().then(() => {
+          const messagesDiv = document.getElementById('sidebar-chat-messages');
+          if (messagesDiv) {
+            messagesDiv.innerHTML = '';
+          }
+          if (currentChatId && currentChatType && currentUser) {
+            const token = getAuthToken();
+            if (token) {
+              loadChatHistory(currentChatId, currentChatType, token, currentUser);
+            }
+          }
         });
+        return;
+      }
+      
+      if (data.type === 'user_unblocked') {
         handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username);
+        return;
+      }
+      
+      if (data.type === 'user_unblocked_by_me') {
+        loadBlockedUsers().then(() => {
+          if (currentChatId && currentChatType && currentUser) {
+            const token = getAuthToken();
+            if (token) {
+              loadChatHistory(currentChatId, currentChatType, token, currentUser);
+            }
+          }
+        });
         return;
       }
 
@@ -1112,7 +1164,6 @@ async function blockUser(userId: number): Promise<boolean> {
     
     if (response.ok) {
       await loadBlockedUsers();
-      console.log('User blocked successfully, cache updated');
       
       refreshDMsList();
       
@@ -1191,7 +1242,6 @@ async function loadBlockedUsers(): Promise<void> {
           blockedUsernames.add(user.username);
         });
       }
-      console.log('Blocked users loaded:', blockedUsernames);
     }
   } catch (error) {
     console.error('Error loading blocked users:', error);
@@ -1234,10 +1284,6 @@ async function getBlockingInfo(userId: number): Promise<IsBlockedResponse | null
 }
 
 function isMessageBlocked(username: string): boolean {
-
-  if (currentChatType === 'group') {
-    return false;
-  }
   return blockedUsernames.has(username);
 }
 
@@ -1246,7 +1292,6 @@ function isMessageBlocked(username: string): boolean {
 // ============================================================================ //
 
 function handleUserBlocked(blockedByUserId: number, blockedByUsername: string): void {
-  blockedUsernames.add(blockedByUsername);
   
   if (currentChatType === 'dm' && currentUserId === blockedByUserId) {
     showErrorMessage(`You have been blocked by ${blockedByUsername}`);
@@ -1255,7 +1300,7 @@ function handleUserBlocked(blockedByUserId: number, blockedByUsername: string): 
       await openDefaultMainGroup();
     }, 2000);
   }
-  
+
   const dropdown = document.getElementById('chatSwitcherDropdown');
   if (dropdown && !dropdown.classList.contains('hidden')) {
     loadChatSwitcher();
@@ -1265,8 +1310,6 @@ function handleUserBlocked(blockedByUserId: number, blockedByUsername: string): 
 }
 
 function handleUserUnblocked(_unblockedByUserId: number, unblockedByUsername: string): void {
-  console.log('handleUserUnblocked called with:', { _unblockedByUserId, unblockedByUsername, currentUserId, currentChatType });
-  
   blockedUsernames.delete(unblockedByUsername);
   
   const dropdown = document.getElementById('chatSwitcherDropdown');

@@ -253,7 +253,7 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     if (reply.sent)
       return;
 
-    const userId = data.user.id;
+    const userId = Number(data.user.id);
     const { blockedUserId } = request.body;
     if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
       return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
@@ -266,15 +266,25 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       
       if (response.data.success) {
-        const notificationMessage = {
+        const blockedUserNotification = {
           type: 'user_blocked',
           blocked_by_user_id: userId,
           blocked_by_username: data.user.username,
           message: `You have been blocked by ${data.user.username}`
         };
         
-        const notificationSent = fastify.sendMessageToUser(blockedUserId, notificationMessage);
-        console.log(`Block notification sent to user ${blockedUserId}: ${notificationSent}`);
+        const blockedNotificationSent = fastify.sendMessageToUser(blockedUserId, blockedUserNotification);
+        console.log(`Block notification sent to blocked user ${blockedUserId}: ${blockedNotificationSent}`);
+
+        const blockerNotification = {
+          type: 'user_blocked_by_me',
+          blocked_user_id: blockedUserId,
+          blocked_username: response.data.blocked_username || 'Unknown',
+          message: `You have blocked this user`
+        };
+        
+        const blockerNotificationSent = fastify.sendMessageToUser(userId, blockerNotification);
+        console.log(`Block notification sent to blocker ${userId}: ${blockerNotificationSent}`);
       }
       
       reply.send(response.data);
@@ -289,7 +299,7 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     if (reply.sent)
       return;
 
-    const userId = data.user.id;
+    const userId = Number(data.user.id);
     const { blockedUserId } = request.body;
     if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
       return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
@@ -302,15 +312,25 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       
       if (response.data.success) {
-        const notificationMessage = {
+        const unblockedUserNotification = {
           type: 'user_unblocked',
           unblocked_by_user_id: userId,
           unblocked_by_username: data.user.username,
           message: `You have been unblocked by ${data.user.username}`
         };
         
-        const notificationSent = fastify.sendMessageToUser(blockedUserId, notificationMessage);
-        console.log(`Unblock notification sent to user ${blockedUserId}: ${notificationSent}`);
+        const unblockedNotificationSent = fastify.sendMessageToUser(blockedUserId, unblockedUserNotification);
+        console.log(`Unblock notification sent to unblocked user ${blockedUserId}: ${unblockedNotificationSent}`);
+        
+        const unblockingUserNotification = {
+          type: 'user_unblocked_by_me',
+          unblocked_user_id: blockedUserId,
+          unblocked_username: response.data.unblocked_username || 'Unknown',
+          message: `You have unblocked this user`
+        };
+        
+        const unblockingNotificationSent = fastify.sendMessageToUser(userId, unblockingUserNotification);
+        console.log(`Unblock notification sent to unblocker ${userId}: ${unblockingNotificationSent}`);
       }
       
       reply.send(response.data);
