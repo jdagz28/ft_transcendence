@@ -1,4 +1,8 @@
-import { clearBlockedUsersCache } from './chat';
+import { clearBlockedUsersCache, refreshDMsList } from './chat';
+
+// ============================================================================ //
+// TYPES & INTERFACES                                                           //
+// ============================================================================ //
 
 type ChatType = 'group' | 'dm';
 
@@ -37,6 +41,10 @@ interface IsBlockedResponse {
   block_id?: number;
 }
 
+// ============================================================================ //
+// GLOBAL STATE                                                                 //
+// ============================================================================ //
+
 let currentWs: WebSocket | null = null;
 let currentChatId: number | null = null;
 let currentChatName: string = '';
@@ -45,6 +53,10 @@ let currentUserId: number | null = null;
 let currentUser: string = '';
 let isInitialized: boolean = false;
 let blockedUsernames: Set<string> = new Set();
+
+// ============================================================================ //
+// AUTHENTICATION HELPERS                                                       //
+// ============================================================================ //
 
 function getAuthToken(): string {
   return localStorage.getItem('token') || '';
@@ -65,6 +77,26 @@ async function getCurrentUser(): Promise<string> {
   }
   return '';
 }
+
+async function getCurrentUserId(): Promise<number | null> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch('/users/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const user = await res.json();
+      return user.id;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch current user ID:', error);
+  }
+  return null;
+}
+
+// ============================================================================ //
+// MAIN INITIALIZATION                                                          //
+// ============================================================================ //
 
 export async function initializePermanentChat(): Promise<void> {
   if (isInitialized) return;
@@ -90,6 +122,10 @@ export async function initializePermanentChat(): Promise<void> {
   renderPermanentMiniButton();
   isInitialized = true;
 }
+
+// ============================================================================ //
+// DEFAULT CHAT NAVIGATION                                                      //
+// ============================================================================ //
 
 async function openDefaultMainGroup(): Promise<void> {
   const token = getAuthToken();
@@ -153,6 +189,10 @@ async function openDefaultMainGroup(): Promise<void> {
   }
 }
 
+// ============================================================================ //
+// UI RENDERING                                                                 //
+// ============================================================================ //
+
 function renderPermanentMiniButton(): void {
   const sidebar = document.getElementById('sidebar-chat');
   if (!sidebar) return;
@@ -169,15 +209,6 @@ function renderPermanentMiniButton(): void {
   if (miniButton) {
     miniButton.addEventListener('click', async () => {
       if (currentChatId && currentChatName && currentChatType) {
-      
-        if (currentChatType === 'dm' && currentUserId) {
-          const isBlocked = await isUserBlocked(currentUserId);
-          if (isBlocked) {
-            console.log('Previous DM was with blocked user, opening default group instead');
-            await openDefaultMainGroup();
-            return;
-          }
-        }
         openSidebarChat(currentChatId, currentChatName, currentChatType, currentUserId);
       } else {
         await openDefaultMainGroup();
@@ -185,6 +216,10 @@ function renderPermanentMiniButton(): void {
     });
   }
 }
+
+// ============================================================================ //
+// CLEANUP & WEBSOCKET MANAGEMENT                                               //   
+// ============================================================================ //
 
 export function disconnectPermanentChat(): void {
   console.log("in function disconnetctPermanentChat");
@@ -211,6 +246,10 @@ function closeCurrentWebSocket(): void {
 
   clearBlockedUsersCache();
 }
+
+// ============================================================================ //
+// CHAT OPENING & HISTORY                                                       //
+// ============================================================================ //
 
 function buildHistoryUrl(type: ChatType, chatId: number): string {
   return type === 'group' 
@@ -293,6 +332,10 @@ function renderSidebarUI(chatName: string): void {
   `;
 }
 
+// ============================================================================ //
+// MESSAGE HANDLING                                                             //
+// ============================================================================ //
+
 function addMessageToUI(username: string, content: string, isCurrentUser: boolean): void {
   const messagesDiv = document.getElementById('sidebar-chat-messages');
   if (!messagesDiv) return;
@@ -356,6 +399,10 @@ async function loadChatHistory(
     showErrorMessage('Error while displaying history.');
   }
 }
+
+// ============================================================================ //
+// WEBSOCKET CONNECTION & ROOM MANAGEMENT                                       //              
+// ============================================================================ //
 
 async function joinAllAvailableRooms(token: string): Promise<void> {
   if (!currentWs || currentWs.readyState !== WebSocket.OPEN) {
@@ -454,20 +501,36 @@ function initializeWebSocket(token: string): void {
   currentWs.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-
+      
       if (data.type === 'user_blocked') {
+        console.log('Processing user_blocked event:', {
+          blocked_by_user_id: data.blocked_by_user_id,
+          blocked_by_username: data.blocked_by_username,
+          currentUserId: currentUserId,
+          currentChatType: currentChatType
+        });
         handleUserBlocked(data.blocked_by_user_id, data.blocked_by_username);
         return;
       }
       
       if (data.type === 'user_unblocked') {
+        console.log('Processing user_unblocked event:', {
+          unblocked_by_user_id: data.unblocked_by_user_id,
+          unblocked_by_username: data.unblocked_by_username,
+          currentUserId: currentUserId,
+          currentChatType: currentChatType
+        });
         handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username);
         return;
       }
-      
-      if (data.message && data.from) {
-        const isMe = data.from === currentUser;
-        addMessageToUI(data.from, data.message, isMe);
+
+      if (data.message && data.from && !data.type) {
+        if (data.roomId && currentChatId && data.roomId === currentChatId) {
+          const isMe = data.from === currentUser;
+          addMessageToUI(data.from, data.message, isMe);
+        } else {
+          console.log(`Message filtered out - from room ${data.roomId}, currently viewing room ${currentChatId}`);
+        }
       }
     } catch (error) {
       const messageText = event.data.toString();
@@ -500,6 +563,10 @@ function initializeWebSocket(token: string): void {
     console.error('Chat WebSocket error:', error);
   };
 }
+
+// ============================================================================ //
+// CHAT SWITCHER FUNCTIONALITY                                                  //      
+// ============================================================================ //
 
 async function loadChatSwitcher(): Promise<void> {
   const token = getAuthToken();
@@ -565,24 +632,25 @@ async function loadChatSwitcher(): Promise<void> {
       );
       
       friendsWithBlockStatus.forEach((friend: any) => {
-      
-        if (friend.isBlocked) {
-          return;
-        }
-        
         const isActive = currentChatType === 'dm' && currentUserId === friend.id;
         const dmItem = document.createElement('button');
-        dmItem.className = `w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-600 transition-colors ${
-          isActive ? 'bg-blue-600 text-white' : 'text-gray-300'
-        }`;
+
+        const baseClasses = 'w-full text-left px-3 py-2 rounded text-sm transition-colors';
+        const blockedClasses = friend.isBlocked 
+          ? 'text-gray-500 cursor-not-allowed opacity-60' 
+          : 'hover:bg-gray-600';
+        const activeClasses = isActive ? 'bg-blue-600 text-white' : 'text-gray-300';
+        
+        dmItem.className = `${baseClasses} ${blockedClasses} ${activeClasses}`;
         dmItem.innerHTML = `
           <div class="flex items-center gap-2">
-            <img src="${friend.avatar}" alt="avatar" class="w-5 h-5 rounded-full flex-shrink-0">
+            <img src="${friend.avatar}" alt="avatar" class="w-5 h-5 rounded-full flex-shrink-0 ${friend.isBlocked ? 'grayscale' : ''}">
             <span class="truncate">${friend.username}</span>
+            ${friend.isBlocked ? '<span class="text-xs text-red-400 ml-auto">🚫</span>' : ''}
           </div>
         `;
         dmItem.addEventListener('click', async () => {
-          await switchToDM(friend.id, friend.username);
+          await switchToDM(friend.id, friend.username, friend.isBlocked);
         });
         dmsList.appendChild(dmItem);
       });
@@ -591,6 +659,10 @@ async function loadChatSwitcher(): Promise<void> {
     console.error('Error loading chat switcher:', error);
   }
 }
+
+// ============================================================================ //
+// CHAT NAVIGATION                                                              //
+// ============================================================================ //
 
 async function switchToChat(chatId: number, chatName: string, type: ChatType): Promise<void> {
 
@@ -633,6 +705,9 @@ async function switchToChat(chatId: number, chatName: string, type: ChatType): P
     }
     await loadChatHistory(chatId, type, token, currentUser);
     
+    enableChatMenuButton();
+    enableChatForm();
+    
   
     console.log(`Switched to viewing group: ${chatName} (already connected via WebSocket)`);
     
@@ -640,13 +715,100 @@ async function switchToChat(chatId: number, chatName: string, type: ChatType): P
   }
 }
 
-async function switchToDM(userId: number, username: string): Promise<void> {
+async function switchToDM(userId: number, username: string, isBlocked: boolean = false): Promise<void> {
   const token = getAuthToken();
   
-
-  const isBlocked = await isUserBlocked(userId);
   if (isBlocked) {
-    showErrorMessage(`Impossible d'ouvrir le chat avec ${username} : utilisateur bloqué.`);
+    currentChatId = null;
+    currentChatName = username;
+    currentChatType = 'dm';
+    currentUserId = userId;
+    
+    const messagesDiv = document.getElementById('sidebar-chat-messages');
+    if (messagesDiv) {
+      const blockingInfo = await getBlockingInfo(userId);
+      const currentUserIdNum = await getCurrentUserId();
+      
+      let blockMessage = "Chat is blocked";
+      
+      if (blockingInfo && currentUserIdNum) {
+        if (blockingInfo.blocker_id === currentUserIdNum) {
+          blockMessage = `You have blocked ${username}`;
+        } else {
+          blockMessage = `You have been blocked by ${username}`;
+        }
+      }
+      
+      messagesDiv.innerHTML = `
+        <div class="flex items-center justify-center h-full text-center p-4">
+          <div class="text-gray-400">
+            <div class="text-4xl mb-4">🚫</div>
+            <div class="text-lg font-semibold mb-2">Chat Blocked</div>
+            <div class="text-sm">${blockMessage}</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    const chatSwitcher = document.getElementById('chatSwitcher');
+    if (chatSwitcher) {
+      const titleSpan = chatSwitcher.querySelector('span');
+      if (titleSpan) {
+        const blockingInfo = await getBlockingInfo(userId);
+        const currentUserIdNum = await getCurrentUserId();
+        
+        let titleSuffix = "(Blocked)";
+        if (blockingInfo && currentUserIdNum) {
+          if (blockingInfo.blocker_id === currentUserIdNum) {
+            titleSuffix = "(You blocked)";
+          } else {
+            titleSuffix = "(Blocked you)";
+          }
+        }
+        
+        titleSpan.textContent = `Chat: ${username} ${titleSuffix}`;
+      }
+    }
+
+    const chatForm = document.getElementById('sidebar-chat-form');
+    if (chatForm) {
+      const input = chatForm.querySelector('#sidebar-chat-input') as HTMLInputElement;
+      const button = chatForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      if (input && button) {
+        input.disabled = true;
+        
+        const blockingInfo = await getBlockingInfo(userId);
+        const currentUserIdNum = await getCurrentUserId();
+        
+        let placeholder = "Cannot send messages";
+        if (blockingInfo && currentUserIdNum) {
+          if (blockingInfo.blocker_id === currentUserIdNum) {
+            placeholder = `You have blocked ${username}`;
+          } else {
+            placeholder = "You cannot send messages to this user";
+          }
+        }
+        
+        input.placeholder = placeholder;
+        input.classList.add('opacity-50', 'cursor-not-allowed');
+        button.disabled = true;
+        button.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    }
+    
+    const chatMenuBtn = document.getElementById('chatMenuBtn');
+    if (chatMenuBtn) {
+      chatMenuBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      chatMenuBtn.setAttribute('title', 'Menu disabled (chat blocked)');
+    }
+    
+    hideChatSwitcher();
+    return;
+  }
+
+  const isBlockedCheck = await isUserBlocked(userId);
+  if (isBlockedCheck) {
+    showErrorMessage(`Cannot open chat with ${username} : user blocked.`);
     hideChatSwitcher();
     return;
   }
@@ -692,6 +854,9 @@ async function switchToDM(userId: number, username: string): Promise<void> {
         currentUser = await getCurrentUser();
       }
       await loadChatHistory(canJoinData.Room, 'dm', token, currentUser);
+      
+      enableChatMenuButton();
+      enableChatForm();
 
       console.log(`Switched to viewing DM with: ${username} (already connected via WebSocket)`);
 
@@ -701,6 +866,10 @@ async function switchToDM(userId: number, username: string): Promise<void> {
     console.error('Error switching to DM:', error);
   }
 }
+
+// ============================================================================ //
+// DROPDOWN MANAGEMENT                                                          //
+// ============================================================================ //
 
 function toggleChatSwitcher(): void {
   const dropdown = document.getElementById('chatSwitcherDropdown');
@@ -720,6 +889,10 @@ function hideChatSwitcher(): void {
     dropdown.classList.add('hidden');
   }
 }
+
+// ============================================================================ //
+// EVENT LISTENERS SETUP                                                        //
+// ============================================================================ //
 
 function setupEventListeners(chatId: number, chatName: string): void {
   setupChatSwitcher();
@@ -755,6 +928,29 @@ function setupChatForm(): void {
   });
 }
 
+function enableChatMenuButton(): void {
+  const chatMenuBtn = document.getElementById('chatMenuBtn');
+  if (chatMenuBtn) {
+    chatMenuBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+    chatMenuBtn.setAttribute('title', 'Menu');
+  }
+}
+
+function enableChatForm(): void {
+  const chatForm = document.getElementById('sidebar-chat-form');
+  if (chatForm) {
+    const input = chatForm.querySelector('#sidebar-chat-input') as HTMLInputElement;
+    const button = chatForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (input && button) {
+      input.disabled = false;
+      input.placeholder = "Message...";
+      input.classList.remove('opacity-50', 'cursor-not-allowed');
+      button.disabled = false;
+      button.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+  }
+}
+
 function setupMenuButton(): void {
   const chatMenuBtn = document.getElementById('chatMenuBtn');
   if (!chatMenuBtn) return;
@@ -766,6 +962,10 @@ function setupMenuButton(): void {
 }
 
 function toggleChatMenu(button: HTMLElement): void {
+  if (button.classList.contains('pointer-events-none') || button.classList.contains('cursor-not-allowed')) {
+    return;
+  }
+
   let dropdownDiv = document.getElementById('chatMenuDropdown');
   
   if (!dropdownDiv) {
@@ -796,8 +996,8 @@ function createChatMenuDropdown(): HTMLDivElement {
   
     dropdownDiv.innerHTML = `
       <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
-        <li><button id="blockUserBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400">Bloquer l'utilisateur</button></li>
-        <li><button id="unblockUserBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 hidden">Débloquer l'utilisateur</button></li>
+        <li><button id="blockUserBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400">Block User</button></li>
+        <li><button id="unblockUserBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 hidden">Unblock User</button></li>
       </ul>
     `;
     
@@ -824,7 +1024,7 @@ function createChatMenuDropdown(): HTMLDivElement {
       if (currentUserId) {
         const success = await blockUser(currentUserId);
         if (success) {
-          showErrorMessage(`${currentChatName} a été bloqué.`);
+          showErrorMessage(`${currentChatName} has been blocked.`);
           dropdownDiv.remove();
           
         
@@ -833,7 +1033,7 @@ function createChatMenuDropdown(): HTMLDivElement {
             await openDefaultMainGroup();
           }, 500);
         } else {
-          showErrorMessage('Erreur lors du blocage de l\'utilisateur.');
+          showErrorMessage('Error while blocking user.');
         }
       }
     });
@@ -842,10 +1042,10 @@ function createChatMenuDropdown(): HTMLDivElement {
       if (currentUserId) {
         const success = await unblockUser(currentUserId);
         if (success) {
-          showErrorMessage(`${currentChatName} a été débloqué.`);
+          showErrorMessage(`${currentChatName} has been blocked.`);
           dropdownDiv.remove();
         } else {
-          showErrorMessage('Erreur lors du déblocage de l\'utilisateur.');
+          showErrorMessage('Error while unblocking user.');
         }
       }
     });
@@ -862,6 +1062,10 @@ function createChatMenuDropdown(): HTMLDivElement {
   return dropdownDiv;
 }
 
+// ============================================================================ //
+// MESSAGE SENDING                                                              //
+// ============================================================================ //
+
 function setupCloseButton(_chatId: number, _chatName: string): void {
   const closeButton = document.getElementById('closeSidebarChat');
   if (!closeButton) return;
@@ -873,7 +1077,8 @@ function setupCloseButton(_chatId: number, _chatName: string): void {
 
 function handleMessageSubmit(): void {
   const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
-  if (!input || !input.value.trim() || !currentWs || !currentChatId) return;
+
+  if (!input || input.disabled || !input.value.trim() || !currentWs || !currentChatId) return;
 
   const message = input.value.trim();
   console.log(`scope = ${currentChatType}, room = ${currentChatId}, message = ${message}`);
@@ -888,6 +1093,10 @@ function handleMessageSubmit(): void {
   
   input.value = '';
 }
+
+// ============================================================================ //
+// USER BLOCKING FUNCTIONALITY                                                  // 
+// ============================================================================ //
 
 async function blockUser(userId: number): Promise<boolean> {
   const token = getAuthToken();
@@ -905,13 +1114,13 @@ async function blockUser(userId: number): Promise<boolean> {
       await loadBlockedUsers();
       console.log('User blocked successfully, cache updated');
       
-    
+      refreshDMsList();
+      
       const chatSwitcher = document.getElementById('sidebar-chat-switcher');
       if (chatSwitcher && !chatSwitcher.classList.contains('hidden')) {
         await loadChatSwitcher();
       }
       
-    
       if (currentChatType === 'dm' && currentUserId === userId) {
         currentChatId = null;
         currentChatName = '';
@@ -934,7 +1143,7 @@ async function blockUser(userId: number): Promise<boolean> {
 
 async function unblockUser(userId: number): Promise<boolean> {
   const token = getAuthToken();
-  try {
+    try {
     const response = await fetch('/chat/unblock-user', {
       method: 'PUT',
       headers: {
@@ -947,7 +1156,8 @@ async function unblockUser(userId: number): Promise<boolean> {
     if (response.ok) {
       await loadBlockedUsers();
       
-    
+      refreshDMsList();
+      
       const chatSwitcher = document.getElementById('sidebar-chat-switcher');
       if (chatSwitcher && !chatSwitcher.classList.contains('hidden')) {
         await loadChatSwitcher();
@@ -961,6 +1171,10 @@ async function unblockUser(userId: number): Promise<boolean> {
     return false;
   }
 }
+
+// ============================================================================ //
+// BLOCKING UTILITIES                                                           //
+// ============================================================================ //
 
 async function loadBlockedUsers(): Promise<void> {
   const token = getAuthToken();
@@ -1002,6 +1216,23 @@ async function isUserBlocked(userId: number): Promise<boolean> {
   }
 }
 
+async function getBlockingInfo(userId: number): Promise<IsBlockedResponse | null> {
+  const token = getAuthToken();
+  try {
+    const response = await fetch(`/chat/isBlocked/${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting blocking info:', error);
+    return null;
+  }
+}
+
 function isMessageBlocked(username: string): boolean {
 
   if (currentChatType === 'group') {
@@ -1010,11 +1241,15 @@ function isMessageBlocked(username: string): boolean {
   return blockedUsernames.has(username);
 }
 
+// ============================================================================ //
+// BLOCK/UNBLOCK EVENT HANDLERS                                                 //
+// ============================================================================ //
+
 function handleUserBlocked(blockedByUserId: number, blockedByUsername: string): void {
   blockedUsernames.add(blockedByUsername);
   
   if (currentChatType === 'dm' && currentUserId === blockedByUserId) {
-    showErrorMessage(`Vous avez été bloqué par ${blockedByUsername}`);
+    showErrorMessage(`You have been blocked by ${blockedByUsername}`);
     
     setTimeout(async () => {
       await openDefaultMainGroup();
@@ -1025,18 +1260,26 @@ function handleUserBlocked(blockedByUserId: number, blockedByUsername: string): 
   if (dropdown && !dropdown.classList.contains('hidden')) {
     loadChatSwitcher();
   }
+
+  refreshDMsList();
 }
 
 function handleUserUnblocked(_unblockedByUserId: number, unblockedByUsername: string): void {
-  blockedUsernames.delete(unblockedByUsername);
+  console.log('handleUserUnblocked called with:', { _unblockedByUserId, unblockedByUsername, currentUserId, currentChatType });
   
-  showErrorMessage(`You have been blocked by ${unblockedByUsername}`);
+  blockedUsernames.delete(unblockedByUsername);
   
   const dropdown = document.getElementById('chatSwitcherDropdown');
   if (dropdown && !dropdown.classList.contains('hidden')) {
     loadChatSwitcher();
   }
+  
+  refreshDMsList();
 }
+
+// ============================================================================ //
+// EXPOSE WS                                                                    //
+// ============================================================================ //
 
 export function getCurrentWebSocket(): WebSocket | null {
   return currentWs;

@@ -24,8 +24,12 @@ async function blockUser(userId: number, token: string | null): Promise<{ succes
       return { success: false, error: json };
     }
     
-    
+    // Ajouter au cache local
     blockedUsersCache.add(userId);
+    
+    // Rafraîchir la liste des DMs immédiatement
+    refreshDMsList();
+    
     return { success: true };
   } catch (err) {
     return { success: false, error: err };
@@ -47,7 +51,12 @@ async function unblockUser(userId: number, token: string | null): Promise<{ succ
       return { success: false, error: json };
     }
 
+    // Supprimer du cache local
     blockedUsersCache.delete(userId);
+    
+    // Rafraîchir la liste des DMs immédiatement
+    refreshDMsList();
+    
     return { success: true };
   } catch (err) {
     return { success: false, error: err };
@@ -155,6 +164,14 @@ async function getBlockingDetails(userId: number, token: string | null): Promise
 
 export function clearBlockedUsersCache(): void {
   blockedUsersCache.clear();
+}
+
+// Fonction pour rafraîchir la liste des DMs
+export function refreshDMsList(): void {
+  const token = localStorage.getItem('token');
+  if (token) {
+    loadDMs(token);
+  }
 }
 
 export function renderChat(): void {
@@ -331,9 +348,9 @@ async function loadDMs(token: string | null) {
     console.log(`User ${dm.username} blocking details:`, blockingDetails); 
     
     if (blockingDetails.theyBlockedMe) {
-      
+      // Maintenant on garde ces utilisateurs dans la liste au lieu de les cacher
       theyBlockedMe.push(dm);
-      console.log(`User ${dm.username} blocked me - hiding from list`); 
+      console.log(`User ${dm.username} blocked me - will show as blocked`); 
     } else if (blockingDetails.iBlockedThem) {
       
       iBlockedThem.push(dm);
@@ -345,12 +362,12 @@ async function loadDMs(token: string | null) {
 
   console.log('Unblocked DMs:', unblockedDms); 
   console.log('I blocked them:', iBlockedThem); 
-  console.log('They blocked me (hidden):', theyBlockedMe); 
+  console.log('They blocked me (will show as blocked):', theyBlockedMe); 
 
   dmList.innerHTML = "";
   
   
-  if (unblockedDms.length === 0 && iBlockedThem.length === 0) {
+  if (unblockedDms.length === 0 && iBlockedThem.length === 0 && theyBlockedMe.length === 0) {
     dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
@@ -390,13 +407,29 @@ async function loadDMs(token: string | null) {
         const result = await blockUser(dm.id, token);
         if (result.success) {
           alert(`User: ${dm.username} Blocked !`);
-          
-          loadDMs(token);
+          // Le refresh se fait automatiquement dans blockUser()
         } else {
           alert("Not possible to block this user: " + (result.error?.error || "Unknown error"));
         }
       });
     }
+  });
+
+  // Afficher les utilisateurs qui m'ont bloqué (ils apparaissent grisés et non-cliquables)
+  theyBlockedMe.forEach((dm) => {
+    const divDM = document.createElement("div");
+    divDM.className = "flex items-center justify-between bg-[#1a1a2e] rounded-xl px-6 py-4 opacity-50";
+    divDM.innerHTML = `
+      <div class="flex items-center gap-4">
+        <img src="${dm.avatar}" alt="avatar" class="w-10 h-10 rounded-full border-2 border-gray-500 grayscale">
+        <span class="text-lg text-gray-400 font-semibold">${dm.username}</span>
+        <span class="text-xs text-red-400 bg-red-900 px-2 py-1 rounded">🚫 Blocked you</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="bg-gray-600 text-gray-400 px-4 py-1 rounded font-bold cursor-not-allowed" disabled>Cannot DM</button>
+      </div>
+    `;
+    dmList.appendChild(divDM);
   });
 
   
@@ -425,7 +458,7 @@ async function loadDMs(token: string | null) {
         unblockBtn.addEventListener('click', async () => {
           const result = await unblockUser(dm.id, token);
           if (result.success) {
-            loadDMs(token);
+            // Le refresh se fait automatiquement dans unblockUser()
           } else {
             alert("Not possible to unblock this user: " + (result.error?.error || "Unknown error"));
           }
