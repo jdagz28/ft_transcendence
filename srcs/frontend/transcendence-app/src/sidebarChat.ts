@@ -544,16 +544,25 @@ function initializeWebSocket(token: string): void {
       }
       
       if (data.type === 'user_blocked_by_me') {
-        loadBlockedUsers().then(() => {
-          const messagesDiv = document.getElementById('sidebar-chat-messages');
-          if (messagesDiv) {
-            messagesDiv.innerHTML = '';
-          }
-          if (currentChatId && currentChatType && currentUser) {
-            const token = getAuthToken();
-            if (token) {
-              loadChatHistory(currentChatId, currentChatType, token, currentUser);
+        loadBlockedUsers().then(async () => {
+          if (currentChatType === 'dm' && currentUserId && data.blocked_user_id === currentUserId) {
+            await switchToDM(currentUserId, currentChatName, true);
+          } else {
+            const messagesDiv = document.getElementById('sidebar-chat-messages');
+            if (messagesDiv) {
+              messagesDiv.innerHTML = '';
             }
+            if (currentChatId && currentChatType && currentUser) {
+              const token = getAuthToken();
+              if (token) {
+                loadChatHistory(currentChatId, currentChatType, token, currentUser);
+              }
+            }
+          }
+          
+          const dropdown = document.getElementById('chatSwitcherDropdown');
+          if (dropdown && !dropdown.classList.contains('hidden')) {
+            loadChatSwitcher();
           }
         });
         return;
@@ -565,12 +574,25 @@ function initializeWebSocket(token: string): void {
       }
       
       if (data.type === 'user_unblocked_by_me') {
-        loadBlockedUsers().then(() => {
-          if (currentChatId && currentChatType && currentUser) {
-            const token = getAuthToken();
-            if (token) {
-              loadChatHistory(currentChatId, currentChatType, token, currentUser);
+        loadBlockedUsers().then(async () => {
+          if (currentChatType === 'dm' && currentUserId && data.unblocked_user_id === currentUserId) {
+            await switchToDM(currentUserId, currentChatName, false);
+          } else {
+            const messagesDiv = document.getElementById('sidebar-chat-messages');
+            if (messagesDiv) {
+              messagesDiv.innerHTML = '';
             }
+            if (currentChatId && currentChatType && currentUser) {
+              const token = getAuthToken();
+              if (token) {
+                loadChatHistory(currentChatId, currentChatType, token, currentUser);
+              }
+            }
+          }
+          
+          const dropdown = document.getElementById('chatSwitcherDropdown');
+          if (dropdown && !dropdown.classList.contains('hidden')) {
+            loadChatSwitcher();
           }
         });
         return;
@@ -1079,11 +1101,12 @@ function createChatMenuDropdown(): HTMLDivElement {
           showErrorMessage(`${currentChatName} has been blocked.`);
           dropdownDiv.remove();
           
-        
-          setTimeout(async () => {
+          await loadBlockedUsers();
           
-            await openDefaultMainGroup();
-          }, 500);
+          await switchToDM(currentUserId, currentChatName, true);
+          
+          await loadChatSwitcher();
+          
         } else {
           showErrorMessage('Error while blocking user.');
         }
@@ -1094,8 +1117,15 @@ function createChatMenuDropdown(): HTMLDivElement {
       if (currentUserId) {
         const success = await unblockUser(currentUserId);
         if (success) {
-          showErrorMessage(`${currentChatName} has been blocked.`);
+          showErrorMessage(`${currentChatName} has been unblocked.`);
           dropdownDiv.remove();
+          
+          await loadBlockedUsers();
+          
+          await switchToDM(currentUserId, currentChatName, false);
+          
+          await loadChatSwitcher();
+          
         } else {
           showErrorMessage('Error while unblocking user.');
         }
