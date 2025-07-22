@@ -1,5 +1,5 @@
 import { whoAmI } from "../setUpLayout";
-import { chatUI } from "@/chat/chatUI";
+import { openSidebarChat } from "../sidebarChat";
 
 
 let notificationWS: WebSocket | null = null;
@@ -456,7 +456,7 @@ function generateChatInviteButtons(contentWrapper:HTMLDivElement, chatId:number 
 				if (res.ok) {
 					btnDiv.remove();
 					setAnsweredButtons(contentWrapper);
-					chatUI.openSidebarChat(chatId, groupName, "group");
+					openSidebarChat(chatId, groupName, "group");
 				}
 			}).catch((err) => {
 				console.error(`Error marking notification ${notif_id} as read:`, err);
