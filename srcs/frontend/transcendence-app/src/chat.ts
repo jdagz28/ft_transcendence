@@ -1,10 +1,171 @@
 import { openSidebarChat } from "./sidebarChat";
 import { setupAppLayout } from "./setUpLayout";
 
+interface BlockedUser {
+  id: number;
+  username: string;
+  avatar: string;
+}
+
+let blockedUsersCache: Set<number> = new Set();
+
+async function blockUser(userId: number, token: string | null): Promise<{ success: boolean; error?: any }> {
+  try {
+    const response = await fetch('/chat/block-user', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ blockedUserId: userId }),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      return { success: false, error: json };
+    }
+    
+    // Ajouter au cache local
+    blockedUsersCache.add(userId);
+    
+    // Rafraîchir la liste des DMs immédiatement
+    refreshDMsList();
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err };
+  }
+}
+
+async function unblockUser(userId: number, token: string | null): Promise<{ success: boolean; error?: any }> {
+  try {
+    const response = await fetch('/chat/unblock-user', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ blockedUserId: userId }),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      return { success: false, error: json };
+    }
+
+    // Supprimer du cache local
+    blockedUsersCache.delete(userId);
+    
+    // Rafraîchir la liste des DMs immédiatement
+    refreshDMsList();
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err };
+  }
+}
+
+async function loadBlockedUsers(token: string | null): Promise<void> {
+  if (!token) {
+    console.log('No token provided to loadBlockedUsers'); 
+    return;
+  }
+  
+  try {
+    
+    const response = await fetch('/chat/blocked-users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const json = await response.json();
+    if (response.ok && json.success) {
+      blockedUsersCache.clear();
+      if (json.blocked_users && Array.isArray(json.blocked_users)) {
+        json.blocked_users.forEach((user: BlockedUser) => {
+          blockedUsersCache.add(user.id);
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error loading blocked users:', err);
+  }
+}
+
+
+async function getBlockingDetails(userId: number, token: string | null): Promise<{
+  isBlocked: boolean;
+  iBlockedThem: boolean;
+  theyBlockedMe: boolean;
+  details?: any;
+}> {
+  try {
+    const response = await fetch(`/chat/isBlocked/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const json = await response.json();
+    
+    if (response.ok && json.isBlocked) {
+      
+      const userResponse = await fetch('/users/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (userResponse.ok) {
+        const currentUser = await userResponse.json();
+        const currentUserId = currentUser.id;
+
+        const iBlockedThem = json.blocker_id === currentUserId;
+        
+        const theyBlockedMe = json.blocked_user_id === currentUserId;
+        
+        return {
+          isBlocked: true,
+          iBlockedThem,
+          theyBlockedMe,
+          details: json
+        };
+      }
+    }
+    
+    return {
+      isBlocked: false,
+      iBlockedThem: false,
+      theyBlockedMe: false
+    };
+  } catch (err) {
+    console.error('Error getting blocking details:', err);
+    return {
+      isBlocked: false,
+      iBlockedThem: false,
+      theyBlockedMe: false
+    };
+  }
+}
+
+
+export function clearBlockedUsersCache(): void {
+  blockedUsersCache.clear();
+}
+
+// Fonction pour rafraîchir la liste des DMs
+export function refreshDMsList(): void {
+  const token = localStorage.getItem('token');
+  if (token) {
+    loadDMs(token);
+  }
+}
+
 export function renderChat(): void {
   const token = localStorage.getItem('token');
+  
   const root = setupAppLayout().contentContainer;
-  if (!root) return;
+  if (!root) {
+    console.log('ERROR: root contentContainer not found'); 
+    return;
+  }
 
   root.innerHTML = `
     <div class="flex flex-col min-h-screen bg-[#11294d]">
@@ -31,7 +192,13 @@ export function renderChat(): void {
 
   setupCreateGroupButton(token);
   loadGroups(token);
-  loadDMs(token);
+  
+  loadBlockedUsers(token).then(() => {
+    loadDMs(token);
+  }).catch(err => {
+    console.error('Error in loadBlockedUsers:', err); 
+    loadDMs(token); 
+  });
 }
 
 function setupCreateGroupButton(token: string | null) {
@@ -91,7 +258,7 @@ async function loadGroups(token: string | null) {
     if (joinBtn) {
       joinBtn.addEventListener('click', async () => {
         if (!token) {
-          alert("Vous devez être connecté pour rejoindre un groupe.");
+          alert("You should be logged in to join a group.");
           return;
         }
         const res = await fetch('/chat/join/group', {
@@ -104,10 +271,10 @@ async function loadGroups(token: string | null) {
         });
         const json = await res.json();
         if (!res.ok) {
-          alert(json.error || "Impossible de rejoindre le groupe");
+          alert(json.error || "Impossible to join the group");
           return;
         }
-        openSidebarChat(group.id, group.name);
+        openSidebarChat(group.id, group.name, "group");
       });
     }
     groupsList.appendChild(divGroup);
@@ -115,25 +282,60 @@ async function loadGroups(token: string | null) {
 }
 
 async function loadDMs(token: string | null) {
+  
   const dmList = document.getElementById('dm-list');
-  if (!dmList) return;
+  if (!dmList) {
+    console.log('ERROR: dm-list element not found'); 
+    return;
+  }
 
   dmList.innerHTML = `<div class="text-gray-400 text-center">Loading...</div>`;
 
   const result = await getFriends(token);
+  
   if (!result.success) {
-    dmList.innerHTML = `<div class="text-red-400 text-center">Error while searching DMs</div>`;
+    console.log('getFriends failed:', result.error); 
+    dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
 
   const dms: { id: number, username: string, avatar: string }[] = result.data.data;
+  
   if (!dms || dms.length === 0) {
-    dmList.innerHTML = `<div class="text-gray-400 text-center">No DM found.</div>`;
+    console.log('No DMs found'); 
+    dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
 
+  const unblockedDms = [];
+  const iBlockedThem = []; 
+  const theyBlockedMe = []; 
+  
+  for (const dm of dms) {
+    const blockingDetails = await getBlockingDetails(dm.id, token);
+    
+    if (blockingDetails.theyBlockedMe) {
+      // Maintenant on garde ces utilisateurs dans la liste au lieu de les cacher
+      theyBlockedMe.push(dm);
+    } else if (blockingDetails.iBlockedThem) {
+      
+      iBlockedThem.push(dm);
+    } else {
+      
+      unblockedDms.push(dm);
+    }
+  }
+
   dmList.innerHTML = "";
-  dms.forEach((dm) => {
+  
+  
+  if (unblockedDms.length === 0 && iBlockedThem.length === 0 && theyBlockedMe.length === 0) {
+    dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
+    return;
+  }
+  
+  
+  unblockedDms.forEach((dm) => {
     const divDM = document.createElement("div");
     divDM.className = "flex items-center justify-between bg-[#18376b] rounded-xl px-6 py-4";
     divDM.innerHTML = `
@@ -150,32 +352,78 @@ async function loadDMs(token: string | null) {
 
     const joinBtn = divDM.querySelector('.join-dm-btn');
     if (joinBtn) {
-      joinBtn.addEventListener('click', () => {
-        openSidebarChat(dm.id, dm.username);
+      joinBtn.addEventListener('click', async () => {
+        const canJoin = await canIJoinDm(dm.id, token);
+        if (!canJoin.success) {
+          alert("Cannot join this DM: " + (canJoin.error?.error || "Unknown error"));
+          return;
+        }
+        openSidebarChat(canJoin.data.Room, dm.username, "dm", dm.id);
       });
     }
 
     const blockBtn = divDM.querySelector('.block-dm-btn');
     if (blockBtn) {
       blockBtn.addEventListener('click', async () => {
-        const res = await fetch('/chat/block-user', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ blockedUserId: dm.id }),
-        });
-        const json = await res.json();
-        if (!res.ok) {
-          alert(json.error || "Not possible to block this user");
-          return;
+        const result = await blockUser(dm.id, token);
+        if (result.success) {
+          alert(`User: ${dm.username} Blocked !`);
+        } else {
+          alert("Not possible to block this user: " + (result.error?.error || "Unknown error"));
         }
-        alert(`User: ${dm.username} Blocked !`);
       });
     }
   });
+
+  theyBlockedMe.forEach((dm) => {
+    const divDM = document.createElement("div");
+    divDM.className = "flex items-center justify-between bg-[#1a1a2e] rounded-xl px-6 py-4 opacity-50";
+    divDM.innerHTML = `
+      <div class="flex items-center gap-4">
+        <img src="${dm.avatar}" alt="avatar" class="w-10 h-10 rounded-full border-2 border-gray-500 grayscale">
+        <span class="text-lg text-gray-400 font-semibold">${dm.username}</span>
+        <span class="text-xs text-red-400 bg-red-900 px-2 py-1 rounded">🚫 Blocked you</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="bg-gray-600 text-gray-400 px-4 py-1 rounded font-bold cursor-not-allowed" disabled>Cannot DM</button>
+      </div>
+    `;
+    dmList.appendChild(divDM);
+  });
+
   
+  if (iBlockedThem.length > 0) {
+    const separator = document.createElement("div");
+    separator.className = "text-gray-500 text-sm text-center py-2 border-t border-gray-600 mt-4";
+    separator.textContent = "Blocked Users";
+    dmList.appendChild(separator);
+
+    iBlockedThem.forEach((dm) => {
+      const divDM = document.createElement("div");
+      divDM.className = "flex items-center justify-between bg-[#2d1b1b] rounded-xl px-6 py-4 opacity-60";
+      divDM.innerHTML = `
+        <div class="flex items-center gap-4">
+          <img src="${dm.avatar}" alt="avatar" class="w-10 h-10 rounded-full border-2 border-red-400">
+          <span class="text-lg text-red-300 font-semibold">${dm.username} (Blocked)</span>
+        </div>
+        <div class="flex gap-2">
+          <button class="unblock-dm-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-1 rounded font-bold">Unblock</button>
+        </div>
+      `;
+      dmList.appendChild(divDM);
+
+      const unblockBtn = divDM.querySelector('.unblock-dm-btn');
+      if (unblockBtn) {
+        unblockBtn.addEventListener('click', async () => {
+          const result = await unblockUser(dm.id, token);
+          if (result.success) {
+          } else {
+            alert("Not possible to unblock this user: " + (result.error?.error || "Unknown error"));
+          }
+        });
+      }
+    });
+  }
 }
 
 async function getChats(token: string | null) {
@@ -209,6 +457,28 @@ async function getFriends(token: string | null) {
     const json = await response.json();
     if (!response.ok) {
       console.error('Get friends request failed', json);
+      return { success: false, error: json };
+    }
+    return { success: true, data: json };
+  } catch (err) {
+    console.error('Fetch error:', err);
+    return { success: false, error: err };
+  }
+}
+
+async function canIJoinDm(userId: number, token: string | null) {
+  try {
+    const response = await fetch(`https://localhost:4242/chat/can-join/dm`, {
+      method: 'POST',
+      body: JSON.stringify({ userId: userId }),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
+    const json = await response.json();
+    if (!response.ok) {
+      console.error('Can I join DM request failed', json);
       return { success: false, error: json };
     }
     return { success: true, data: json };

@@ -1,200 +1,215 @@
-let currentWs: WebSocket | null = null;
+import { clearBlockedUsersCache } from './chat';
+import { chatState } from './chat/chatState';
+import { chatUI } from './chat/chatUI';
+import { chatMessages } from './chat/chatMessages';
+import { chatWebSocket } from './chat/chatWebSocket';
+import { chatSwitcher } from './chat/chatSwitcher';
+import { userBlocking } from './chat/userBlocking';
+import type { ChatType } from './chat/types';
 
-export async function openSidebarChat(groupId: number, groupName: string) {
+// ============================================================================ //
+// MAIN INITIALIZATION                                                          //
+// ============================================================================ //
+
+export async function initializePermanentChat(): Promise<void> {
+  if (chatState.isInitialized) return;
+  
+  const currentUser = await chatState.getCurrentUserFromAPI();
+  if (!currentUser) {
+    console.warn('Cannot initialize chat: user not authenticated');
+    return;
+  }
+  
+  const token = chatState.getAuthToken();
+  if (!token) {
+    console.warn('Cannot initialize chat: no authentication token');
+    return;
+  }
+  
+  // Load blocked users
+  await userBlocking.loadBlockedUsers();
+
+  // Initialize WebSocket if not connected
+  if (!chatWebSocket.isWebSocketConnected()) {
+    await chatWebSocket.initializeWebSocket(token);
+  }
+  
+  // Render mini button
+  renderPermanentMiniButton();
+  chatState.setInitialized(true);
+}
+
+// ============================================================================ //
+// CLEANUP & WEBSOCKET MANAGEMENT                                               //   
+// ============================================================================ //
+
+export function disconnectPermanentChat(): void {
+  console.log("Disconnecting permanent chat");
+  chatWebSocket.closeWebSocket();
+  chatState.reset();
+  
+  const sidebar = document.getElementById('sidebar-chat');
+  if (sidebar) {
+    sidebar.innerHTML = '';
+  }
+  
+  clearBlockedUsersCache();
+}
+
+// ============================================================================ //
+// UI RENDERING                                                                 //
+// ============================================================================ //
+
+function renderPermanentMiniButton(): void {
   const sidebar = document.getElementById('sidebar-chat');
   if (!sidebar) return;
 
-  const token = localStorage.getItem('token') || '';
-
-  let currentUser = '';
-  try {
-    const res = await fetch('/users/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
+  sidebar.innerHTML = `
+    <button id="openSidebarChatMini"
+      class="fixed bottom-8 right-8 z-50 bg-[#1a2740] text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center text-3xl hover:bg-[#22325a] transition-colors"
+      title="Ouvrir le chat">
+      💬
+    </button>
+  `;
+  
+  const miniButton = document.getElementById('openSidebarChatMini');
+  if (miniButton) {
+    miniButton.addEventListener('click', async () => {
+      if (chatState.currentChatId && chatState.currentChatName && chatState.currentChatType) {
+        openSidebarChat(chatState.currentChatId, chatState.currentChatName, chatState.currentChatType, chatState.currentUserId);
+      } else {
+        await openDefaultMainGroup();
+      }
     });
-    if (res.ok) {
-      const user = await res.json();
-      currentUser = user.username;
-    }
-  } catch {}
+  }
+}
 
-  if (currentWs) {
-    currentWs.close();
-    currentWs = null;
+// ============================================================================ //
+// DEFAULT CHAT NAVIGATION                                                      //
+// ============================================================================ //
+
+export async function openDefaultMainGroup(): Promise<void> {
+  await chatUI.openDefaultMainGroup();
+}
+
+// ============================================================================ //
+// MAIN CHAT OPENING FUNCTION                                                   //
+// ============================================================================ //
+
+export async function openSidebarChat(
+  chatId: number, 
+  chatName: string, 
+  type: ChatType = 'group', 
+  userId: number | null = null
+): Promise<void> {
+  const sidebar = document.getElementById('sidebar-chat');
+  if (!sidebar) return;
+  
+  // Update chat state
+  chatState.setCurrentChat(chatId, chatName, type, userId);
+  
+  // Render the sidebar UI
+  chatUI.renderSidebarUI(chatName);
+  
+  // Load chat history
+  await chatMessages.loadChatHistory(chatId, type);
+
+  // Setup event listeners
+  setupEventListeners();
+}
+
+// ============================================================================ //
+// EVENT LISTENERS SETUP                                                        //
+// ============================================================================ //
+
+function setupEventListeners(): void {
+  // Close button
+  const closeButton = document.getElementById('closeSidebarChat');
+  if (closeButton) {
+    closeButton.addEventListener('click', () => {
+      renderPermanentMiniButton();
+    });
   }
 
-  fetch(`/chat/group/${groupId}/history`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  })
-    .then(res => res.json())
-    .then(history => {
-      const messagesDiv = document.getElementById('sidebar-chat-messages');
-      if (!messagesDiv) return;
-      if (Array.isArray(history)) {
-        history.forEach(msg => {
-          const isMe = msg.username === currentUser;
-          messagesDiv.innerHTML += `
-            <div class="mb-2 flex ${isMe ? 'justify-end' : 'justify-start'}">
-              <div class="${isMe ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
-                <b>${isMe ? 'Moi' : msg.username}:</b> ${msg.content}
-              </div>
-            </div>
-          `;
-        });
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      } else if (history.error) {
-        messagesDiv.innerHTML += `<div class="text-red-400 mb-2">${history.error}</div>`;
+  // Chat form submission
+  const chatForm = document.getElementById('sidebar-chat-form');
+  if (chatForm) {
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
+      if (input && input.value.trim()) {
+        chatMessages.handleMessageSubmit();
       }
-    })
-    .catch(() => {
-      const messagesDiv = document.getElementById('sidebar-chat-messages');
-      if (messagesDiv)
-        messagesDiv.innerHTML += `<div class="text-red-400 mb-2">Erreur lors du chargement de l'historique.</div>`;
     });
+  }
 
-  sidebar.innerHTML = `
-    <div class="
-      fixed bottom-4 right-4 z-50
-      w-[90vw] max-w-[320px] md:w-[320px] md:max-w-[350px]
-      min-h-[400px] max-h-[40vh]
-      bg-[#1a2740] shadow-2xl rounded-xl flex flex-col border border-gray-700
-    ">
-      <div class="px-4 py-2 border-b border-gray-700 flex justify-between items-center rounded-t-xl">
-        <span class="text-lg font-bold text-white truncate">Chat: ${groupName}</span>
-        <div class="flex items-center gap-2">
-          <button id="chatMenuBtn" class="text-white text-xl hover:text-gray-400 px-2" title="Menu">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <circle cx="5" cy="12" r="2" fill="currentColor"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
-              <circle cx="19" cy="12" r="2" fill="currentColor"/>
-            </svg>
-          </button>
-          <button id="closeSidebarChat" class="text-white text-xl hover:text-red-400">✖</button>
-        </div>
-      </div>
-      <div id="sidebar-chat-messages" class="flex-1 overflow-y-auto px-4 py-2"></div>
-      <form id="sidebar-chat-form" class="px-4 py-2 flex gap-2 border-t border-gray-700">
-        <input type="text" id="sidebar-chat-input" class="flex-1 rounded p-2 bg-[#f8f8e7] text-[#11294d] placeholder-gray-500" placeholder="Message..." />
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded transition-colors">Send</button>
-      </form>
-    </div>
-  `;
+  // Chat switcher button
+  const chatSwitcherButton = document.getElementById('chatSwitcher');
+  if (chatSwitcherButton) {
+    chatSwitcherButton.addEventListener('click', async () => {
+      await chatSwitcher.toggleChatSwitcher();
+    });
+  }
 
-  currentWs = new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`);
-
-  currentWs.onopen = () => {
-    setTimeout(() => {
-      if (currentWs) {
-        currentWs.send(JSON.stringify({
-          action: 'join',
-          scope: 'group',
-          room: groupId
-        }));
-      }
-    }, 100);
-  };
-
-  currentWs.onmessage = (event) => {
-    const messagesDiv = document.getElementById('sidebar-chat-messages');
-    if (!messagesDiv) return;
-    try {
-      const data = JSON.parse(event.data);
-      if (data.message && data.from) {
-        const isMe = data.from === currentUser;
-        messagesDiv.innerHTML += `
-          <div class="mb-2 flex ${isMe ? 'justify-end' : 'justify-start'}">
-            <div class="${isMe ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
-              <b>${data.from}:</b> ${data.message}
-            </div>
-          </div>
-        `;
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      }
-    } catch {
-      console.log("error in catching message data", event.data);
-    }
-  };
-
-  currentWs.onclose = () => {};
-
+  // Chat menu button
   const chatMenuBtn = document.getElementById('chatMenuBtn');
   if (chatMenuBtn) {
-    chatMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      let dropdownDiv = document.getElementById('chatMenuDropdown');
-      if (!dropdownDiv) {
-        dropdownDiv = document.createElement('div');
-        dropdownDiv.id = 'chatMenuDropdown';
-        dropdownDiv.className = 'absolute right-10 top-12 bg-white dark:bg-gray-800 rounded shadow-lg z-50 min-w-[140px]';
-        dropdownDiv.innerHTML = `
-          <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
-            <li><button class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Option 1</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Option 2</button></li>
-          </ul>
-        `;
-        const header = (e.currentTarget as HTMLElement).parentElement;
-        if (header) {
-          header.appendChild(dropdownDiv);
-        }
-      } else {
-        if (dropdownDiv.style.display === 'none' || dropdownDiv.style.display === '') {
-          dropdownDiv.style.display = 'block';
-        } else {
-          dropdownDiv.style.display = 'none';
-        }
+    chatMenuBtn.addEventListener('click', async () => {
+      if (chatState.currentChatType === 'dm' && chatState.currentUserId) {
+        await showUserActions(chatState.currentUserId, chatState.currentChatName);
       }
-
-      document.addEventListener('click', function closeMenu(ev) {
-        if (dropdownDiv && !dropdownDiv.contains(ev.target as Node)) {
-          dropdownDiv.remove();
-          document.removeEventListener('click', closeMenu);
-        }
-      });
     });
   }
 
-  document.getElementById('closeSidebarChat')?.addEventListener('click', () => {
-    if (currentWs) {
-      currentWs.close();
-      currentWs = null;
-    }
-    sidebar.innerHTML = `
-      <button id="openSidebarChatMini"
-        class="fixed bottom-8 right-8 z-50 bg-[#1a2740] text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center text-3xl hover:bg-[#22325a] transition-colors"
-        title="Ouvrir le chat">
-        💬
-      </button>
-    `;
-    document.getElementById('openSidebarChatMini')?.addEventListener('click', () => {
-      openSidebarChat(groupId, groupName);
-    });
-  });
-
-  document.getElementById('sidebar-chat-form')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
-    if (input && input.value.trim() !== '' && currentWs) {
-      currentWs.send(JSON.stringify({
-        action: 'send',
-        scope: 'group',
-        room: groupId,
-        message: input.value
-      }));
-
-      const messagesDiv = document.getElementById('sidebar-chat-messages');
-      if (messagesDiv) {
-        messagesDiv.innerHTML += `
-          <div class="mb-2 flex justify-end">
-            <div class="bg-blue-600 text-white rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
-              <b>Moi:</b> ${input.value}
-            </div>
-          </div>
-        `;
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  // Click outside to close dropdown
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('chatSwitcherDropdown');
+    const switcher = document.getElementById('chatSwitcher');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+      if (!switcher?.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+        chatSwitcher.hideChatSwitcher();
       }
-
-      input.value = '';
     }
   });
+}
+
+// ============================================================================ //
+// USER ACTIONS MENU                                                           //
+// ============================================================================ //
+
+async function showUserActions(userId: number, username: string): Promise<void> {
+  const isBlocked = await userBlocking.isUserBlocked(userId);
+  const actionText = isBlocked ? 'Unblock User' : 'Block User';
+  
+  if (confirm(`${actionText} ${username}?`)) {
+    let success = false;
+    if (isBlocked) {
+      success = await userBlocking.unblockUser(userId);
+    } else {
+      success = await userBlocking.blockUser(userId);
+    }
+    
+    if (success) {
+      console.log(`${isBlocked ? 'Unblocked' : 'Blocked'} user ${username}`);
+      // Refresh the UI
+      if (chatState.currentChatType === 'dm' && chatState.currentUserId === userId) {
+        // Reload the current chat to reflect the new blocking state
+        await openSidebarChat(chatState.currentChatId || 0, chatState.currentChatName, chatState.currentChatType, userId);
+      }
+    } else {
+      console.error(`Failed to ${isBlocked ? 'unblock' : 'block'} user ${username}`);
+    }
+  }
+}
+
+// ============================================================================ //
+// WEBSOCKET EXPORTS                                                            //
+// ============================================================================ //
+
+export function getCurrentWebSocket(): WebSocket | null {
+  return chatState.currentWs;
+}
+
+export function isWebSocketConnected(): boolean {
+  return chatWebSocket.isWebSocketConnected();
 }

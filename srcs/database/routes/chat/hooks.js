@@ -16,6 +16,14 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return false;
     },
 
+    async getUsernameById(userId) {
+      const userQuery = fastify.db.prepare(`
+        SELECT username FROM users WHERE id = ? LIMIT 1
+      `);
+      const user = userQuery.get(userId);
+      return user ? user.username : null;
+    },
+
     async groupExist(groupId) {
       const groupQuery = fastify.db.prepare(`
         SELECT id FROM conversations
@@ -171,8 +179,17 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         VALUES (?, ?, ?)
       `);
       const result = insertQuery.run(fromUserId, groupId, message);
+      
+      // Récupérer le nom d'utilisateur pour le retourner
+      const username = await this.getUsernameById(fromUserId);
+      
       console.log(`success in sendDirectMessage`)
-      return { success: true, messageId: result.lastInsertRowid }
+      return { 
+        success: true, 
+        messageId: result.lastInsertRowid,
+        fromUserId: fromUserId,
+        fromUsername: username || `User${fromUserId}`
+      }
     },
 
     async sendGroupMessage(fromUserId, room, message) {
@@ -216,7 +233,15 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const result = insertQuery.run(fromUserId, room, message);
 
-      return { success: true, messageId: result.lastInsertRowid };
+      // Récupérer le nom d'utilisateur pour le retourner
+      const username = await this.getUsernameById(fromUserId);
+
+      return { 
+        success: true, 
+        messageId: result.lastInsertRowid,
+        fromUserId: fromUserId,
+        fromUsername: username || `User${fromUserId}`
+      };
     },
 
     async canJoinGroup(userId, roomId) {
@@ -510,6 +535,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         JOIN convo_members m ON c.id = m.conversation_id
         WHERE m.user_id = ?
           AND c.type = 'group'
+          AND c.is_game = 0
           AND m.banned_at IS NULL
           AND m.kicked_at IS NULL
       `);
@@ -520,6 +546,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         FROM conversations c
         WHERE c.type = 'group'
           AND c.group_type = 'public'
+          AND c.is_game = 0
           AND c.id NOT IN (
             SELECT conversation_id FROM convo_members WHERE user_id = ?
           )
@@ -570,6 +597,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
     },
 
     async getDmHistory(chatId, userId) {
+      console.log(`in dmHistory chatId and typeof = ${chatId} ${typeof chatId}/ userId and typeof = ${userId} ${typeof userId}`)
       const chatQuery = fastify.db.prepare(`
         SELECT id FROM conversations
         WHERE id = ? AND type = 'direct'
@@ -589,10 +617,9 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       if (!isMember) {
         throw new Error('User is not a member of this DM');
       }
-
+ 
       const messagesQuery = fastify.db.prepare(`
-        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created,
-              (SELECT avatar FROM user_avatars WHERE user_id = u.id LIMIT 1) as avatar
+        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = ?
@@ -629,6 +656,119 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       insertBlockQuery.run(userId, blockedUserId);
 
       return { success: true, blocker: userId, blocked: blockedUserId };
+    },
+
+    async unblockUser(userId, blockedUserId) {
+      if (!(await this.userExist(blockedUserId))) {
+        throw new Error(`Blocked user ${blockedUserId} does not exist`);
+      }
+
+      if (userId === blockedUserId) {
+        throw new Error('Cannot unblock yourself');
+      }
+
+      const existingBlockQuery = fastify.db.prepare(`
+        SELECT 1 FROM user_blocks
+        WHERE blocker_id = ? AND blocked_user_id = ?
+        LIMIT 1
+      `);
+      const existingBlock = existingBlockQuery.get(userId, blockedUserId);
+      if (!existingBlock) {
+        return { success: false, reason: 'User is not blocked' };
+      }
+
+      const deleteBlockQuery = fastify.db.prepare(`
+        DELETE FROM user_blocks
+        WHERE blocker_id = ? AND blocked_user_id = ?
+      `);
+      const result = deleteBlockQuery.run(userId, blockedUserId);
+
+      if (result.changes === 0) {
+        return { success: false, reason: 'Failed to unblock user' };
+      }
+
+      return { success: true, blocker: userId, unblocked: blockedUserId };
+    },
+
+    async getBlockedUsers(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`);
+      }
+
+      const blockedUsersQuery = fastify.db.prepare(`
+        SELECT 
+          u.id,
+          u.username,
+          u.email,
+          u.nickname,
+          ub.created as blocked_at
+        FROM user_blocks ub
+        JOIN users u ON ub.blocked_user_id = u.id
+        WHERE ub.blocker_id = ?
+        ORDER BY ub.created DESC
+      `);
+      
+      const blockedUsers = blockedUsersQuery.all(userId);
+      
+      return {
+        success: true,
+        blocker_id: userId,
+        blocked_count: blockedUsers.length,
+        blocked_users: blockedUsers
+      };
+    },
+
+    async isBlocked(userId, targetUserId) {
+      if (!(await this.userExist(userId))) {
+        throw new Error(`User ${userId} does not exist`);
+      }
+
+      if (!(await this.userExist(targetUserId))) {
+        throw new Error(`Target user ${targetUserId} does not exist`);
+      }
+
+      if (userId === targetUserId) {
+        return { 
+          isBlocked: false, 
+          reason: 'Cannot check block status with yourself',
+          blocker_id: userId,
+          target_id: targetUserId
+        };
+      }
+
+      // Vérifie si l'un ou l'autre a bloqué (bidirectionnel pour chat DM)
+      const blockQuery = fastify.db.prepare(`
+        SELECT 
+          id,
+          blocker_id,
+          blocked_user_id,
+          created as blocked_at
+        FROM user_blocks
+        WHERE (blocker_id = ? AND blocked_user_id = ?)
+           OR (blocker_id = ? AND blocked_user_id = ?)
+        LIMIT 1
+      `);
+      
+      const blockRecord = blockQuery.get(userId, targetUserId, targetUserId, userId);
+      
+      if (blockRecord) {
+        return {
+          isBlocked: true,
+          blocker_id: blockRecord.blocker_id,
+          blocked_user_id: blockRecord.blocked_user_id,
+          blocked_at: blockRecord.blocked_at,
+          block_id: blockRecord.id,
+          // Indique qui a initié le blocage par rapport à l'utilisateur qui fait la demande
+          user_is_blocker: blockRecord.blocker_id === userId,
+          user_is_blocked: blockRecord.blocked_user_id === userId
+        };
+      }
+
+      return {
+        isBlocked: false,
+        blocker_id: userId,
+        target_id: targetUserId
+      };
     }
 
   })

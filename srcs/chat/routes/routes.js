@@ -53,17 +53,20 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     const data = await fastify.authenticate(request, reply);
     if (reply.sent)
       return;
-
+    console.log(`request.body = `, request.body) // REMOVE THIS COMMENT
     const fromUserId = data.user.id
     const { userId } = request.body
-    if (typeof userId !== 'number' || userId <= 0 || !Number.isInteger(userId)) {
+    const intUserId = Number(userId);
+    console.log("userId (raw) =", userId, "typeof:", typeof userId);  // REMOVE THIS COMMENT
+    console.log("intUserId =", intUserId, "typeof:", typeof intUserId); // REMOVE THIS COMMENT
+    if (typeof intUserId !== 'number' || intUserId <= 0 || !Number.isInteger(intUserId)) {
       return reply.status(400).send({error: `Invalid field 'userId' must be number`})
     }
 
     try {
       const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/can-join/dm`, {
         fromUserId: fromUserId,
-        toUserId: userId
+        toUserId: intUserId
       })
       reply.send(response.data)
     } catch(err) {
@@ -250,9 +253,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     if (reply.sent)
       return;
 
-    const userId = data.user.id;
+    const userId = Number(data.user.id);
     const { blockedUserId } = request.body;
-    console.log(`userId: ${userId}, blockedUserId: ${blockedUserId}`)
     if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
       return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
     }
@@ -262,9 +264,115 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
         userId: Number(userId),
         blockedUserId: blockedUserId
       })
+      
+      if (response.data.success) {
+        const blockedUserNotification = {
+          type: 'user_blocked',
+          blocked_by_user_id: userId,
+          blocked_by_username: data.user.username,
+          message: `You have been blocked by ${data.user.username}`
+        };
+        
+        const blockedNotificationSent = fastify.sendMessageToUser(blockedUserId, blockedUserNotification);
+        console.log(`Block notification sent to blocked user ${blockedUserId}: ${blockedNotificationSent}`);
+
+        const blockerNotification = {
+          type: 'user_blocked_by_me',
+          blocked_user_id: blockedUserId,
+          blocked_username: response.data.blocked_username || 'Unknown',
+          message: `You have blocked this user`
+        };
+        
+        const blockerNotificationSent = fastify.sendMessageToUser(userId, blockerNotification);
+        console.log(`Block notification sent to blocker ${userId}: ${blockerNotificationSent}`);
+      }
+      
       reply.send(response.data);
     } catch (err) {
       console.error(`error blocking user: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
+    }
+  }),
+
+  fastify.put('/chat/unblock-user', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = Number(data.user.id);
+    const { blockedUserId } = request.body;
+    if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
+      return reply.status(400).send({ error: "Invalid 'blockedUserId'" });
+    }
+
+    try {
+      const response = await axios.put(`http://database:${process.env.DB_PORT}/chat/unblock-user`, {
+        userId: Number(userId),
+        blockedUserId: blockedUserId
+      })
+      
+      if (response.data.success) {
+        const unblockedUserNotification = {
+          type: 'user_unblocked',
+          unblocked_by_user_id: userId,
+          unblocked_by_username: data.user.username,
+          message: `You have been unblocked by ${data.user.username}`
+        };
+        
+        const unblockedNotificationSent = fastify.sendMessageToUser(blockedUserId, unblockedUserNotification);
+        console.log(`Unblock notification sent to unblocked user ${blockedUserId}: ${unblockedNotificationSent}`);
+        
+        const unblockingUserNotification = {
+          type: 'user_unblocked_by_me',
+          unblocked_user_id: blockedUserId,
+          unblocked_username: response.data.unblocked_username || 'Unknown',
+          message: `You have unblocked this user`
+        };
+        
+        const unblockingNotificationSent = fastify.sendMessageToUser(userId, unblockingUserNotification);
+        console.log(`Unblock notification sent to unblocker ${userId}: ${unblockingNotificationSent}`);
+      }
+      
+      reply.send(response.data);
+    } catch (err) {
+      console.error(`error unblocking user: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
+    }
+  }),
+
+  fastify.get('/chat/blocked-users', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/blocked-users/${userId}`)
+      reply.send(response.data)
+    } catch (err) {
+      console.error(`error fetching blocked users: ${err.message}`)
+      return reply.status(500).send({ error: `${err.response.data.error}` })
+    }
+  }),
+
+  fastify.get('/chat/isBlocked/:userId', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return;
+
+    const userId = data.user.id;
+    const blockedUserId = Number(request.params.userId);
+
+    if (typeof blockedUserId !== 'number' || !Number.isInteger(blockedUserId)) {
+      return reply.status(400).send({ error: "Invalid 'blockeduserId'" });
+    }
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/isBlocked/${userId}/${blockedUserId}`)
+      reply.send(response.data)
+    } catch (err) {
+      console.error(`error checking if user is blocked: ${err.message}`)
       return reply.status(500).send({ error: `${err.response.data.error}` })
     }
   })
