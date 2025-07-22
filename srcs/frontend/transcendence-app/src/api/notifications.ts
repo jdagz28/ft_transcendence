@@ -732,6 +732,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 async function populateNotifContainer(container: HTMLElement, id: number): Promise<void> {
 	const token = localStorage.getItem("token");
 	if (!token) {
+		emptyNotif = true;
 		console.warn("No token found, cannot fetch notifications");
 		container.innerHTML = '<span class="text-xs text-gray-400 absolute inset-0 flex items-center justify-center">No Notifications</span>';
 		return;
@@ -745,12 +746,14 @@ async function populateNotifContainer(container: HTMLElement, id: number): Promi
 	});
 
 	if (!response.ok) {
+		emptyNotif = true;
 		console.error('Failed to fetch notifications:', response.statusText);
 		container.innerHTML = '<span class="text-xs text-gray-400 absolute inset-0 flex items-center justify-center">No Notifications</span>';
 		return;
 	}
 	const data = await response.json();
 	if (!data || !data.notifications || data.notifications.length === 0) {
+		emptyNotif = true;
 		console.warn('No notifications found for user:', id);
 		container.innerHTML = '<span class="text-xs text-gray-400 absolute inset-0 flex items-center justify-center">No Notifications</span>';
 		return;
@@ -765,11 +768,12 @@ async function populateNotifContainer(container: HTMLElement, id: number): Promi
 
 export async function connectNotifications(): Promise<WebSocket | null> {
   const user = await whoAmI();
+  console.log('User data:', user);
   if (!user.success) {
     console.warn('User is not authenticated, cannot connect to notifications WebSocket');
     return null;
   }
-
+  console.log('Connecting to notifications WebSocket for user:', user.data.id);
   	let notificationCount = 0;
 	const token = localStorage.getItem("token");
 	if (token) {
@@ -846,14 +850,15 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 
   const userId = user.data.id;
   
-  if (notificationWS && notificationWS.readyState === WebSocket.OPEN) {
+  /*if (notificationWS && notificationWS.readyState === WebSocket.OPEN) {
+	console.log('Notifications WebSocket is already connected');
     return notificationWS;
   }
 
   if (notificationWS) {
     notificationWS.close();
     notificationWS = null;
-  }
+  }*/
 
   try {
     notificationWS = new WebSocket(
@@ -869,6 +874,13 @@ export async function connectNotifications(): Promise<WebSocket | null> {
     notificationWS.onmessage = (event) => {
     	const msg: wsNotif = JSON.parse(event.data);
 		notificationCount++;
+		if (open && notifContainer) {
+			notificationCount--;
+			if (emptyNotif)
+				notifContainer.innerHTML = '';
+			emptyNotif = false;
+			notifContainer.prepend(generateNotifDiv(msg, user.data.id, token || ''));
+		}
 		notifString = notificationCount.toString();
 		if (notifString.length > 1)
 			notifString = '9+';
@@ -881,12 +893,6 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 				badge.classList.add('hidden');
 				badge.classList.remove('flex');
 				badge.textContent = '';
-			}
-			if (open && notifContainer) {
-				if (emptyNotif)
-					notifContainer.innerHTML = '';
-				emptyNotif = false;
-				notifContainer.prepend(generateNotifDiv(msg, user.data.id, token || ''));
 			}
 		}
       console.log('WebSocket message received:', msg);
