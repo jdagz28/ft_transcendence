@@ -95,6 +95,58 @@ export class ChatWebSocketManager {
     }
   }
 
+  async joinSpecificRoom(chatId: number, type: 'group' | 'dm'): Promise<void> {
+    if (!chatState.currentWs || chatState.currentWs.readyState !== WebSocket.OPEN) {
+      console.log('WebSocket not ready for joining specific room');
+      return;
+    }
+
+    const token = chatState.getAuthToken();
+    if (!token) return;
+
+    try {
+      if (type === 'group') {
+        const joinResponse = await fetch('/chat/join/group', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ groupId: chatId }),
+        });
+        
+        if (joinResponse.ok) {
+          chatState.currentWs!.send(JSON.stringify({
+            action: 'join',
+            scope: 'group',
+            room: chatId
+          }));
+        }
+      } else if (type === 'dm') {
+        const canJoinResponse = await fetch('https://localhost:4242/chat/can-join/dm', {
+          method: 'POST',
+          body: JSON.stringify({ userId: chatId }),
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (canJoinResponse.ok) {
+          const canJoinData = await canJoinResponse.json();
+          chatState.currentWs!.send(JSON.stringify({
+            action: 'join',
+            scope: 'dm',
+            room: canJoinData.Room,
+            userId: chatId
+          }));
+        }
+      }
+    } catch (error) {
+      console.error(`Error joining ${type} room ${chatId}:`, error);
+    }
+  }
+
   initializeWebSocket(token: string): void {
     chatState.setWebSocket(new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`));
 
