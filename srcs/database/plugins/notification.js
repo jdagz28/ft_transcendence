@@ -28,68 +28,80 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
 
     async friendRequest(requesterId, recipientId, requesterName) {
       const message = `${requesterName} sent you a friend request`;
+      const result = await fastify.notifications.writeNotificationToDB(
+        recipientId, requesterId, 'friend.request', null, message
+      );
+      const id = result.id;
+      console.log(`NOTIFY USER ${recipientId} OF FRIEND REQUEST ${requesterId} ID ${id}`);
       await fastify.notifications.notifyUser(recipientId, {
         type: 'friend.request',
         requesterId,
         requesterName,
-        message
+        message,
+        id
       });
-      await fastify.notifications.writeNotificationToDB(
-        recipientId, requesterId, 'friend.request', null, message
-      );
     },
 
     async gameTurn(playerId, gameId) {
       console.log(`Notifying player ${playerId} for game ${gameId}`);
       const message = `It's your turn! Game ${gameId} is ready for you.`;
+      const result = await fastify.notifications.writeNotificationToDB(
+        playerId, null, 'game.turn', gameId, message
+      );
+      const id = result.id;
       await fastify.notifications.notifyUser(playerId, {
         type: 'game.turn',
         gameId,
-        message
+        message,
+        id
       });
-      await fastify.notifications.writeNotificationToDB(
-        playerId, null, 'game.turn', gameId, message
-      );
     },
 
     async tournamentUpdate(tournamentId, message) {
       console.log(`Notifying tournament ${tournamentId} with message: ${message}`);
+      const result = await fastify.notifications.writeNotificationToDB(
+        null, null, 'tournament.update', tournamentId, message
+      );
+      const id = result.id;
       await fastify.notifications.broadcast({
         type: 'tournament.update',
         tournamentId,
-        message
+        message,
+        id
       });
-      await fastify.notifications.writeNotificationToDB(
-        null, null, 'tournament.update', tournamentId, message
-      );
+      
     },
 
     async gameInvite(senderId, recipientId, gameId) {
       console.log(`Notifying recipient ${recipientId} of game invite from ${senderId} for game ${gameId}`);
       const message = `You have been invited to join a game by user ${senderId}`;
+      const {result} = await fastify.notifications.writeNotificationToDB(
+        recipientId, senderId, 'game.invite', gameId, message
+      );
+      const id = result.id;
       await fastify.notifications.notifyUser(recipientId, {
         type: 'game.invite',
         senderId,
         gameId,
-        message
+        message,
+        id
       });
-      await fastify.notifications.writeNotificationToDB(
-        recipientId, senderId, 'game.invite', gameId, message
-      );
     },
 
     async tournamentInvite(senderId, recipientId, tournamentId) {
       console.log(`Notifying recipient ${recipientId} of tournament invite from ${senderId} for tournament ${tournamentId}`);
       const message = `You have been invited to join a tournament by user ${senderId}`;
+      const {result} = await fastify.notifications.writeNotificationToDB(
+        recipientId, senderId, 'tournament.invite', tournamentId, message
+      );
+      const id = result.id;
       await fastify.notifications.notifyUser(recipientId, {
         type: 'tournament.invite',
         senderId, 
         tournamentId,
-        message
+        message,
+        id
       });
-      await fastify.notifications.writeNotificationToDB(
-        recipientId, senderId, 'tournament.invite', tournamentId, message
-      );
     },
 
     async writeNotificationToDB(userID, senderID, type, type_id, message) {
@@ -99,10 +111,11 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       `);
       const result = query.run(userID, senderID, type, type_id, message);
       console.log(`Notification written to DB for user ${userID}: ${message}`); //! DELETE
+      console.log(`Result: ${JSON.stringify(result)}`); //! DELETE
       if (result.changes === 0) {
         throw new Error('Failed to write notification to database');
       }
-      return { success: true };
+      return { success: true , id: result.lastInsertRowid };
     }
 
   });
