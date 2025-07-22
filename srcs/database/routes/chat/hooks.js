@@ -415,6 +415,17 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       if (!(await this.userExist(fromUserId))) {
         throw new Error(`User ${fromUserId} does not exist`);
       }
+
+      const groupQuery = fastify.db.prepare(`
+        SELECT name FROM conversations
+        WHERE id = ? AND type = 'group'
+        LIMIT 1
+      `);
+      const group = groupQuery.get(groupId);
+      if (!group) {
+        throw new Error('Group not found');
+      }
+
       console.log("BEFORE EXISTINGINVITATION")
       const existingInvitationQuery = fastify.db.prepare(`
         SELECT id FROM group_invitations
@@ -432,6 +443,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       insertInvitation.run(groupId, toUserId, fromUserId);
 
+      await fastify.notifications.groupChatInvite(fromUserId, toUserId, groupId, group.name, `You have been invited to join the group ${group.name}`);
       return { invited: true, groupId, toUserId };
     },
 

@@ -483,6 +483,7 @@ async function databaseConnector(fastify) {
         sender_id INTEGER,
         type TEXT NOT NULL,
         type_id INTEGER,
+        name TEXT DEFAULT NULL,
         content TEXT NOT NULL,
         is_read BOOLEAN NOT NULL DEFAULT 0,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
