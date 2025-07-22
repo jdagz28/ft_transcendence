@@ -107,11 +107,9 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
     async groupChatInvite(senderId, sendedToId, groupId, groupName, message) {
       console.log(`Notifying recipient ${sendedToId} of group chat invite from ${senderId} for group ${groupId}`);
       const result = await fastify.notifications.writeNotificationToDB(
-        sendedToId, senderId, 'chat.invite', groupId, message
+        sendedToId, senderId, 'chat.invite', groupId, message, groupName
       );
-      console.log(`C'EST ICI`)
       const id = result.id;
-      console.log(`C'EST ICI`)
       await fastify.notifications.notifyUser(sendedToId, {
         type: 'chat.invite',
         senderId: senderId,

@@ -104,6 +104,8 @@ export async function openSidebarChat(
 ): Promise<void> {
   const sidebar = document.getElementById('sidebar-chat');
   if (!sidebar) return;
+
+  await chatWebSocket.joinSpecificRoom(chatId, type);
   
   // Update chat state
   chatState.setCurrentChat(chatId, chatName, type, userId);
