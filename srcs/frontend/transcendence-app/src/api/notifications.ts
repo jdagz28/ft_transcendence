@@ -10,7 +10,7 @@ type wsNotif =
 	| { type: "friend.request"; requesterId: string; requesterName: string, message: string; id:number; img: "/icons8-invite.svg"; title: "Friend Request"}
 	| { type: "tournament.update"; tournamentId: string; message: string; id:number; img: "/icons8-sync.svg"; title: "Tournament Update"}
 	| { type: "game.turn"; gameId: string; message: string; id:number; img: "/icons8-double-left.svg"; title: "Game Turn"}
-	| { type: "chat.invite"; senderId: number; message: string; groupId: number; groupName: string; id: number; img: "/icons8-invite.svg"; title: "Chat Invitation"};
+	| { type: "chat.invite"; senderId: number; message: string; groupId: number; groupName: string; id: number; img: "/chatroom.svg"; title: "Chat Invitation"};
 
 type APINotif = {
 	id: number;
@@ -53,6 +53,8 @@ type APINotif = {
 		]
 	}
 */
+
+let emptyNotif = true;
 
 function setAnsweredButtons(contentWrapper:HTMLDivElement) {
 	const div = document.createElement("div");
@@ -561,7 +563,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 	} else if (notif.type === "game.turn") {
 		notif.img = "/icons8-double-left.svg";
 	} else if (notif.type === "chat.invite") {
-		notif.img = "/icons8-invite.svg";
+		notif.img = "/chatroom.svg";
 	}
 	const iconImg = document.createElement("img");
 	iconImg.src = notif.img;
@@ -640,6 +642,8 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 		notif.img = "/icons8-sync.svg";
 	} else if (notif.type === "game.turn") {
 		notif.img = "/icons8-double-left.svg";
+	} else if (notif.type === "chat.invite") {
+		notif.img = "/chatroom.svg";
 	}
 
 	const iconImg = document.createElement("img");
@@ -752,6 +756,7 @@ async function populateNotifContainer(container: HTMLElement, id: number): Promi
 		return;
 	}
 	container.innerHTML = '';
+	emptyNotif = false;
 	data.notifications.forEach((notif: APINotif) => {
 		const notifDiv = generateAPINotifDiv(notif, token, id);
 		container.prepend(notifDiv);
@@ -878,6 +883,9 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 				badge.textContent = '';
 			}
 			if (open && notifContainer) {
+				if (emptyNotif)
+					notifContainer.innerHTML = '';
+				emptyNotif = false;
 				notifContainer.prepend(generateNotifDiv(msg, user.data.id, token || ''));
 			}
 		}
