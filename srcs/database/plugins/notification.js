@@ -75,7 +75,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
     async gameInvite(senderId, recipientId, gameId) {
       console.log(`Notifying recipient ${recipientId} of game invite from ${senderId} for game ${gameId}`);
       const message = `You have been invited to join a game by user ${senderId}`;
-      const {result} = await fastify.notifications.writeNotificationToDB(
+      const result = await fastify.notifications.writeNotificationToDB(
         recipientId, senderId, 'game.invite', gameId, message, null
       );
       const id = result.id;
@@ -91,7 +91,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
     async tournamentInvite(senderId, recipientId, tournamentId) {
       console.log(`Notifying recipient ${recipientId} of tournament invite from ${senderId} for tournament ${tournamentId}`);
       const message = `You have been invited to join a tournament by user ${senderId}`;
-      const {result} = await fastify.notifications.writeNotificationToDB(
+      const result = await fastify.notifications.writeNotificationToDB(
         recipientId, senderId, 'tournament.invite', tournamentId, message, null
       );
       const id = result.id;
@@ -106,10 +106,12 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
 
     async groupChatInvite(senderId, sendedToId, groupId, groupName, message) {
       console.log(`Notifying recipient ${sendedToId} of group chat invite from ${senderId} for group ${groupId}`);
-      const {result} = await fastify.notifications.writeNotificationToDB(
+      const result = await fastify.notifications.writeNotificationToDB(
         sendedToId, senderId, 'chat.invite', groupId, message
       );
+      console.log(`C'EST ICI`)
       const id = result.id;
+      console.log(`C'EST ICI`)
       await fastify.notifications.notifyUser(sendedToId, {
         type: 'chat.invite',
         senderId: senderId,
