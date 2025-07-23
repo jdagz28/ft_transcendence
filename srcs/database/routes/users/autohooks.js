@@ -354,6 +354,21 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
             VALUES (?, ?)
           `)
           insertQuery.run(userId, friendId)
+
+          try {
+            const axios = require('axios');
+            const accepterName = fastify.db.prepare('SELECT username FROM users WHERE id = ?').get(userId)
+            await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/friend-accepted`, {
+              requesterId: friendId,
+              accepterId: userId,
+              accepterName: accepterName.username
+            }, {
+              timeout: 3000
+            });
+            console.log(`Sent friend_request_accepted WebSocket notification to user ${friendId}`);
+          } catch (wsError) {
+            console.error(`Failed to send WebSocket notification for friend acceptance: ${wsError.message}`);
+          }
         }
         return true
       } catch (err) {

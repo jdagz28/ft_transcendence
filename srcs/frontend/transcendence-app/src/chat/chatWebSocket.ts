@@ -190,6 +190,10 @@ export class ChatWebSocketManager {
         'user_blocked_by_me': () => userBlocking.handleUserBlockedByMe(data.blocked_user_id),
         'user_unblocked': () => userBlocking.handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username),
         'user_unblocked_by_me': () => userBlocking.handleUserUnblockedByMe(data.unblocked_user_id),
+        'friend_request_accepted': async () => {
+          console.log('Friend request accepted, rejoining all available rooms');
+          await this.joinAllAvailableRooms();
+        },
       };
       
       const handler = messageHandlers[data.type];
@@ -229,7 +233,6 @@ export class ChatWebSocketManager {
     }
   }
 
-  // Expose WebSocket for external access
   getCurrentWebSocket(): WebSocket | null {
     return chatState.currentWs;
   }

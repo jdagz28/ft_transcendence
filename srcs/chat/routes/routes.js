@@ -375,5 +375,30 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       console.error(`error checking if user is blocked: ${err.message}`)
       return reply.status(500).send({ error: `${err.response.data.error}` })
     }
+  }),
+
+  fastify.post('/internal/friend-accepted', async (request, reply) => {
+    const { requesterId, accepterId, accepterName } = request.body;
+
+    if (!requesterId || !accepterId || !accepterName) {
+      return reply.status(400).send({ error: 'Missing required fields: requesterId, accepterId, accepterName' });
+    }
+
+    try {
+      const notification = {
+        type: 'friend_request_accepted',
+        accepter_id: accepterId,
+        accepter_name: accepterName,
+        message: `${accepterName} accepted your friend request`
+      };
+
+      const notificationSent = fastify.sendMessageToUser(requesterId, notification);
+      console.log(`Friend request accepted notification sent to user ${requesterId}: ${notificationSent}`);
+
+      reply.send({ success: true, notificationSent });
+    } catch (err) {
+      console.error(`Error sending friend request accepted notification: ${err.message}`);
+      return reply.status(500).send({ error: 'Failed to send notification' });
+    }
   })
 })

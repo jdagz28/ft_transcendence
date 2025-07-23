@@ -149,6 +149,9 @@ export class ChatUIManager {
   private setupEventListeners(): void {
     this.setupChatForm();
     this.setupCloseButton();
+    this.setupChatSwitcher();
+    this.setupChatMenu();
+    this.setupOutsideClickHandler();
   }
 
   private setupChatForm(): void {
@@ -170,32 +173,142 @@ export class ChatUIManager {
     });
   }
 
+  private setupChatSwitcher(): void {
+    const chatSwitcher = document.getElementById('chatSwitcher');
+    if (!chatSwitcher) return;
+
+    chatSwitcher.addEventListener('click', async () => {
+      console.log('Chat switcher button clicked from chatUI!');
+      const { chatSwitcher: chatSwitcherModule } = await import('./chatSwitcher');
+      await chatSwitcherModule.toggleChatSwitcher();
+    });
+  }
+
+  private setupChatMenu(): void {
+    const chatMenuBtn = document.getElementById('chatMenuBtn');
+    if (!chatMenuBtn) return;
+
+    chatMenuBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      
+      if (chatState.currentChatType !== 'dm' || !chatState.currentUserId) {
+        console.log('Chat menu only available for DM chats');
+        return;
+      }
+
+      const existingMenu = document.getElementById('chatUserMenu');
+      if (existingMenu) {
+        existingMenu.remove();
+        return;
+      }
+
+      try {
+        const { userBlocking } = await import('./userBlocking');
+        const isBlocked = await userBlocking.isUserBlocked(chatState.currentUserId);
+        
+        const menu = document.createElement('div');
+        menu.id = 'chatUserMenu';
+        menu.className = 'absolute top-full right-0 mt-1 bg-[#1a2740] border border-gray-600 rounded-lg shadow-xl z-50 min-w-[120px]';
+        menu.innerHTML = `
+          <div class="p-2">
+            <button id="toggleBlockUser" class="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#22325a] rounded transition-colors">
+              ${isBlocked ? 'Unblock User' : 'Block User'}
+            </button>
+          </div>
+        `;
+
+        const menuContainer = chatMenuBtn.parentElement;
+        if (menuContainer) {
+          menuContainer.style.position = 'relative';
+          menuContainer.appendChild(menu);
+        }
+
+        const toggleBlockBtn = menu.querySelector('#toggleBlockUser');
+        if (toggleBlockBtn) {
+          toggleBlockBtn.addEventListener('click', async () => {
+            const userId = chatState.currentUserId;
+            if (!userId) return;
+
+            try {
+              let success;
+              if (isBlocked) {
+                success = await userBlocking.unblockUser(userId);
+              } else {
+                success = await userBlocking.blockUser(userId);
+              }
+
+              if (success) {
+                console.log(`User ${isBlocked ? 'unblocked' : 'blocked'} successfully`);
+              }
+            } catch (error) {
+              console.error('Error toggling user block status:', error);
+            }
+
+            menu.remove();
+          });
+        }
+
+        const handleOutsideClick = (event: Event) => {
+          if (!menu.contains(event.target as Node) && !chatMenuBtn.contains(event.target as Node)) {
+            menu.remove();
+            document.removeEventListener('click', handleOutsideClick);
+          }
+        };
+        
+        setTimeout(() => {
+          document.addEventListener('click', handleOutsideClick);
+        }, 0);
+
+      } catch (error) {
+        console.error('Error setting up chat menu:', error);
+      }
+    });
+  }
+
+  private setupOutsideClickHandler(): void {
+    document.removeEventListener('click', this.handleOutsideClick);
+    document.addEventListener('click', this.handleOutsideClick);
+  }
+
+  private handleOutsideClick = (e: Event): void => {
+    const dropdown = document.getElementById('chatSwitcherDropdown');
+    const switcher = document.getElementById('chatSwitcher');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+      if (!switcher?.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+        import('./chatSwitcher').then(({ chatSwitcher }) => {
+          chatSwitcher.hideChatSwitcher();
+        });
+      }
+    }
+  };
+
   enableChatForm(): void {
-    const chatForm = document.getElementById('sidebar-chat-form');
+    const chatForm = document.getElementById('sidebar-chat-form') as HTMLFormElement;
     if (chatForm) {
-      const input = chatForm.querySelector('#sidebar-chat-input') as HTMLInputElement;
+      chatForm.style.display = 'flex';
+      const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
       const button = chatForm.querySelector('button[type="submit"]') as HTMLButtonElement;
       if (input && button) {
         input.disabled = false;
         input.placeholder = "Message...";
-        input.classList.remove('opacity-50', 'cursor-not-allowed');
         button.disabled = false;
-        button.classList.remove('opacity-50', 'cursor-not-allowed');
+        button.style.opacity = '1';
       }
     }
   }
 
   disableChatForm(message: string = "You cannot send messages"): void {
-    const chatForm = document.getElementById('sidebar-chat-form');
+    const chatForm = document.getElementById('sidebar-chat-form') as HTMLFormElement;
     if (chatForm) {
-      const input = chatForm.querySelector('#sidebar-chat-input') as HTMLInputElement;
+      chatForm.style.display = 'flex';
+      const input = document.getElementById('sidebar-chat-input') as HTMLInputElement;
       const button = chatForm.querySelector('button[type="submit"]') as HTMLButtonElement;
       if (input && button) {
         input.disabled = true;
         input.placeholder = message;
-        input.classList.add('opacity-50', 'cursor-not-allowed');
+        input.value = '';
         button.disabled = true;
-        button.classList.add('opacity-50', 'cursor-not-allowed');
+        button.style.opacity = '0.5';
       }
     }
   }
@@ -208,6 +321,10 @@ export class ChatUIManager {
         titleSpan.textContent = title;
       }
     }
+  }
+
+  cleanup(): void {
+    document.removeEventListener('click', this.handleOutsideClick);
   }
 }
 
