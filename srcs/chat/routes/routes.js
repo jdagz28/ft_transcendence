@@ -25,7 +25,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data)
     } catch (err) {
       console.error(`error joining direct message: ${err.message}`)
-      return reply.status(500).send({ error: `${err.message}` })
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({ error: `${err.response?.data?.error || err.message}` })
     }
   }),
 
@@ -45,7 +46,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data)
     } catch (err) {
       console.error(`error checking if user can join group: ${err.message}`)
-      return reply.status(500).send({ error: `${err.response.data.error}` })
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({ error: `${err.response?.data?.error || err.message}` })
     }
   }),
 
@@ -53,12 +55,11 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     const data = await fastify.authenticate(request, reply);
     if (reply.sent)
       return;
-    console.log(`request.body = `, request.body) // REMOVE THIS COMMENT
+    
     const fromUserId = data.user.id
     const { userId } = request.body
     const intUserId = Number(userId);
-    console.log("userId (raw) =", userId, "typeof:", typeof userId);  // REMOVE THIS COMMENT
-    console.log("intUserId =", intUserId, "typeof:", typeof intUserId); // REMOVE THIS COMMENT
+    
     if (typeof intUserId !== 'number' || intUserId <= 0 || !Number.isInteger(intUserId)) {
       return reply.status(400).send({error: `Invalid field 'userId' must be number`})
     }
@@ -71,8 +72,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data)
     } catch(err) {
       console.error(`error checking if user can join dm : ${err.message}`)
-      console.error(`BIG ERROOORR: ${err.response.data.error}`)
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -85,10 +86,10 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
     const { name, type, is_game } = request.body
 
     if (typeof type != "string" || !["public", "private"].includes(type))
-      return reply.status(500).send({error: "invalid 'type'"})
+      return reply.status(400).send({error: "invalid 'type'"})
 
     if (name !== null && typeof name !== "string")
-      return reply.status(500).send({error: "Invalid 'name'"})
+      return reply.status(400).send({error: "Invalid 'name'"})
 
     const isGameValue = typeof is_game === "boolean" ? is_game : false;
 
@@ -101,7 +102,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       reply.send(result.data)
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
 
   }),
@@ -124,7 +126,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       reply.send(response.data)
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -146,7 +149,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       reply.send(response.data)
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -167,7 +171,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       reply.send(response.data)
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -188,7 +193,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       })
       reply.send(response.data)
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -203,7 +209,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/mychats/${userId}`)
       reply.send(response.data)
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -223,7 +230,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/group/${groupId}/history/${userId}`)
       reply.send(response.data);
     } catch (err) {
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -243,8 +251,9 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/dm/${chatId}/history/${userId}`)
       reply.send(response.data)
     } catch (err) {
-      console.error(`error: ${err.response.err}`)
-      return reply.status(500).send({error: `${err.response.data.error}`})
+      console.error(`error: ${err.response?.err}`)
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
     }
   }),
 
@@ -290,7 +299,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data);
     } catch (err) {
       console.error(`error blocking user: ${err.message}`)
-      return reply.status(500).send({ error: `${err.response.data.error}` })
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({ error: `${err.response?.data?.error || err.message}` })
     }
   }),
 
@@ -336,7 +346,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data);
     } catch (err) {
       console.error(`error unblocking user: ${err.message}`)
-      return reply.status(500).send({ error: `${err.response.data.error}` })
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({ error: `${err.response?.data?.error || err.message}` })
     }
   }),
 
@@ -352,7 +363,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data)
     } catch (err) {
       console.error(`error fetching blocked users: ${err.message}`)
-      return reply.status(500).send({ error: `${err.response.data.error}` })
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({ error: `${err.response?.data?.error || err.message}` })
     }
   }),
 
@@ -373,7 +385,8 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       reply.send(response.data)
     } catch (err) {
       console.error(`error checking if user is blocked: ${err.message}`)
-      return reply.status(500).send({ error: `${err.response.data.error}` })
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({ error: `${err.response?.data?.error || err.message}` })
     }
   }),
 
