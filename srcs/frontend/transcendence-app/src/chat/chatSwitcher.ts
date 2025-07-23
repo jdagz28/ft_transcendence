@@ -3,6 +3,7 @@ import { chatState } from './chatState';
 import { chatMessages } from './chatMessages';
 import { chatUI } from './chatUI';
 import { userBlocking } from './userBlocking';
+import { userModal } from './userModal';
 
 // ============================================================================ //
 // CHAT SWITCHER MANAGER                                                        //
@@ -86,7 +87,7 @@ export class ChatSwitcherManager {
         const isActive = chatState.currentChatType === 'dm' && chatState.currentUserId === friend.id;
         const dmItem = document.createElement('button');
 
-        const baseClasses = 'w-full text-left px-3 py-2 rounded text-sm transition-colors';
+        const baseClasses = 'group w-full text-left px-3 py-2 rounded text-sm transition-colors';
         const blockedClasses = friend.isBlocked 
           ? 'text-gray-500 cursor-not-allowed opacity-60' 
           : 'hover:bg-gray-600';
@@ -96,13 +97,30 @@ export class ChatSwitcherManager {
         dmItem.innerHTML = `
           <div class="flex items-center gap-2">
             <img src="${friend.avatar}" alt="avatar" class="w-5 h-5 rounded-full flex-shrink-0 ${friend.isBlocked ? 'grayscale' : ''}">
-            <span class="truncate">${friend.username}</span>
-            ${friend.isBlocked ? '<span class="text-xs text-red-400 ml-auto">🚫</span>' : ''}
+            <span class="truncate flex-1">${friend.username}</span>
+            ${friend.isBlocked ? '<span class="text-xs text-red-400">🚫</span>' : ''}
+            <button class="opacity-0 group-hover:opacity-70 hover:!opacity-100 ml-auto text-gray-400 hover:text-white p-1 rounded transition-all duration-200" data-username="${friend.username}" title="User actions">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+              </svg>
+            </button>
           </div>
         `;
-        dmItem.addEventListener('click', async () => {
+        dmItem.addEventListener('click', async (e) => {
+          if ((e.target as HTMLElement).closest('button[data-username]')) {
+            return;
+          }
           await this.switchToDM(friend.id, friend.username, friend.isBlocked);
         });
+        
+        const userActionsBtn = dmItem.querySelector('button[data-username]');
+        if (userActionsBtn) {
+          userActionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userModal.showUserModal(friend.username, e as MouseEvent);
+          });
+        }
+        
         dmsList.appendChild(dmItem);
       });
     }

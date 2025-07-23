@@ -2,6 +2,14 @@
 
 const fp = require('fastify-plugin')
 
+class HttpError extends Error {
+  constructor(message, statusCode = 500) {
+    super(message);
+    this.name = 'HttpError';
+    this.statusCode = statusCode;
+  }
+}
+
 module.exports = fp(async function chatAutoHooks (fastify, opts) {
   fastify.decorate('dbChat', {
     
@@ -41,7 +49,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       try {
         if (userIdA === userIdB) {
           fastify.log.error(`User ${userIdA} cannot create a conversation with themselves`)
-          throw new Error('Cannot create conversation with self')
+          throw new HttpError('Cannot create conversation with self', 400)
         }
 
         const existingConversationQuery = fastify.db.prepare(`
@@ -79,19 +87,19 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         return conversationId;
       } catch (err) {
         fastify.log.error(`createConversation error: ${err.message}`)
-        throw new Error('Failed to create conversation')
+        throw new HttpError('Failed to create conversation', 500)
       }
     },
 
     async joinDirectMessage(userIdA, userIdB) {
       if (!(await this.userExist(userIdA))) {
-        throw new Error(`User ${userIdA} does not exist`);
+        throw new HttpError(`User ${userIdA} does not exist`, 404);
       }
       if (!(await this.userExist(userIdB))) {
-        throw new Error(`User ${userIdB} does not exist`);
+        throw new HttpError(`User ${userIdB} does not exist`, 404);
       }
       if (userIdA === userIdB) {
-        throw new Error('Cannot join a conversation with self');
+        throw new HttpError('Cannot join a conversation with self', 400);
       }
 
       const blockQuery = fastify.db.prepare(`
@@ -128,7 +136,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async sendDirectMessage(fromUserId, groupId, message) {
       if (!(await this.userExist(fromUserId))) {
-        throw new Error(`User ${fromUserId} does not exist`);
+        throw new HttpError(`User ${fromUserId} does not exist`, 404);
       }
 
       const conversationQuery = fastify.db.prepare(`
@@ -138,7 +146,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const conversation = conversationQuery.get(groupId);
       if (!conversation) {
-        throw new Error('No direct conversation found with this id');
+        throw new HttpError('No direct conversation found with this id', 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -148,11 +156,11 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const isMember = memberQuery.get(groupId, fromUserId);
       if (!isMember) {
-        throw new Error('Sender is not a member of this conversation');
+        throw new HttpError('Sender is not a member of this conversation', 403);
       }
 
       if (typeof message !== 'string' || message.trim() === '') {
-        throw new Error('Message must be a non-empty string');
+        throw new HttpError('Message must be a non-empty string', 400);
       }
 
       const otherMemberQuery = fastify.db.prepare(`
@@ -170,7 +178,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         `);
         const isBlocked = blockQuery.get(fromUserId, otherMember.user_id, otherMember.user_id, fromUserId);
         if (isBlocked) {
-          throw new Error('Message cannot be sent: one user has blocked the other');
+          throw new HttpError('Message cannot be sent: one user has blocked the other', 403);
         }
       }
 
@@ -179,8 +187,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         VALUES (?, ?, ?)
       `);
       const result = insertQuery.run(fromUserId, groupId, message);
-      
-      // Récupérer le nom d'utilisateur pour le retourner
+
       const username = await this.getUsernameById(fromUserId);
       
       console.log(`success in sendDirectMessage`)
@@ -194,7 +201,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async sendGroupMessage(fromUserId, room, message) {
       if (!(await this.userExist(fromUserId))) {
-        throw new Error(`User ${fromUserId} does not exist`);
+        throw new HttpError(`User ${fromUserId} does not exist`, 404);
       }
 
       const groupQuery = fastify.db.prepare(`
@@ -204,7 +211,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const group = groupQuery.get(room);
       if (!group) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -214,17 +221,17 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const member = memberQuery.get(room, fromUserId);
       if (!member) {
-        throw new Error('User is not a member of this group');
+        throw new HttpError('User is not a member of this group', 403);
       }
       if (member.banned_at !== null) {
-        throw new Error('User is banned from this group');
+        throw new HttpError('User is banned from this group', 403);
       }
       if (member.kicked_at !== null) {
-        throw new Error('User has been kicked from this group');
+        throw new HttpError('User has been kicked from this group', 403);
       }
 
       if (typeof message !== 'string' || message.trim() === '') {
-        throw new Error('Message must be a non-empty string');
+        throw new HttpError('Message must be a non-empty string', 400);
       }
 
       const insertQuery = fastify.db.prepare(`
@@ -233,7 +240,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const result = insertQuery.run(fromUserId, room, message);
 
-      // Récupérer le nom d'utilisateur pour le retourner
       const username = await this.getUsernameById(fromUserId);
 
       return { 
@@ -246,7 +252,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async canJoinGroup(userId, roomId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`);
+        throw new HttpError(`User ${userId} does not exist`, 404);
       }
 
       const convoQuery = fastify.db.prepare(`
@@ -256,7 +262,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const convo = convoQuery.get(roomId);
       if (!convo) {
-        throw new Error('Conversation not found');
+        throw new HttpError('Conversation not found', 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -275,7 +281,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
       if (member) {
         if (member.banned_at !== null) {
-          throw new Error('User is banned from this group');
+          throw new HttpError('User is banned from this group', 403);
         }
         return { Permission: true, reason: 'Can join user is member', Chat: `${roomId}` };
       }
@@ -288,7 +294,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         return { Permission: true, reason: 'Can join private game group', Chat: `${roomId}` };
       }
 
-      throw new Error('User cannot join this group');
+      throw new HttpError('User cannot join this group', 403);
     },
 
     async createGroup(userId, name, groupType, isGame) {
@@ -310,13 +316,13 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         return {created: true, conversationId: conversationId}
       } catch (err) {
         console.error(`createGroup error: ${err.message}`)
-        throw new Error('Failed to create group')
+        throw new HttpError('Failed to create group', 500)
       }
     },
 
     async joinGroup(userId, groupId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`);
+        throw new HttpError(`User ${userId} does not exist`, 404);
       }
 
       const groupQuery = fastify.db.prepare(`
@@ -326,7 +332,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const group = groupQuery.get(groupId);
       if (!group) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -337,7 +343,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       const member = memberQuery.get(groupId, userId);
       if (member) {
         if (member.banned_at !== null) {
-          throw new Error('User is banned from this group');
+          throw new HttpError('User is banned from this group', 403);
         }
         return { joined: false, reason: 'Already a member' };
       }
@@ -383,7 +389,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const group = groupQuery.get(groupId);
       if (!group) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -403,17 +409,14 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
     },
     
     async invitGroup(fromUserId, toUserId, groupId) {
-      const canInvite = await this.canInvitGroup(fromUserId, groupId);
-      if (!canInvite.canInvite) {
-        throw new Error(canInvite.reason || 'Not allowed to invite');
-      }
+      await this.canInvitGroup(fromUserId, groupId);
 
       if (!(await this.userExist(toUserId))) {
-        throw new Error(`User ${toUserId} does not exist`);
+        throw new HttpError(`User ${toUserId} does not exist`, 404);
       }
 
       if (!(await this.userExist(fromUserId))) {
-        throw new Error(`User ${fromUserId} does not exist`);
+        throw new HttpError(`User ${fromUserId} does not exist`, 404);
       }
 
       const groupQuery = fastify.db.prepare(`
@@ -423,7 +426,17 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const group = groupQuery.get(groupId);
       if (!group) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
+      }
+
+      const memberQuery = fastify.db.prepare(`
+        SELECT 1 FROM convo_members
+        WHERE conversation_id = ? AND user_id = ?
+        LIMIT 1
+      `);
+      const isMember = memberQuery.get(groupId, toUserId);
+      if (isMember) {
+        throw new HttpError('User is already a member of this group', 409);
       }
 
       console.log("BEFORE EXISTINGINVITATION")
@@ -449,7 +462,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async acceptInvite(userId, groupId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`);
+        throw new HttpError(`User ${userId} does not exist`, 404);
       }
 
       const groupQuery = fastify.db.prepare(`
@@ -459,7 +472,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const group = groupQuery.get(groupId);
       if (!group) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -470,7 +483,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       const member = memberQuery.get(groupId, userId);
       if (member) {
         if (member.banned_at !== null) {
-          throw new Error('User is banned from this group');
+          throw new HttpError('User is banned from this group', 403);
         }
         return { accepted: false, reason: 'Already a member' };
       }
@@ -503,7 +516,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async refuseInvite(userId, groupId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`);
+        throw new HttpError(`User ${userId} does not exist`, 404);
       }
 
       const groupQuery = fastify.db.prepare(`
@@ -513,7 +526,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const group = groupQuery.get(groupId);
       if (!group) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
       }
 
       const invitationQuery = fastify.db.prepare(`
@@ -538,7 +551,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async getUserChats(userId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`)
+        throw new HttpError(`User ${userId} does not exist`, 404)
       }
 
       const memberGroupsQuery = fastify.db.prepare(`
@@ -572,7 +585,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async getGroupHistory(groupId, userId) {
       if (!(await this.groupExist(groupId))) {
-        throw new Error('Group not found');
+        throw new HttpError('Group not found', 404);
       }
 
       const groupTypeRow = fastify.db.prepare(`
@@ -589,10 +602,10 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         `);
         const member = memberQuery.get(groupId, userId);
         if (!member) {
-          throw new Error('User is not a member of this private group');
+          throw new HttpError('User is not a member of this private group', 403);
         }
         if (member.banned_at !== null) {
-          throw new Error('User is banned from this group');
+          throw new HttpError('User is banned from this group', 403);
         }
       }
 
@@ -617,7 +630,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const chat = chatQuery.get(chatId);
       if (!chat || !chat.id) {
-        throw new Error(`DM ${chatId} not found`);
+        throw new HttpError(`DM ${chatId} not found`, 404);
       }
 
       const memberQuery = fastify.db.prepare(`
@@ -627,7 +640,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       `);
       const isMember = memberQuery.get(chatId, userId);
       if (!isMember) {
-        throw new Error('User is not a member of this DM');
+        throw new HttpError('User is not a member of this DM', 403);
       }
  
       const messagesQuery = fastify.db.prepare(`
@@ -644,11 +657,11 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async blockUser(userId, blockedUserId) {
       if (!(await this.userExist(blockedUserId))) {
-        throw new Error(`Blocked user ${blockedUserId} does not exist`);
+        throw new HttpError(`Blocked user ${blockedUserId} does not exist`, 404);
       }
 
       if (userId === blockedUserId) {
-        throw new Error('Cannot block yourself');
+        throw new HttpError('Cannot block yourself', 400);
       }
 
       const existingBlockQuery = fastify.db.prepare(`
@@ -672,11 +685,11 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async unblockUser(userId, blockedUserId) {
       if (!(await this.userExist(blockedUserId))) {
-        throw new Error(`Blocked user ${blockedUserId} does not exist`);
+        throw new HttpError(`Blocked user ${blockedUserId} does not exist`, 404);
       }
 
       if (userId === blockedUserId) {
-        throw new Error('Cannot unblock yourself');
+        throw new HttpError('Cannot unblock yourself', 400);
       }
 
       const existingBlockQuery = fastify.db.prepare(`
@@ -704,7 +717,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async getBlockedUsers(userId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`);
+        throw new HttpError(`User ${userId} does not exist`, 404);
       }
 
       const blockedUsersQuery = fastify.db.prepare(`
@@ -732,11 +745,11 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
 
     async isBlocked(userId, targetUserId) {
       if (!(await this.userExist(userId))) {
-        throw new Error(`User ${userId} does not exist`);
+        throw new HttpError(`User ${userId} does not exist`, 404);
       }
 
       if (!(await this.userExist(targetUserId))) {
-        throw new Error(`Target user ${targetUserId} does not exist`);
+        throw new HttpError(`Target user ${targetUserId} does not exist`, 404);
       }
 
       if (userId === targetUserId) {
@@ -748,7 +761,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         };
       }
 
-      // Vérifie si l'un ou l'autre a bloqué (bidirectionnel pour chat DM)
       const blockQuery = fastify.db.prepare(`
         SELECT 
           id,
@@ -770,7 +782,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
           blocked_user_id: blockRecord.blocked_user_id,
           blocked_at: blockRecord.blocked_at,
           block_id: blockRecord.id,
-          // Indique qui a initié le blocage par rapport à l'utilisateur qui fait la demande
           user_is_blocker: blockRecord.blocker_id === userId,
           user_is_blocked: blockRecord.blocked_user_id === userId
         };

@@ -1,5 +1,7 @@
 import { whoAmI } from "../setUpLayout";
 import { openSidebarChat } from "../sidebarChat";
+import { chatWebSocket } from "../chat/chatWebSocket";
+import { chatSwitcher } from "../chat/chatSwitcher";
 
 
 let notificationWS: WebSocket | null = null;
@@ -90,6 +92,13 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			body: JSON.stringify({ friend: `${sender}`, action: "accept" })
 		});
 		if (response.ok) {
+			await chatWebSocket.joinAllAvailableRooms();
+
+			const dropdown = document.getElementById('chatSwitcherDropdown');
+			if (dropdown && !dropdown.classList.contains('hidden')) {
+				await chatSwitcher.loadChatSwitcher();
+			}
+			
 			fetch(`/notifications/${user_id}/${notif_id}`, {
     			method: 'PATCH',
    				headers: {

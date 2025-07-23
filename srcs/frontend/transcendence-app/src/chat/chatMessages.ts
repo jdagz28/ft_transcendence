@@ -1,5 +1,6 @@
 import type { ChatMessage, ChatHistory } from './types';
 import { chatState } from './chatState';
+import { userModal } from './userModal';
 
 // ============================================================================ //
 // CHAT MESSAGES HANDLER                                                        //
@@ -17,7 +18,7 @@ export class ChatMessagesHandler {
     if (chatState.currentChatType === 'group' && isBlocked) {
       this.addBlockedMessageToUI(displayName, content);
     } else if (chatState.currentChatType === 'dm' && isBlocked) {
-      return; // Don't show blocked messages in DMs
+      return;
     } else {
       this.addNormalMessageToUI(displayName, content, isCurrentUser);
     }
@@ -39,11 +40,13 @@ export class ChatMessagesHandler {
             <span class="text-xs italic">🚫 Message from blocked user (click to reveal)</span>
           </div>
           <div class="blocked-content hidden">
-            <b>${displayName}:</b> ${content}
+            <b class="cursor-pointer hover:text-blue-400 hover:underline transition-colors duration-200" data-username="${displayName}">${displayName}:</b> ${content}
           </div>
         </div>
       </div>
     `;
+    
+    setTimeout(() => this.setupUsernameClickHandlers(), 0);
   }
 
   private addNormalMessageToUI(displayName: string, content: string, isCurrentUser: boolean): void {
@@ -52,14 +55,34 @@ export class ChatMessagesHandler {
 
     const messageClass = isCurrentUser ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white';
     const alignClass = isCurrentUser ? 'justify-end' : 'justify-start';
+    
+    const usernameDisplay = isCurrentUser || displayName === 'Me' 
+      ? `<b>${displayName}:</b>`
+      : `<b class="cursor-pointer hover:text-blue-400 hover:underline transition-colors duration-200" data-username="${displayName}">${displayName}:</b>`;
 
     messagesDiv.innerHTML += `
       <div class="mb-2 flex ${alignClass}">
         <div class="${messageClass} rounded-xl px-3 py-2 max-w-[80%] break-words whitespace-pre-line">
-          <b>${displayName}:</b> ${content}
+          ${usernameDisplay} ${content}
         </div>
       </div>
     `;
+    
+    setTimeout(() => this.setupUsernameClickHandlers(), 0);
+  }
+
+  private setupUsernameClickHandlers(): void {
+    const usernameElements = document.querySelectorAll('b[data-username]:not([data-handler-added])');
+    
+    usernameElements.forEach(element => {
+      const username = element.getAttribute('data-username');
+      if (username) {
+        element.addEventListener('click', (event) => {
+          userModal.showUserModal(username, event as MouseEvent);
+        });
+        element.setAttribute('data-handler-added', 'true');
+      }
+    });
   }
 
   toggleBlockedMessage(messageId: string): void {
@@ -149,7 +172,6 @@ export class ChatMessagesHandler {
   }
 }
 
-// Setup global function for blocked messages
 (window as any).toggleBlockedMessage = function(messageId: string) {
   const handler = new ChatMessagesHandler();
   handler.toggleBlockedMessage(messageId);

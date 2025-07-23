@@ -13,7 +13,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       reply.send(result);
     } catch (error) {
       console.error('Error joining direct message:', error);
-      reply.status(500).send({ error: 'Internal Server Error' });
+      const statusCode = error.statusCode || 500;
+      reply.status(statusCode).send({ error: error.message || 'Internal Server Error' });
     }
   }),
 
@@ -26,7 +27,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       reply.send(response)
     } catch (err) {
       console.error(`error checking if user can join group: ${err.message}`)
-      return reply.status(500).send({ error: `${err.message}` })
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({ error: `${err.message}` })
     }
   }),
 
@@ -37,7 +39,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       reply.send(response);
     } catch(err) {
       console.error(`error checking if user can join grouop: ${err.message}`)
-      return reply.status(500).send({ error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({ error: `${err.message}`})
     }
   }),
 
@@ -54,7 +57,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       return reply.send(response)
     } catch (err) {
       console.error(`error joining direct message: ${err.message}`)
-      return reply.status(500).send({ error: `${err.message}` })
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({ error: `${err.message}` })
     }
   }),
 
@@ -65,7 +69,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const  response = await fastify.dbChat.sendGroupMessage(fromUserId, room, message)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
 
   })
@@ -77,7 +82,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.createGroup(userId, name, type, isGame)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -88,7 +94,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.joinGroup(userId, groupId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -99,7 +106,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.invitGroup(fromUserId,toUserId,groupId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -110,7 +118,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.acceptInvite(userId, groupId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -121,7 +130,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.refuseInvite(userId, groupId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -132,7 +142,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.getUserChats(userId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -144,7 +155,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.getGroupHistory(groupId, userId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -156,7 +168,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.getDmHistory(chatId, userId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -168,7 +181,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.blockUser(userId, blockedUserId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
   
@@ -180,7 +194,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.unblockUser(userId, blockedUserId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -191,7 +206,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.getBlockedUsers(userId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   }),
 
@@ -203,7 +219,8 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
       const response = await fastify.dbChat.isBlocked(userId, blockedUserId)
       return reply.send(response)
     } catch (err) {
-      return reply.status(500).send({error: `${err.message}`})
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
     }
   })
 
