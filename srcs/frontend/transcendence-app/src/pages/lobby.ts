@@ -1,6 +1,7 @@
 import { type RouteParams, DEFAULT, ROUTE_MAIN, deletePastLobby } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
+import { getFriends, getChats } from "../chat";
 
 type user = {
   username: string;
@@ -91,76 +92,68 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
           <button id="con2" class="absolute left-1/2 top-full mt-6 -translate-x-1/2 bg-white  hover:bg-gray-100  text-gray-800 text-sm font-semibold px-6.25 py-1 rounded shadow transition duration-200">
               Connect
           </button>
+          <button id="inv2" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
       </div>`;
   } else if (playerCount === "4") {
     playersHTML = `
-    <div class="relative z-10 grid grid-cols-2 gap-x-32 gap-y-20 min-h-[calc(100vh-64px)] items-center justify-items-center bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-12 py-40 selection:bg-blue-400 selection:text-white">
-
+    <div class="relative z-10 grid min-h-[calc(100vh-64px)] grid-cols-2 items-center justify-items-center gap-x-32 gap-y-20 bg-gradient-to-b from-[#0a1d3b] to-[#0f2a4e] px-12 py-40 selection:bg-blue-400 selection:text-white">
   <!-- Player 1 -->
-  <div class="relative flex flex-col items-center -mt-40">
+  <div class="relative -mt-40 flex flex-col items-center">
     <div id="avatar1" class="h-35 w-35 rounded-full bg-white"></div>
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
-      <div class="bg-[rgba(20,50,90,0.70)] rounded-md px-2 py-2 w-64 flex items-center justify-between">
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">W</div>
-        <span class="flex-1 mx-2 truncate text-center text-[25px]">${user1.username}</span>
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">W</div>
+      <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">W</div>
+        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user1.username}</span>
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">W</div>
       </div>
     </h2>
   </div>
 
   <!-- Player 2 -->
-  <div class="relative flex flex-col items-center -mt-40">
+  <div class="relative -mt-40 flex flex-col items-center">
     <div id="avatar2" class="h-35 w-35 rounded-full bg-white"></div>
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
-      <div class="bg-[rgba(20,50,90,0.70)] rounded-md px-2 py-2 w-64 flex items-center justify-between">
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">↑</div>
-        <span class="flex-1 mx-2 truncate text-center text-[25px]">${user2.username}</span>
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">↑</div>
+      <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">↑</div>
+        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user2.username}</span>
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">↑</div>
       </div>
     </h2>
-  <button id="dis2" class="absolute left-1/2 top-full mt-6 hidden -translate-x-1/2 bg-red-500  hover:bg-red-400  text-white text-sm font-semibold px-4 py-1 rounded shadow transition duration-200">
-              Disconnect
-          </button>
-          <button id="con2" class="absolute left-1/2 top-full mt-6 -translate-x-1/2 bg-white  hover:bg-gray-100  text-gray-800 text-sm font-semibold px-6.25 py-1 rounded shadow transition duration-200">
-              Connect
-          </button>
+    <button id="dis2" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Disconnect</button>
+    <button id="con2" class="absolute top-full left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-6.25 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Connect</button>
+    <button id="inv2" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
   </div>
 
   <!-- Player 3 -->
-  <div class="relative flex flex-col items-center -mt-20">
+  <div class="relative -mt-20 flex flex-col items-center">
     <div id="avatar3" class="h-35 w-35 rounded-full bg-white"></div>
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
-      <div class="bg-[rgba(20,50,90,0.70)] rounded-md px-2 py-2 w-64 flex items-center justify-between">
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">L</div>
-        <span class="flex-1 mx-2 truncate text-center text-[25px]">${user3.username}</span>
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">L</div>
+      <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">L</div>
+        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user3.username}</span>
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">L</div>
       </div>
     </h2>
-  <button id="dis3" class="absolute left-1/2 top-full mt-6 hidden -translate-x-1/2 bg-red-500  hover:bg-red-400  text-white text-sm font-semibold px-4 py-1 rounded shadow transition duration-200">
-              Disconnect
-          </button>
-          <button id="con3" class="absolute left-1/2 top-full mt-6 -translate-x-1/2 bg-white  hover:bg-gray-100  text-gray-800 text-sm font-semibold px-6.25 py-1 rounded shadow transition duration-200">
-              Connect
-          </button>
+    <button id="dis3" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Disconnect</button>
+    <button id="con3" class="absolute top-full left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-6.25 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Connect</button>
+    <button id="inv3" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
   </div>
 
   <!-- Player 4 -->
-  <div class="relative flex flex-col items-center -mt-20">
+  <div class="relative -mt-20 flex flex-col items-center">
     <div id="avatar4" class="h-35 w-35 rounded-full bg-white"></div>
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
-      <div class="bg-[rgba(20,50,90,0.70)] rounded-md px-2 py-2 w-64 flex items-center justify-between">
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">5</div>
-        <span class="flex-1 mx-2 truncate text-center text-[25px]">${user4.username}</span>
-        <div class="h-10 w-10 border-2 border-white bg-transparent rounded-sm flex items-center justify-center text-white font-bold text-[30px]">5</div>
+      <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">5</div>
+        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user4.username}</span>
+        <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">5</div>
       </div>
     </h2>
-  <button id="dis4" class="absolute left-1/2 top-full mt-6 hidden -translate-x-1/2 bg-red-500  hover:bg-red-400  text-white text-sm font-semibold px-4 py-1 rounded shadow transition duration-200">
-              Disconnect
-          </button>
-          <button id="con4" class="absolute left-1/2 top-full mt-6 -translate-x-1/2 bg-white  hover:bg-gray-100  text-gray-800 text-sm font-semibold px-6.25 py-1 rounded shadow transition duration-200">
-              Connect
-          </button>
-  </div>`;
+    <button id="dis4" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Disconnect</button>
+    <button id="con4" class="absolute top-full left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-6.25 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Connect</button>
+    <button id="inv4" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
+  </div>
+</div>`;
   } else {
     // renderLobbyError(root);
     return;
@@ -256,7 +249,22 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
         </button>
       </div>
     </div>
+  </div>
+  <div id="inviteModal" class="fixed inset-0 z-50 hidden pointer-events-none items-center justify-center bg-transparent">
+    <div class="relative w-96 max-w-full rounded-lg border-4 border-[rgba(20,50,90,1)] bg-white p-8">
+      <button id="closeInvite" class="absolute top-3 right-3 text-xl font-bold text-gray-600 hover:text-gray-900" aria-label="Close Options Modal">&times;</button>
+      <h2 class="mb-4 text-2xl text-black font-bold">Invite</h2>
+
+      <label class="mb-4 block text-gray-700">
+        <span class="text-gray-950">Friends</span>
+        <div id="invFriend" class="space-y-1 max-h-[9vh] overflow-y-auto"></div>
+      </label>
+      <label class="mb-4 block text-gray-950">
+        <span class="text-gray-700">Group Chats</span>
+        <div id="invGroup" class="space-y-1 max-h-[9vh] overflow-y-auto"></div>
+      </label>
     </div>
+  </div>
   </div>
   </div>`;
   root.innerHTML = playersHTML + btnHTML;
@@ -381,14 +389,22 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     });
 
   const loginModal = document.getElementById('loginModal') as HTMLDivElement;
-    const closeLogin = document.getElementById('closeLogin') as HTMLButtonElement;
+  const closeLogin = document.getElementById('closeLogin') as HTMLButtonElement;
+  const inviteModal = document.getElementById('inviteModal') as HTMLDivElement;
+  const closeInvite = document.getElementById('closeInvite') as HTMLButtonElement;
   const con2 = document.getElementById("con2") as HTMLButtonElement;
   const dis2 = document.getElementById("dis2") as HTMLButtonElement;
+  const inv2 = document.getElementById("inv2") as HTMLButtonElement;
   const con3 = document.getElementById("con3") as HTMLButtonElement;
   const dis3 = document.getElementById("dis3") as HTMLButtonElement;
+  const inv3 = document.getElementById("inv3") as HTMLButtonElement;
   const con4 = document.getElementById("con4") as HTMLButtonElement;
   const dis4 = document.getElementById("dis4") as HTMLButtonElement;
+  const inv4 = document.getElementById("inv4") as HTMLButtonElement;
   let userlog:number = 1;
+  let userinvite:number = 1;
+  let friendlist;
+  let chatlist;
 
   closeLogin.addEventListener('click', () => {
       loginModal.classList.remove('flex');
@@ -400,7 +416,12 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     }
   });
 
-  if (con2 && dis2) {
+  closeInvite.addEventListener('click', () => {
+      inviteModal.classList.remove('flex', "pointer-events-auto");
+    inviteModal.classList.add('hidden', "pointer-events-none");
+  });
+
+  if (con2 && dis2 && inv2) {
     con2.addEventListener('click', () => {
       loginModal.classList.remove('hidden');
       loginModal.classList.add('flex');
@@ -425,13 +446,79 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
       setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
     });
+    inv2.addEventListener('click', async () => {
+      inviteModal.classList.remove('hidden', "pointer-events-none");
+      inviteModal.classList.add('flex', "pointer-events-auto");
+      userinvite = 2;
+      friendlist = await getFriends(user1.token);
+      chatlist = await getChats(user1.token);
+      if (friendlist.success && chatlist.success) {
+        const groupsList = document.getElementById('invGroup') as HTMLDivElement;
+        if (groupsList) {
+          groupsList.innerHTML = '';
+          chatlist.data.forEach((group: any) => {
+            const groupItem = document.createElement('div');
+            groupItem.className = `w-full rounded bg-blue-950 px-3 py-2 text-left text-sm text-white pointer-events-none`;
+            const greenCircle = document.createElement('span');
+            greenCircle.className = 'h-2 w-2 flex-shrink-0 rounded-full bg-green-400';
+            const groupName = document.createElement('span');
+            groupName.className = 'truncate';
+            groupName.textContent = group.name;
+            const truncateContainer = document.createElement('div');
+            truncateContainer.className = 'flex items-center gap-2 truncate';
+            truncateContainer.appendChild(greenCircle);
+            truncateContainer.appendChild(groupName);
+            const flexContainer = document.createElement('div');
+            flexContainer.className = 'flex items-center justify-between gap-2';
+            flexContainer.appendChild(truncateContainer);
+            const inviteButton = document.createElement('button');
+            inviteButton.className = 'bg-blue-600 pointer-events-auto rounded hover:bg-blue-500 px-2';
+            inviteButton.textContent = 'Invite';
+            flexContainer.appendChild(inviteButton);
+            groupItem.appendChild(flexContainer);
+            groupsList.appendChild(groupItem);
+            // inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
+            // });
+          });
+        }
+        const friendsList = document.getElementById('invFriend') as HTMLDivElement;
+        if (friendsList) {
+          friendsList.innerHTML = '';
+          friendlist.data.data.forEach((friend: any) => {
+            const friendItem = document.createElement('div');
+            friendItem.className = `w-full rounded bg-blue-950 px-3 py-2 text-left text-sm text-white pointer-events-none`;
+            const greenCircle = document.createElement('span');
+            greenCircle.className = 'h-2 w-2 flex-shrink-0 rounded-full bg-green-400';
+            const friendName = document.createElement('span');
+            friendName.className = 'truncate';
+            friendName.textContent = friend.username;
+            const truncateContainer = document.createElement('div');
+            truncateContainer.className = 'flex items-center gap-2 truncate';
+            truncateContainer.appendChild(greenCircle);
+            truncateContainer.appendChild(friendName);
+            const flexContainer = document.createElement('div');
+            flexContainer.className = 'flex items-center justify-between gap-2';  
+            flexContainer.appendChild(truncateContainer);
+            const inviteButton = document.createElement('button');
+            inviteButton.className = 'bg-blue-600 pointer-events-auto rounded hover:bg-blue-500 px-2';
+            inviteButton.textContent = 'Invite';
+            flexContainer.appendChild(inviteButton);
+            friendItem.appendChild(flexContainer);
+            friendsList.appendChild(friendItem);
+            // inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
+            // });
+          });
+        }
+      }
+    });
     if (user2.connected) {
       con2.classList.add('hidden');
+      inv2.classList.add('hidden');
       dis2.classList.remove('hidden');
     }
   }
 
-  if (con3 && dis3) {
+  if (con3 && dis3 && inv3) {
     con3.addEventListener('click', () => {
       loginModal.classList.remove('hidden');
       loginModal.classList.add('flex');
@@ -456,13 +543,19 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
       setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
     });
+    inv3.addEventListener('click', () => {
+      inviteModal.classList.remove('hidden');
+      inviteModal.classList.add('flex');
+      userinvite = 3;
+    });
     if (user3.connected) {
       con3.classList.add('hidden');
+      inv3.classList.add('hidden');
       dis3.classList.remove('hidden');
     }
   }
 
-  if (con4 && dis4) {
+  if (con4 && dis4 && inv4) {
     con4.addEventListener('click', () => {
       loginModal.classList.remove('hidden');
       loginModal.classList.add('flex');
@@ -487,12 +580,21 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
       setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
     });
+    inv4.addEventListener('click', () => {
+      inviteModal.classList.remove('hidden');
+      inviteModal.classList.add('flex');
+      userinvite = 4;
+    });
     if (user4.connected) {
       con4.classList.add('hidden');
+      inv4.classList.add('hidden');
       dis4.classList.remove('hidden');
     }
   }
   let userId = "1";
+  if (userinvite === 2) {
+    console.log("suck my peanits");//REMOVE THIS
+  }
 
   const mfaModal = document.getElementById('mfaModal') as HTMLDivElement;
     const closeMFA = document.getElementById('closeMFA') as HTMLButtonElement;

@@ -426,7 +426,7 @@ async function loadDMs(token: string | null) {
   }
 }
 
-async function getChats(token: string | null) {
+export async function getChats(token: string | null) {
   try {
     const response = await fetch('/chat/mychats', {
       method: 'GET',
@@ -446,7 +446,7 @@ async function getChats(token: string | null) {
   }
 }
 
-async function getFriends(token: string | null) {
+export async function getFriends(token: string | null) {
   try {
     const response = await fetch('https://localhost:4242/users/me/friends', {
       method: 'GET',
