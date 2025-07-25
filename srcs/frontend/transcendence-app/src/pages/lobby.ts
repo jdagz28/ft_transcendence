@@ -159,7 +159,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     return;
   }
   const btnHTML = ` 
-  <div class="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex flex-col items-center space-y-4">
+  <div class="absolute bottom-20 left-1/2 transform z-20 -translate-x-1/2 flex flex-col items-center space-y-4">
       <button
         id="startBtn"
         class="bg-orange-500 hover:bg-orange-600 text-white font-bold uppercase text-[40px] px-15 py-1 rounded-lg shadow-md transition duration-200"
