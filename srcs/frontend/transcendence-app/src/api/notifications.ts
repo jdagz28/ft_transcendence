@@ -118,15 +118,6 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 		}
 	}
 	denyBtn.onclick = async () => {
-		await fetch(`/users/me/friends`, {
-			method: 'POST',
-			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			},
-			credentials: 'include',
-			body: JSON.stringify({ friend: `${sender}`, action: "decline" })
-		});
 		const response = await fetch(`/users/me/friends`, {
 			method: 'POST',
 			headers: {
