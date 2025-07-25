@@ -1,6 +1,82 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { getMfaDetails } from "../api/mfa";
 
+
+async function validatePassword(username: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+    
+    const box = document.createElement('div');
+    box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
+    
+    const h = document.createElement("h1");
+    h.textContent = "Validate Current Password";
+    h.className = "text-xl font-semibold";
+    box.appendChild(h);
+
+    const passwordInput = document.createElement("input");
+    passwordInput.type = "password";
+    passwordInput.placeholder = "Enter your current password";
+    passwordInput.className = "w-full p-2 border border-gray-700 rounded bg-gray-800 text-white";
+    box.appendChild(passwordInput);
+
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "flex gap-3";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.textContent = "Cancel";
+    cancelButton.className = "flex-1 bg-gray-600 hover:bg-gray-700 text-white p-2 rounded";
+
+    const validateButton = document.createElement("button");
+    validateButton.textContent = "Validate";
+    validateButton.className = "flex-1 bg-orange-500 hover:bg-orange-500 text-white p-2 rounded";
+
+    validateButton.onclick = async () => {
+      try {
+        const response = await fetch('/auth/authenticate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            username: username, 
+            password: passwordInput.value 
+          })
+        });
+        if (response.ok) {
+          overlay.remove();
+          resolve(true);
+        } else {
+          passwordInput.style.borderColor = 'red';
+          passwordInput.placeholder = 'Invalid password - try again';
+          passwordInput.value = '';
+          alert("Invalid password - try again");
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        passwordInput.style.borderColor = 'red';
+        passwordInput.placeholder = 'Error - try again';
+        passwordInput.value = '';
+        alert("An error occurred while validating your password. Please try again.");
+      }
+    };
+
+    cancelButton.onclick = () => {
+      overlay.remove();
+      resolve(false);
+    };
+
+    buttonContainer.appendChild(cancelButton);
+    buttonContainer.appendChild(validateButton);
+    box.appendChild(buttonContainer);
+    
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    setTimeout(() => passwordInput.focus(), 100);
+  });
+}
+
+
 export async function renderAccountSettingsPage(username: string): Promise<void> {
   const { contentContainer } = setupAppLayout();
   contentContainer.className = "flex-grow flex flex-col text-white";
@@ -30,7 +106,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      credentials: "include"
+      credentials: "include"  
     });
     const oauthData = await oauth.json();
     if (oauth.ok) {
@@ -69,7 +145,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   const formsContainer = document.createElement("div");
   formsContainer.className = "flex flex-col items-center px-8 mt-4 space-y-6";
 
-  formsContainer.appendChild(createIndividualForm({
+  formsContainer.appendChild(createIndividualForm(username, {
     label: "Username",
     value: username,
     inputType: "text",
@@ -77,7 +153,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
     endpoint: '/users/me/settings/changeUsername'
   }));
 
-  formsContainer.appendChild(createIndividualForm({
+  formsContainer.appendChild(createIndividualForm(username, {
     label: "Preferred Alias / Nickname",
     value: nickname || "",
     inputType: "text",
@@ -86,7 +162,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   }));
 
   if (!oAuthUser) {
-    formsContainer.appendChild(createIndividualForm({
+    formsContainer.appendChild(createIndividualForm(username, {
       label: "Email",
       value: userEmail,
       inputType: "email",
@@ -94,7 +170,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
       endpoint: '/users/me/settings/changeEmail'
     }));
 
-    formsContainer.appendChild(createIndividualForm({
+    formsContainer.appendChild(createIndividualForm(username, {
       label: "Password",
       value: "",
       inputType: "password",
@@ -103,7 +179,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
     }));
   }
 
-  formsContainer.appendChild(createIndividualForm({
+  formsContainer.appendChild(createIndividualForm(username, {
     label: "Avatar",
     value: "",
     inputType: "file",
@@ -310,7 +386,7 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
   }
 }
 
-function createIndividualForm({ label, value, inputType, inputName, endpoint }: {
+function createIndividualForm(username: string, { label, value, inputType, inputName, endpoint }: {
   label: string;
   value: string;
   inputType: string;
@@ -353,6 +429,7 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
   form.addEventListener("submit", async e => {
     e.preventDefault();
     try {
+      let isValid = false;
       const token = localStorage.getItem("token");
       if (inputType === "file") {
         const data = new FormData();
@@ -379,7 +456,7 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
             alert("Username/Nickname must be between 3 and 15 characters");
             return;
           }
-        } else if (inputName === "password") {
+        } else if (inputName === "newPassword") {
           if (input.value.length < 8 || input.value.length > 20) {
             alert("Password must at least be 8 characters and 20 characters max with at least one uppercase letter, one number, and one special character.");
             return;
@@ -388,8 +465,12 @@ function createIndividualForm({ label, value, inputType, inputName, endpoint }: 
             alert("Password must contain at least one uppercase letter, one number, and one special character.");
             return;
           }
+          isValid = await validatePassword(username);
+          if (!isValid) {
+            alert("Invalid password. Please try again.");
+            return;
+          }
         }
-
         const payload = { [inputName]: (form.querySelector(`input[name="${inputName}"]`) as HTMLInputElement).value };
         const res = await fetch(endpoint, {
           method: "PUT",
