@@ -1,22 +1,14 @@
-FROM node:23-slim AS deps
-
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY ./entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-RUN npm ci --omit=dev
-
-
-# start to build the runtime image
 FROM node:23-slim
+
+RUN apt-get update && apt-get install -y && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+COPY package*.json ./
+RUN npm ci --only-production
+
 COPY . .
-COPY --from=deps /entrypoint.sh /
-RUN chmod +x /entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
-# run app with low permissions level user
-USER node
-
-ENTRYPOINT ["/entrypoint.sh"]
-
+ENTRYPOINT ["./entrypoint.sh"]

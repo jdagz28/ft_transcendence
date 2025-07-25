@@ -1,5 +1,5 @@
 # Docker multistage build
-FROM node:23-slim AS builder
+FROM node:23-slim 
 
 WORKDIR /app
 COPY transcendence-app/package*.json ./  
@@ -7,5 +7,4 @@ COPY transcendence-app/package*.json ./
 RUN npm install 
 COPY transcendence-app ./
 
-# Build the app - outputs to /app/dist
 RUN npm run build   
