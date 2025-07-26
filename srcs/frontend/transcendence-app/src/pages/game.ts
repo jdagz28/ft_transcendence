@@ -466,8 +466,8 @@ export async function renderGamePage(params: RouteParams) {
         stats: statsTracker.finishSession()
       });
       cleanup();
+      window.location.hash = ROUTE_MAIN;
     }
-    window.location.hash = ROUTE_MAIN;
   });
 
   function render(state:any) {
