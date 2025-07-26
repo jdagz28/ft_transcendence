@@ -40,11 +40,12 @@ function setupDom(root: HTMLElement): GamePageElements {
 }
 
 function winnerPromptBox(state: GameState, players: PlayerConfig[], totalGames: number, tournamentId: number, cleanup: () => void) {
-  let winner;
+  let winners: PlayerConfig[] = [];
+
   if (state.totalScore.left >= totalGames) {
-    winner = players.find(p => p.paddle_loc === 'left');
+    winners = players.filter(p => p.paddle_loc === 'left');
   } else if (state.totalScore.right >= totalGames) {
-    winner = players.find(p => p.paddle_loc === 'right');
+    winners = players.filter(p => p.paddle_loc === 'right');
   }
 
   const container = document.getElementById('game-container');
@@ -61,11 +62,28 @@ function winnerPromptBox(state: GameState, players: PlayerConfig[], totalGames: 
   h.className = "text-2xl font-bold text-center";
   box.appendChild(h);
 
-  const avatar = document.createElement('img');
-  avatar.src = winner?.avatar || "";
-  avatar.alt = `${winner?.username || 'Unknown'}'s avatar`;
-  avatar.className = "w-32 h-32 rounded-full items-center mx-auto mb-4 object-cover";
-  box.appendChild(avatar);
+  const winnersContainer = document.createElement('div');
+  winnersContainer.className = "flex justify-center gap-4";
+
+  winners.forEach((winner) => {
+    const winnerBox = document.createElement('div');
+    winnerBox.className = "text-center items-center justify-center";
+
+    const avatar = document.createElement('img');
+    avatar.src = winner.avatar || "";
+    avatar.alt = `${winner.username || 'Unknown'}'s avatar`;
+    avatar.className = "w-32 h-32 rounded-full mb-2 object-cover";
+
+    const username = document.createElement('div');
+    username.textContent = winner.username || 'Unknown';
+    username.className = "text-lg font-semibold";
+
+    winnerBox.appendChild(avatar);
+    winnerBox.appendChild(username);
+    winnersContainer.appendChild(winnerBox);
+  });
+
+  box.appendChild(winnersContainer);
 
   let buttonLabel = "Return to Main Menu";
   let navigateTo = ROUTE_MAIN; 
