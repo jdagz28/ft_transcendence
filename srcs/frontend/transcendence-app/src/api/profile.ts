@@ -48,3 +48,19 @@ export async function getFriendsList(): Promise<Friend[]> {
   const data = await response.json();
   return data.data;
 }
+
+export async function getUserFriendsList(username: string): Promise<Friend[]> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`/users/${username}/friends`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    },
+    credentials: "include" 
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch friends list");
+  }
+  const data = await response.json();
+  return data.data;
+}
