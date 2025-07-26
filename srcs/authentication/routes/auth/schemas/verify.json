@@ -2,7 +2,7 @@
   "type": "object",
   "$id": "schema:auth:verify",
   "additionalProperties": false,
-  "required": ["token"],
+  "required": [ "token" ],
   "properties": {
     "token": {
       "type": "string",

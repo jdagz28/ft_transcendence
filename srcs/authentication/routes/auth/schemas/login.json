@@ -15,5 +15,6 @@
       "minLength": 8,
       "maxLength": 20
     }
-  }
+  },
+  "additionalProperties": false
 }
