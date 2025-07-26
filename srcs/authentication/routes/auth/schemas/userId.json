@@ -1,8 +1,9 @@
 {
   "type": "object",
   "$id": "schema:auth:userId",
-  "required": ["userId"],
+  "required": [ "userId" ],
   "properties": {
     "userId": { "type": "number" }
-  }
+  },
+  "additionalProperties": false
 }

@@ -4,5 +4,6 @@
   "required": [ "token" ],
   "properties": {
     "token": { "type": "number" }
-  }
+  },
+  "additionalProperties": false
 }
