@@ -44,6 +44,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         console.log('Game Players created with ID:', result4.lastInsertRowid) //! DELETE
 
         fastify.db.exec('COMMIT')
+        if (!fastify.db.inTransaction) { //! DELETE
+          fastify.log.info('Transaction committed successfully') //! DELETE
+        }
         return gameId
       } catch (err) {
         if (fastify.db.inTransaction) {
