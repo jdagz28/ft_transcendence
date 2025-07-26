@@ -9,7 +9,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
     "flex-grow flex flex-col gap-8 px-8 py-10 text-white overflow-x-auto";
 
   const { name: tournamentName, status } = await getTournamentDetails(tournamentId);
-  if (status !== "active" || status !== "finished") {
+  if (status !== "active" && status !== "finished") {
     window.location.hash = `#/400`;
   }
   const slots = await getTournamentBrackets(tournamentId)
