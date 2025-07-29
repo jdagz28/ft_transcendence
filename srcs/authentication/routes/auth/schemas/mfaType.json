@@ -1,11 +1,12 @@
 {
   "type": "object",
   "$id": "schema:auth:mfaType",
-  "required": ["mfa_type"],
+  "required": [ "mfa_type" ],
   "properties": {
     "mfa_type": {
       "type": "string",
       "enum": ["totp", "email"]
     }
-  }
+  },
+  "additionalProperties": false
 }

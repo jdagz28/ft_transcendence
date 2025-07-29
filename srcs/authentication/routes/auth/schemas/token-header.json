@@ -6,5 +6,6 @@
       "type": "string",
       "pattern": "^Bearer [a-zA-Z0-9-._~+/]+=*$"
     }
-  }
+  }, 
+  "additionalProperties": false
 }

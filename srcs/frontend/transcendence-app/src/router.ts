@@ -231,8 +231,10 @@ export function initRouter() {
       
       if (m) {
         console.log("Route matched! Calling handler with params:", { ...params, ...extractParams(m, r.pattern) });
-		if (r.pattern !== ROUTE_LOBBY)
-			await deletePastLobby();
+        const GAME_RELATED_ROUTES = [ROUTE_LOBBY, ROUTE_GAME_PLAY, ROUTE_GAMES_PAGE];
+        if (!GAME_RELATED_ROUTES.includes(r.pattern)) {
+          await deletePastLobby();
+        }
         r.handler({ ...params, ...extractParams(m, r.pattern) });
         return;
       }

@@ -1,5 +1,5 @@
 import { setupAppLayout, whoAmI } from '../setUpLayout';
-import { getUserProfile, getMatchHistory, getFriendsList } from '../api/profile';
+import { getUserProfile, getMatchHistory, getFriendsList, getUserFriendsList } from '../api/profile';
 import { DEFAULT } from '../router';
 
 export async function renderProfilePage(username: string): Promise<any> {
@@ -19,6 +19,13 @@ export async function renderProfilePage(username: string): Promise<any> {
     if (!profile) {
         window.location.hash = DEFAULT;
         return;
+    }
+
+    let friends = [];
+    if (profile.username === userData.data.username) {
+        friends = await getFriendsList();
+    } else {
+        friends = await getUserFriendsList(profile.username);
     }
 
     const matchHistory = await getMatchHistory(username);
@@ -45,7 +52,7 @@ export async function renderProfilePage(username: string): Promise<any> {
     usernameEl.textContent = profile.username;
     usernameRow.appendChild(usernameEl);
 
-    if (profile.id !== currentUser) {
+    if (profile.id !== currentUser && friends.some(friend => friend.id === profile.id)) {
         const addFriendButton = document.createElement("button");
         addFriendButton.className = "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
         addFriendButton.textContent = "Add Friend";
@@ -61,7 +68,7 @@ export async function renderProfilePage(username: string): Promise<any> {
             alert(`Friend request sent to ${profile.username}`);
         };
         usernameRow.appendChild(addFriendButton);
-    } else {
+    } else if (profile.id === currentUser) {
         const friendRequestsButton = document.createElement("button");
         friendRequestsButton.className = "bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
         friendRequestsButton.textContent = "Friend Requests";
@@ -165,7 +172,6 @@ export async function renderProfilePage(username: string): Promise<any> {
         `;
     }
 
-    const friends = await getFriendsList();
     const friendsContainer = document.createElement("div");
     friendsContainer.className = "lg:w-72 w-full flex-shrink-0 bg-[#0f2a4e] p-6 rounded-lg shadow-lg";
 

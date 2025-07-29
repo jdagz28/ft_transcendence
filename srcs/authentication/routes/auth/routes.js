@@ -16,16 +16,11 @@ module.exports = fp(
         try {
           const existingUser = await fastify.usersDataSource.readUser(request.body.username)
           if (existingUser) {
-            const err = new Error('Username already exists')
-            err.statusCode = 409
-            throw err
+            return reply.status(409).send({ error: 'Username already exists' })
           }
-
           const emailExists = await fastify.usersDataSource.readUser(request.body.email)
           if (emailExists) {
-            const err = new Error('Email already exists')
-            err.statusCode = 409
-            throw err
+            return reply.status(409).send({ error: 'Email already exists' })
           }
         
           const { hash, salt } = await fastify.generateHash(request.body.password)
@@ -38,9 +33,7 @@ module.exports = fp(
           })
           reply.status(201).send({ userId: newUserId })
         } catch (err) {
-          console.error('Failed to create user:', err) //! DELETE
-          const status = err.statusCode || 500
-          reply.status(status).send({ error: err.message })
+          reply.status(500).send({ error: err.message })
         }
       }
     })
@@ -61,16 +54,12 @@ module.exports = fp(
 
         const user = await this.usersDataSource.readUser(request.body.username)
         if (!user) {
-          const err = new Error('User do not exist')
-          err.statusCode = 401
-          throw err
+          return reply.status(401).send({ error: 'User do not exist' })
         }
 
         const passWordMatch  = await bcrypt.compare(request.body.password, user.password)
         if (!passWordMatch) {
-          const err = new Error('Invalid password')
-          err.statusCode = 401
-          throw err
+          return reply.status(401).send({ error: 'Invalid password' })
         }
 
         const userId = user.id
@@ -122,7 +111,6 @@ module.exports = fp(
       const front = process.env.FRONTEND_BASE
       const dest = `${front}/#/main?${new URLSearchParams({
                  token, user: username, provider }).toString()}`
-      console.log('Redirecting to:', dest) //! DELETE
       return reply.redirect(dest)
     }
 
@@ -147,32 +135,25 @@ module.exports = fp(
       handler: async function handler42Callback (request, reply) {
         const code = request.query.code
         if (!code) {
-          const err = new Error('No code provided')
-          err.statusCode = 400
-          throw err
+          return reply.status(400).send({ error: 'No code provided' })
         }
 
         try {
           const tokenResponse = await fastify.remoteAuth42.auth(code)
           if (!tokenResponse) {
-            const err = new Error('Failed to authenticate with 42')
-            err.statusCode = 401
-            throw err
+            return reply.status(401).send({ error: 'Failed to authenticate with 42' })
           }
 
           const accessToken = tokenResponse.data.access_token
           const userResponse = await fastify.remoteAuth42.getUser(accessToken)
           if (!userResponse) {
-            const err = new Error('Failed to get user data from 42')
-            err.statusCode = 401
-            throw err
+            return reply.status(401).send({ error: 'Failed to get user data from 42' })
           }
 
           const { login: username, email } = userResponse
           const existingUser = await fastify.usersDataSource.OAuthReadUser(username)
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
-            console.log(`User ${username} or email ${email} already exists`) //! DELETE
             if (existingUser) {
               request.user = {
                 id: existingUser.id,
@@ -188,7 +169,6 @@ module.exports = fp(
             return OAuthRedirect(reply, token, username, "42")
           }
           
-          //! TEMPORARY PASSWORD
           const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD) 
           const newUserId = await fastify.usersDataSource.OAuthCreateUser({
             username,
@@ -198,16 +178,13 @@ module.exports = fp(
             provider: '42'
           })
           if (!newUserId) {
-            const err = new Error('Failed to create user')
-            err.statusCode = 500
-            throw err
+            return reply.status(500).send({ error: 'Failed to create user' })
           }
           request.user = { id: newUserId, username }
           const token = await request.generateToken()
           return OAuthRedirect(reply, token, username, "42")
         } catch (err) {
-        console.error('Error during 42 authentication:', err) //! DELETE
-        reply.status(err.statusCode || 500).send({ error: err.message })
+          return reply.status(500).send({ error: err.message })
         }
       }
     }),
@@ -234,28 +211,21 @@ module.exports = fp(
         }
       },
       handler: async function handlerGoogleCallback (request, reply) {
-        console.log('Google callback received') //! DELETE
         const code = request.query.code
         if (!code) {
-          const err = new Error('No code provided')
-          err.statusCode = 400
-          throw err
+          return reply.status(400).send({ error: 'No code provided' })
         }
 
         try {
           const tokenResponse = await fastify.remoteAuthGoogle.auth(code)
           if (!tokenResponse) {
-            const err = new Error('Failed to authenticate with Google')
-            err.statusCode = 401
-            throw err
+            return reply.status(401).send({ error: 'Failed to authenticate with Google' })
           }
 
           const accessToken = tokenResponse.data.access_token
           const userResponse = await fastify.remoteAuthGoogle.getUser(accessToken)
           if (!userResponse) {
-            const err = new Error('Failed to get user data from Google')
-            err.statusCode = 401
-            throw err
+            return reply.status(401).send({ error: 'Failed to get user data from Google' })
           }
 
           const { email } = userResponse
@@ -263,7 +233,6 @@ module.exports = fp(
           const existingUser = await fastify.usersDataSource.OAuthReadUser(username)
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
           if (existingUser || existingEmail) {
-            console.log(`User ${username} or email ${email} already exists`) //! DELETE
             if (existingUser) {
               request.user = {
                 id: existingUser.id,
@@ -278,8 +247,7 @@ module.exports = fp(
             const token = await request.generateToken()
             return OAuthRedirect(reply, token, username, "Google")
           }
-          
-          //! TEMPORARY PASSWORD
+
           const { hash, salt } = await fastify.generateHash(process.env.REMOTE_TEMP_PASSWORD)
           const newUserId = await fastify.usersDataSource.OAuthCreateUser({
             username,
@@ -289,17 +257,14 @@ module.exports = fp(
             provider: 'Google'
           })
           if (!newUserId) {
-            const err = new Error('Failed to create user')
-            err.statusCode = 500
-            throw err
+            return reply.status(500).send({ error: 'Failed to create user' })
           }
 
           request.user = { id: newUserId, username }
           const token = await request.generateToken()
           return OAuthRedirect(reply, token, username, "Google")
         } catch (err) {
-        console.error('Error during Google authentication:', err) //! DELETE
-        reply.status(err.statusCode || 500).send({ error: err.message })
+          return reply.status(500).send({ error: err.message })
         }
       }
     })
@@ -312,9 +277,7 @@ module.exports = fp(
       handler: async function tokenVerificationHandler(request) {
         try {
           const cleanToken =  request.query.token.replace(/^"|"$/g, '')
-          console.log('Verifying token:', cleanToken)   //! DELETE
           const user = await fastify.jwt.verify(cleanToken)
-          console.log('Token verified, user:', user) //! DELETE
           fastify.updateUserActivity(user.id)
           return { valid: true, user }
         } catch (err) {
@@ -335,7 +298,6 @@ module.exports = fp(
 
         try {
           const { salt, hash } = await fastify.generateHash(newPassword)
-          console.log ('Generated hash and salt:', { hash, salt }) //! DELETE
           const response = await axios.put(`http://database:${process.env.DB_PORT}/users/${userId}/password`, { 
             password: hash,
             salt: salt
@@ -396,7 +358,6 @@ module.exports = fp(
         try {
           const check = await fastify.usersDataSource.getMfaDetails(userId, request)
           const userSecret = await fastify.usersDataSource.getMfaSecret(userId, request)
-          console.log('MFA type:', check.mfa_type) //! DELETE
           let secret = userSecret.mfa_secret
           if (!userSecret.mfa_secret) {
             const username = request.user.username
@@ -462,9 +423,7 @@ module.exports = fp(
           
           const user = await this.usersDataSource.readUserById(userId)
           if (!user) {
-            const err = new Error('User do not exist')
-            err.statusCode = 401
-            throw err
+            return reply.status(404).send({ error: 'User not found' })
           }
 
           request.user = {
@@ -529,7 +488,6 @@ module.exports = fp(
           if (!username || !email) {
             return reply.status(404).send({ error: 'User not found' })
           }
-          console.log ('Sending MFA email to:', email) //! DELETE
 
           const secret = check.mfa_secret;
           const code = speakeasy.totp({
@@ -538,10 +496,8 @@ module.exports = fp(
             step: 60, 
             window: 1 
           })
-          console.log ('Generated MFA code:', code) //! DELETE
           await fastify.usersDataSource.setMfaToken(userId, code)
           fastify.sendEmail(email, code)
-          console.log ('MFA email sent successfully') //! DELETE
 
           return reply.send({ success: true, message: 'MFA email sent successfully' })
         } catch (err) {

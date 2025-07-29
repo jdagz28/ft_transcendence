@@ -3,12 +3,13 @@
   "$id": "schema:auth:verify-response",
   "required": ["valid", "user"],
   "properties": {
-      "valid": { "type": "boolean" },
-      "user": {
-        "oneOf": [
-          { "$ref": "schema:auth:getUser" },
-          { "type": "null" }
-        ]
-      }
+    "valid": { "type": "boolean" },
+    "user": {
+      "oneOf": [
+        { "$ref": "schema:auth:getUser" },
+        { "type": "null" }
+      ]
     }
+  },
+  "additionalProperties": false
 }

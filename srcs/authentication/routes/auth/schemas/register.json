@@ -20,5 +20,6 @@
       "type": "string",
       "format": "email"
     }
-  }
+  },
+  "additionalProperties": false
 }
