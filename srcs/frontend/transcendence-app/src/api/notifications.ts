@@ -7,7 +7,7 @@ import { chatSwitcher } from "../chat/chatSwitcher";
 let notificationWS: WebSocket | null = null;
 
 type wsNotif =
-	| { type: "game.invite"; senderId: string; gameId: string; message: string; id:number; img: "/icons8-game-controller.svg"; title: "Game Invitation"}
+	| { type: "game.invite"; senderId: string; gameId: string; chat: boolean; message: string; id:number; img: "/icons8-game-controller.svg"; title: "Game Invitation"}
 	| { type: "tournament.invite"; senderId: string; tournamentId: string; message: string; id:number; img: "/icons8-tournament.svg"; title: "Tournament Invitation"}
 	| { type: "friend.request"; requesterId: string; requesterName: string, message: string; id:number; img: "/icons8-invite.svg"; title: "Friend Request"}
 	| { type: "tournament.update"; tournamentId: string; message: string; id:number; img: "/icons8-sync.svg"; title: "Tournament Update"}
@@ -26,6 +26,7 @@ type APINotif = {
 	img: string;
 	title: string;
 	name: string | null;
+	chat: boolean;
 };
 
 /*
@@ -177,7 +178,7 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 	}
 }
 
-function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string, user_id: number, notif_id:number) {
+function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string, user_id: number, notif_id:number, chat: boolean) {
 	if (!gameId) {
 		console.error("Game ID is null, cannot generate game invite buttons");
 		return;
@@ -220,6 +221,9 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 				if (res.ok) {
 					btnDiv.remove();
 					setAnsweredButtons(contentWrapper);
+					if (chat) {
+						//reloadsidebarchat();
+					}
 				}
 			}).catch((err) => {
 				console.error(`Error marking notification ${notif_id} as read:`, err);
@@ -611,7 +615,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 	if (notif.type === "friend.request") {
 		generateFriendRequestButtons(contentWrapper, Number(notif.requesterId), notif.message.replace(/ .*/,''), token, user_id, notif.id);
 	} else if (notif.type === "game.invite") {
-		generateGameInviteButtons(contentWrapper, Number(notif.gameId), Number(notif.senderId), token, user_id, notif.id);
+		generateGameInviteButtons(contentWrapper, Number(notif.gameId), Number(notif.senderId), token, user_id, notif.id, notif.chat || false);
 	} else if (notif.type === "tournament.invite") {
 		generateTournamentInviteButtons(contentWrapper, Number(notif.tournamentId), Number(notif.senderId), token, user_id, notif.id);
 	} else if (notif.type === "chat.invite") {
@@ -714,7 +718,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 	if (notif.type === "friend.request" && notif.is_read === 0) {
 		generateFriendRequestButtons(contentWrapper, notif.sender_id, notif.content.replace(/ .*/,''), token, id, notif.id);
 	} else if (notif.type === "game.invite" && notif.is_read === 0) {
-		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
+		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id, notif.chat || false);
 	} else if (notif.type === "tournament.invite" && notif.is_read === 0) {
 		generateTournamentInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
 	} else if (notif.type === "chat.invite" && notif.is_read === 0) {
