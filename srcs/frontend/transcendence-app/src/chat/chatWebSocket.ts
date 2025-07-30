@@ -195,7 +195,7 @@ export class ChatWebSocketManager {
           console.log('Friend request accepted, rejoining all available rooms');
           await this.joinAllAvailableRooms();
         },
-        'game.invite': () => chatUI.displayGameInvite(data.senderId, data.gameId),
+        'game.invite': () => chatUI.displayGameInvite(data.senderId, data.gameId, data.receiverId, data.notifId),
       };
       
       const handler = messageHandlers[data.type];

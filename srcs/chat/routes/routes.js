@@ -413,5 +413,51 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
       console.error(`Error sending friend request accepted notification: ${err.message}`);
       return reply.status(500).send({ error: 'Failed to send notification' });
     }
+  }),
+
+  fastify.post('/internal/game-invite', async (request, reply) =>{
+    const { gameId, senderId, receiverId, notifId } = request.body;
+console.log(`in internal game invite`)
+    if (!receiverId || !senderId || !gameId || !notifId) {
+      return reply.status(400).send({ error: 'Missing required fields: type, senderId, gameId, notifId' });
+    }
+
+    try {
+      const notification = {
+        type: "game.invite",
+        senderId: senderId,
+        gameId: gameId,
+        receiverId: receiverId,
+        notifId: notifId
+      };
+      const notificationSent = fastify.sendMessageToUser(receiverId, notification);
+      reply.send({ success: true, notificationSent });
+    } catch (err) {
+      console.error(`Error sending game invite notification: ${err.message}`);
+      return reply.status(500).send({ error: 'Failed to send notification' });
+    }
+  })
+
+  fastify.post('/internal/game-responded', async (request, reply) => {
+    const { type, responderId, gameId, id } = request.body;
+
+    if (!type || !responderId || !gameId || !id) {
+      return reply.status(400).send({ error: 'Missing required fields: type, responderId, gameId, id' });
+    }
+
+    try {
+      const notification = {
+        type: 'game.invite',
+        responderId: accepterId,
+        accepter_name: accepterName,
+        message: `${accepterName} accepted your friend request`
+      };
+
+      const notificationSent = fastify.sendMessageToUser(responderId, notification);
+      reply.send({ success: true, notificationSent });
+    } catch (err) {
+      console.error(`Error sending game response notification: ${err.message}`);
+      return reply.status(500).send({ error: 'Failed to send notification' });
+    }
   })
 })

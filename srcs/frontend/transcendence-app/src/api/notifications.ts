@@ -733,7 +733,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 	return notifItem;
 }
 
-async function populateNotifContainer(container: HTMLElement, id: number): Promise<void> {
+export async function populateNotifContainer(container: HTMLElement, id: number): Promise<void> {
 	const token = localStorage.getItem("token");
 	if (!token) {
 		emptyNotif = true;
