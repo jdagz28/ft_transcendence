@@ -2,6 +2,7 @@ import { chatState } from './chatState';
 import { chatMessages } from './chatMessages';
 import { chatSwitcher } from './chatSwitcher';
 import { userBlocking } from './userBlocking';
+import { chatUI } from './chatUI';
 
 // ============================================================================ //
 // CHAT WEBSOCKET MANAGER                                                       //
@@ -194,6 +195,7 @@ export class ChatWebSocketManager {
           console.log('Friend request accepted, rejoining all available rooms');
           await this.joinAllAvailableRooms();
         },
+        'game.invite': () => chatUI.displayGameInvite(data.senderId, data.gameId, data.receiverId, data.notifId),
       };
       
       const handler = messageHandlers[data.type];
@@ -239,6 +241,20 @@ export class ChatWebSocketManager {
 
   isWebSocketConnected(): boolean {
     return chatState.currentWs !== null && chatState.currentWs.readyState === WebSocket.OPEN;
+  }
+
+  sendMessage(scope: 'group' | 'dm', room: number, message: string): boolean {
+    if (this.isWebSocketConnected() && chatState.currentWs) {
+      chatState.currentWs.send(JSON.stringify({
+        action: 'send',
+        scope,
+        room,
+        message
+      }));
+      return true;
+    }
+    console.warn('Cannot send message: WebSocket not connected');
+    return false;
   }
 }
 

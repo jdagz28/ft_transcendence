@@ -505,8 +505,27 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
             flexContainer.appendChild(inviteButton);
             friendItem.appendChild(flexContainer);
             friendsList.appendChild(friendItem);
-            // inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
-            // });
+            inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
+              /*const response = */await fetch(`/games/${game}/invite`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${user1.token}`
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  username: friend.username
+                })
+              })
+              // if (!response.ok) {
+              //   const errorDiv = document.getElementById('loginError');
+              //   if (errorDiv) {
+              //     errorDiv.textContent = "Error inviting user";
+              //     errorDiv.classList.remove('hidden');
+              //   }
+              //   return;
+              // }
+            });
           });
         }
       }

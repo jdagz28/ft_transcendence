@@ -1,6 +1,7 @@
 import type { ChatType } from './types';
 import { chatState } from './chatState';
 import { chatMessages } from './chatMessages';
+import { populateNotifContainer } from '../api/notifications';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -325,6 +326,127 @@ export class ChatUIManager {
 
   cleanup(): void {
     document.removeEventListener('click', this.handleOutsideClick);
+  }
+
+  // ============================================================================ //
+  // GAME INVITE UI                                                               //
+  // ============================================================================ //
+
+  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string): void {
+    try {
+      console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
+
+      const messagesDiv = document.getElementById('sidebar-chat-messages');
+      if (!messagesDiv) {
+        console.warn('Messages div not found, cannot display game invite in chat');
+        return;
+      }
+
+      const inviteId = `game-invite-${gameId}-${Date.now()}`;
+
+      messagesDiv.innerHTML += `
+        <div class="mb-2 flex justify-start">
+          <div class="bg-yellow-100 text-[#1a2740] rounded-lg px-3 py-2 max-w-[75%] shadow border border-yellow-300 text-sm">
+            <p class="mb-3">You received a game invite</p>
+            <div class="flex gap-2">
+              <button id="acceptGameBtn-${inviteId}" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">Accept</button>
+              <button id="declineGameBtn-${inviteId}" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">Decline</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      setTimeout(() => {
+        this.setupGameInviteButtons(inviteId, gameId, userId, notifId);
+      }, 0);
+
+    } catch (error) {
+      console.error('Error displaying game invite in chat UI:', error);
+    }
+  }
+
+  private setupGameInviteButtons(inviteId: string, gameId: string, userId: string, notifId: string): void {
+    const acceptBtn = document.getElementById(`acceptGameBtn-${inviteId}`);
+    const declineBtn = document.getElementById(`declineGameBtn-${inviteId}`);
+
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', () => {
+        this.respondToGameInvite(gameId, 'accept', inviteId, userId, notifId);
+      });
+    }
+
+    if (declineBtn) {
+      declineBtn.addEventListener('click', () => {
+        this.respondToGameInvite(gameId, 'decline', inviteId, userId, notifId);
+      });
+    }
+  }
+
+  private async respondToGameInvite(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
+    try {
+      const token = chatState.getAuthToken();
+      
+      const apiResponse = await fetch('https://localhost:4242/games/invites/respond', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          gameId: parseInt(gameId),
+          response: response
+        })
+      });
+
+      fetch(`/notifications/${userId}/${notifId}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			})
+
+      const notifContainer = document.getElementById('notifContainer');
+      if (notifContainer) {
+        notifContainer.innerHTML = '';
+        populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
+      }
+
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error responding to game invite: ${apiResponse.status}`);
+      }
+
+      const acceptBtn = document.getElementById(`acceptGameBtn-${inviteId}`);
+      const declineBtn = document.getElementById(`declineGameBtn-${inviteId}`);
+      
+      if (acceptBtn && declineBtn) {
+        const container = acceptBtn.parentElement;
+        if (container) {
+          const responseText = response === 'accept' ? 'Invitation accepted!' : 'Invitation declined.';
+          const textColor = response === 'accept' ? 'text-green-700' : 'text-red-700';
+          container.innerHTML = `<p class="${textColor} font-medium">${responseText}</p>`;
+        }
+      }
+
+      console.log(`Game invite ${response}ed for game ${gameId}`);
+      
+      if (response === 'accept') {
+        setTimeout(() => {
+          window.location.hash = `#/games/${gameId}/lobby`;
+        }, 1500);
+      }
+
+    } catch (error) {
+      console.error('Error responding to game invite:', error);
+      alert(`Failed to ${response} game invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 
