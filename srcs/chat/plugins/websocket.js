@@ -34,6 +34,7 @@ function broadcastToRoom(roomId, message, exceptSocket = null) {
 function sendMessageToUser(userId, message) {
   const socket = userSockets.get(userId);
   if (socket && socket.readyState === socket.OPEN) {
+    console.log(`message = ${JSON.stringify(message)}`);
     socket.send(JSON.stringify(message));
     console.log(`Sent notification to user ${userId}:`, message);
     return true;

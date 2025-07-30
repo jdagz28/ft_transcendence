@@ -1,6 +1,7 @@
 import type { ChatType } from './types';
 import { chatState } from './chatState';
 import { chatMessages } from './chatMessages';
+import { populateNotifContainer } from '../api/notifications';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -331,7 +332,7 @@ export class ChatUIManager {
   // GAME INVITE UI                                                               //
   // ============================================================================ //
 
-  displayGameInvite(senderId: string, gameId: string): void {
+  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string): void {
     try {
       console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
 
@@ -358,7 +359,7 @@ export class ChatUIManager {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
       setTimeout(() => {
-        this.setupGameInviteButtons(inviteId, gameId);
+        this.setupGameInviteButtons(inviteId, gameId, userId, notifId);
       }, 0);
 
     } catch (error) {
@@ -366,29 +367,29 @@ export class ChatUIManager {
     }
   }
 
-  private setupGameInviteButtons(inviteId: string, gameId: string): void {
+  private setupGameInviteButtons(inviteId: string, gameId: string, userId: string, notifId: string): void {
     const acceptBtn = document.getElementById(`acceptGameBtn-${inviteId}`);
     const declineBtn = document.getElementById(`declineGameBtn-${inviteId}`);
 
     if (acceptBtn) {
       acceptBtn.addEventListener('click', () => {
-        this.respondToGameInvite(gameId, 'accept', inviteId);
+        this.respondToGameInvite(gameId, 'accept', inviteId, userId, notifId);
       });
     }
 
     if (declineBtn) {
       declineBtn.addEventListener('click', () => {
-        this.respondToGameInvite(gameId, 'decline', inviteId);
+        this.respondToGameInvite(gameId, 'decline', inviteId, userId, notifId);
       });
     }
   }
 
-  private async respondToGameInvite(gameId: string, response: 'accept' | 'decline', inviteId: string): Promise<void> {
+  private async respondToGameInvite(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
     try {
       const token = chatState.getAuthToken();
       
       const apiResponse = await fetch('https://localhost:4242/games/invites/respond', {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -399,6 +400,23 @@ export class ChatUIManager {
           response: response
         })
       });
+
+      fetch(`/notifications/${userId}/${notifId}`, {
+    			method: 'PATCH',
+   				headers: {
+      				'Authorization': `Bearer ${token}`,
+      				'Content-Type': 'application/json'
+    			},
+    			credentials: 'include',
+    			body: JSON.stringify({status: "read"})
+			})
+
+      const notifContainer = document.getElementById('notifContainer');
+      if (notifContainer) {
+        notifContainer.innerHTML = '';
+        populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
+      }
+
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json().catch(() => ({}));

@@ -86,6 +86,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
         message,
         id
       });
+      return id;
     },
 
     async tournamentInvite(senderId, recipientId, tournamentId) {

@@ -836,8 +836,16 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           throw new Error('Failed to invite user to game')
         }
         
-        await fastify.notifications.gameInvite(inviter, userId, gameId)
+        const id = await fastify.notifications.gameInvite(inviter, userId, gameId)
 
+        const axios = require('axios')
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-invite`, {
+          gameId: gameId,
+          senderId: inviter,
+          receiverId: userId,
+          notifId: id
+        })
+        
         return { message: `Game invite sent successfully to ${userId}` }
       } catch (err) {
         fastify.log.error(err)
@@ -876,6 +884,20 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         
         if (response === 'accept') {
           await fastify.dbGames.joinGame(gameId, userId)
+        }
+
+        try {
+          const axios = require('axios');
+            const accepterName = fastify.db.prepare('SELECT username FROM users WHERE id = ?').get(userId)
+            await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-responded`, {
+              requesterId: friendId,
+              accepterId: userId,
+              accepterName: accepterName.username
+            }, {
+              timeout: 3000
+            });
+        } catch (err) {
+          console.error(`Failed to send WebSocket notification for game invite`);
         }
 
         return { message: `Invite ${newStatus} successfully` }
