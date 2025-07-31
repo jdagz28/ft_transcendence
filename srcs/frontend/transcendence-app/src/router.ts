@@ -146,7 +146,6 @@ const routes: RouteEntry[] = [
 
 function parseRoute(): [string, RouteParams] {
   const checkPath = window.location.pathname + window.location.hash;
-  console.log(checkPath);
   if (checkPath.substring(0, 3) !== '/#/') {
     if (!window.location.pathname || !window.location.hash || window.location.pathname === '/') {
       console.warn("No pathname found in window location");
@@ -174,7 +173,7 @@ function parseRoute(): [string, RouteParams] {
     const provider = params.get('provider');
     
     if (token && user && token !== 'null' && user !== 'null') {
-      console.log('OAuth params preserved:', { token, user, provider });
+      // console.log('OAuth params preserved:', { token, user, provider });
       
       sessionStorage.setItem('oauth_token', token);
       sessionStorage.setItem('oauth_user', user);
@@ -216,10 +215,7 @@ export async function deletePastLobby() {
 
 export function initRouter() {
   const render = async () => {
-    console.log("Router render called");
     const [path, params] = parseRoute();
-    console.log("Parsed path:", path);
-    console.log("Parsed params:", params);
 
     if (path == '/') {
       await handleRootRedirect();
@@ -227,13 +223,12 @@ export function initRouter() {
     }
     
     for (const r of routes) {
-      console.log("Testing route pattern:", r.pattern);
-      console.log("Route regex:", r.regex);
+      // console.log("Testing route pattern:", r.pattern);
+      // console.log("Route regex:", r.regex);
       const m = r.regex.exec(path);
-      console.log("Regex match result:", m);
+      // console.log("Regex match result:", m);
       
       if (m) {
-        console.log("Route matched! Calling handler with params:", { ...params, ...extractParams(m, r.pattern) });
         const GAME_RELATED_ROUTES = [ROUTE_LOBBY, ROUTE_GAME_PLAY, ROUTE_GAMES_PAGE];
         if (!GAME_RELATED_ROUTES.includes(r.pattern)) {
           await deletePastLobby();
@@ -244,8 +239,8 @@ export function initRouter() {
     }
 
 	await deletePastLobby();
-    
-    console.log("No route matched, calling default handler");
+
+    // console.log("No route matched, calling default handler");
     routes.find(r => r.pattern === DEFAULT)!.handler({});
   };
 

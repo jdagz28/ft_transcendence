@@ -626,7 +626,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 }
 
 function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDivElement {
-	console.log("Generating notification div for:", notif);
+	// console.log("Generating notification div for:", notif);
 	const notifItem = document.createElement("div");
 	notifItem.className = "notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:bg-blue-100";
 
@@ -769,12 +769,12 @@ export async function populateNotifContainer(container: HTMLElement, id: number)
 
 export async function connectNotifications(): Promise<WebSocket | null> {
   const user = await whoAmI();
-  console.log('User data:', user);
+  // console.log('User data:', user);
   if (!user.success) {
     console.warn('User is not authenticated, cannot connect to notifications WebSocket');
     return null;
   }
-  console.log('Connecting to notifications WebSocket for user:', user.data.id);
+  // console.log('Connecting to notifications WebSocket for user:', user.data.id);
   	let notificationCount = 0;
 	const token = localStorage.getItem("token");
 	if (token) {
@@ -817,7 +817,7 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 	const notifModal = document.getElementById('notifModal');
 	const notifContainer = document.getElementById('notifContainer');
 	let open = false;
-	console.log('Open is', open);
+	// console.log('Open is', open);
 	if (notifBtn && notifModal && badge) {
 		notifBtn.addEventListener('click', (event) => {
 			if (notifModal.classList.contains('hidden')) {
@@ -869,7 +869,7 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 	
 
     notificationWS.onopen = () => {
-      console.log('Notifications WebSocket connected');
+      // console.log('Notifications WebSocket connected');
     };
 
     notificationWS.onmessage = (event) => {
@@ -896,11 +896,11 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 				badge.textContent = '';
 			}
 		}
-      console.log('WebSocket message received:', msg);
+      // console.log('WebSocket message received:', msg);
     };
 
     notificationWS.onclose = (event) => {
-      console.log('Notifications WebSocket closed:', event.code, event.reason);
+      // console.log('Notifications WebSocket closed:', event.code, event.reason);
       notificationWS = null;
 
       if (event.code !== 1000) {

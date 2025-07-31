@@ -1,6 +1,6 @@
 /* src/pages/renderTournamentGameLobby.ts */
 import { setupAppLayout, whoAmI } from "../setUpLayout";
-import { getGamePlayers, startGame } from "../api/game";   
+import { getGamePlayers, startGame, getGameDetails } from "../api/game";   
 import type { TourPlayer } from "../types/game_api";
 import { getTournamentCreator } from "../api/tournament";
 import { type RouteParams, DEFAULT } from "../router";
@@ -71,6 +71,12 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
   const tournamentId = Number(params.tournamentId);
   const gameId       = Number(params.gameId);
 
+  const { status } = await getGameDetails(gameId);
+  if (status !== "pending") {
+    window.location.hash = '#/400';
+    return;
+  }
+
   const user = await whoAmI();
   if (!user.success) {
     window.location.hash = "#/";
@@ -124,9 +130,12 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
   startBtn.addEventListener("click", async () => {
     startBtn.disabled = true;
     try {
-      await startGame(gameId, p1, p2);
-      alert("Game started successfully!");
-      window.location.hash = `#/tournaments/${tournamentId}/${gameId}/play`;  
+      const res = await startGame(gameId, p1, p2);
+      if (!res) {
+        window.location.hash = `#/tournaments/${tournamentId}/bracket`;
+        return;
+      }
+      window.location.hash = `#/tournaments/${tournamentId}/${gameId}/play`;
     } catch (err) {
       console.error(err);
       startBtn.disabled = false;

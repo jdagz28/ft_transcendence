@@ -13,7 +13,7 @@ export async function renderProfilePage(username: string): Promise<any> {
         return;
     }
     const currentUser = userData.data.id;
-
+    const currentUserFriends = await getFriendsList();
 
     const profile = await getUserProfile(username);
     if (!profile) {
@@ -52,7 +52,7 @@ export async function renderProfilePage(username: string): Promise<any> {
     usernameEl.textContent = profile.username;
     usernameRow.appendChild(usernameEl);
 
-    if (profile.id !== currentUser && friends.some(friend => friend.id === profile.id)) {
+    if (profile.id !== currentUser && !currentUserFriends.some(friend => friend.id === profile.id)) {
         const addFriendButton = document.createElement("button");
         addFriendButton.className = "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
         addFriendButton.textContent = "Add Friend";

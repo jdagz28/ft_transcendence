@@ -29,7 +29,7 @@ export async function getGamePlayers(gameId: number): Promise<any> {
   }));
 }
 
-export async function startGame(gameId: number, player1: TourPlayer, player2: TourPlayer): Promise<void> {
+export async function startGame(gameId: number, player1: TourPlayer, player2: TourPlayer): Promise<boolean>{
   const token = localStorage.getItem("token");
 
   const requestBody = {
@@ -55,9 +55,9 @@ export async function startGame(gameId: number, player1: TourPlayer, player2: To
     body: JSON.stringify(requestBody)
   });
   if (!response.ok) {
-    throw new Error(`Failed to start game ${gameId}`);
+    return false;
   }
-  return;
+  return true;
 }
 
 
@@ -131,4 +131,28 @@ export async function updateGameOptions(gameId: number, num_games: number, num_m
     throw new Error(`Failed to update options for game ${gameId}`);
   }
   return response.json();
+}
+
+export async function getGameDetails(gameId: number): Promise<any> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`/games/${gameId}`, {
+    method: 'GET',
+    headers: { 
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch details for game ${gameId}`);
+  }
+  const data = await response.json();
+  return {
+    id: data.id,
+    name: data.name,
+    status: data.status,
+    created_by: data.created_by,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    options: data.options
+  };
 }

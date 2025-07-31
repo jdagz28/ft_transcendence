@@ -1,7 +1,7 @@
 import { type RouteParams, DEFAULT, ROUTE_MAIN, deletePastLobby } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
-import { getFriends, getChats } from "../chat";
+import { getFriends } from "../chat";
 
 type user = {
   username: string;
