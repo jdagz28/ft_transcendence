@@ -66,6 +66,13 @@ function setAnsweredButtons(contentWrapper:HTMLDivElement) {
 	contentWrapper.appendChild(div);
 }
 
+function setErrorButtons(contentWrapper:HTMLDivElement) {
+	const div = document.createElement("div");
+	div.className = "mt-1 flex gap-2 text-[8px] text-red-500 font-semibold";
+	div.textContent = "An error occurred while processing this notification";
+	contentWrapper.appendChild(div);
+}
+
 function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:number, sender:string, token: string, user_id:number, notif_id:number) {
 	const btnDiv = document.createElement("div");
 	btnDiv.className = "mt-1 flex gap-2";
@@ -92,30 +99,27 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			credentials: 'include',
 			body: JSON.stringify({ friend: `${sender}`, action: "accept" })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
 			await chatWebSocket.joinAllAvailableRooms();
 
 			const dropdown = document.getElementById('chatSwitcherDropdown');
 			if (dropdown && !dropdown.classList.contains('hidden')) {
 				await chatSwitcher.loadChatSwitcher();
 			}
-			
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -128,23 +132,21 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			credentials: 'include',
 			body: JSON.stringify({ friend: `${sender}`, action: "decline" })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 	blockBtn.onclick = async () => {
@@ -157,23 +159,21 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			credentials: 'include',
 			body: JSON.stringify({ blockedUserId: sender_id })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 }
@@ -208,26 +208,27 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			credentials: 'include',
 			body: JSON.stringify({ gameId: gameId, response: "accept" })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-					if (chat) {
-						//reloadsidebarchat();
-					}
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+			if (chat) {
+				//reloadsidebarchat();
+			}
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
+			if (chat) {
+				//reloadsidebarchat();
+			}
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -240,27 +241,31 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			credentials: 'include',
 			body: JSON.stringify({ gameId: gameId, response: "decline" })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+			if (chat) {
+				//reloadsidebarchat();
+			}
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
+			if (chat) {
+				//reloadsidebarchat();
+			}
 		}
 	}
 	blockBtn.onclick = async () => {
-		await fetch(`/games/invites/respond`, {
+		const response = await fetch(`/games/invites/respond`, {
 			method: 'PATCH',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -269,7 +274,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			credentials: 'include',
 			body: JSON.stringify({ gameId: gameId, response: "decline" })
 		});
-		const response = await fetch(`/chat/block-user`, {
+		await fetch(`/chat/block-user`, {
 			method: 'PUT',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -278,23 +283,27 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			credentials: 'include',
 			body: JSON.stringify({ blockedUserId: sender_id })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+			if (chat) {
+				//reloadsidebarchat();
+			}
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
+			if (chat) {
+				//reloadsidebarchat();
+			}
 		}
 	}
 }
@@ -329,23 +338,21 @@ function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tourname
 			credentials: 'include',
 			body: JSON.stringify({ tournamentId: tournamentId, response: "accept" })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -358,27 +365,25 @@ function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tourname
 			credentials: 'include',
 			body: JSON.stringify({ tournamentId: tournamentId, response: "decline" })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 	blockBtn.onclick = async () => {
-		await fetch(`/tournaments/invites/respond`, {
+		const response = await fetch(`/tournaments/invites/respond`, {
 			method: 'PATCH',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -387,7 +392,7 @@ function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tourname
 			credentials: 'include',
 			body: JSON.stringify({ tournamentId: tournamentId, response: "decline" })
 		});
-		const response = await fetch(`/chat/block-user`, {
+		await fetch(`/chat/block-user`, {
 			method: 'PUT',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -396,23 +401,21 @@ function generateTournamentInviteButtons(contentWrapper:HTMLDivElement, tourname
 			credentials: 'include',
 			body: JSON.stringify({ blockedUserId: sender_id })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 }
@@ -447,24 +450,22 @@ function generateChatInviteButtons(contentWrapper:HTMLDivElement, chatId:number 
 			credentials: 'include',
 			body: JSON.stringify({ groupId: chatId })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-					openSidebarChat(chatId, groupName, "group");
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+			openSidebarChat(chatId, groupName, "group");
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -477,27 +478,25 @@ function generateChatInviteButtons(contentWrapper:HTMLDivElement, chatId:number 
 			credentials: 'include',
 			body: JSON.stringify({ groupId: chatId })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 	blockBtn.onclick = async () => {
-		await fetch(`/chat/invite/refuse`, {
+		const response = await fetch(`/chat/invite/refuse`, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -506,7 +505,7 @@ function generateChatInviteButtons(contentWrapper:HTMLDivElement, chatId:number 
 			credentials: 'include',
 			body: JSON.stringify({ groupId: chatId })
 		});
-		const response = await fetch(`/chat/block-user`, {
+		await fetch(`/chat/block-user`, {
 			method: 'PUT',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -515,23 +514,21 @@ function generateChatInviteButtons(contentWrapper:HTMLDivElement, chatId:number 
 			credentials: 'include',
 			body: JSON.stringify({ blockedUserId: sender_id })
 		});
+		fetch(`/notifications/${user_id}/${notif_id}`, {
+    		method: 'PATCH',
+   			headers: {
+      			'Authorization': `Bearer ${token}`,
+      			'Content-Type': 'application/json'
+    		},
+    		credentials: 'include',
+    		body: JSON.stringify({status: "read"})
+		})
 		if (response.ok) {
-			fetch(`/notifications/${user_id}/${notif_id}`, {
-    			method: 'PATCH',
-   				headers: {
-      				'Authorization': `Bearer ${token}`,
-      				'Content-Type': 'application/json'
-    			},
-    			credentials: 'include',
-    			body: JSON.stringify({status: "read"})
-			}).then((res) => {
-				if (res.ok) {
-					btnDiv.remove();
-					setAnsweredButtons(contentWrapper);
-				}
-			}).catch((err) => {
-				console.error(`Error marking notification ${notif_id} as read:`, err);
-			});
+			btnDiv.remove();
+			setAnsweredButtons(contentWrapper);
+		} else {
+			btnDiv.remove();
+			setErrorButtons(contentWrapper);
 		}
 	}
 }
