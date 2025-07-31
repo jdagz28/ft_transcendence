@@ -259,10 +259,6 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
         <span class="text-gray-950">Friends</span>
         <div id="invFriend" class="space-y-1 max-h-[9vh] overflow-y-auto"></div>
       </label>
-      <label class="mb-4 block text-gray-950">
-        <span class="text-gray-700">Group Chats</span>
-        <div id="invGroup" class="space-y-1 max-h-[9vh] overflow-y-auto"></div>
-      </label>
     </div>
   </div>
   </div>
@@ -402,9 +398,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
   const dis4 = document.getElementById("dis4") as HTMLButtonElement;
   const inv4 = document.getElementById("inv4") as HTMLButtonElement;
   let userlog:number = 1;
-  let userinvite:number = 1;
   let friendlist;
-  let chatlist;
 
   closeLogin.addEventListener('click', () => {
       loginModal.classList.remove('flex');
@@ -449,38 +443,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     inv2.addEventListener('click', async () => {
       inviteModal.classList.remove('hidden', "pointer-events-none");
       inviteModal.classList.add('flex', "pointer-events-auto");
-      userinvite = 2;
       friendlist = await getFriends(user1.token);
-      chatlist = await getChats(user1.token);
-      if (friendlist.success && chatlist.success) {
-        const groupsList = document.getElementById('invGroup') as HTMLDivElement;
-        if (groupsList) {
-          groupsList.innerHTML = '';
-          chatlist.data.forEach((group: any) => {
-            const groupItem = document.createElement('div');
-            groupItem.className = `w-full rounded bg-blue-950 px-3 py-2 text-left text-sm text-white pointer-events-none`;
-            const greenCircle = document.createElement('span');
-            greenCircle.className = 'h-2 w-2 flex-shrink-0 rounded-full bg-green-400';
-            const groupName = document.createElement('span');
-            groupName.className = 'truncate';
-            groupName.textContent = group.name;
-            const truncateContainer = document.createElement('div');
-            truncateContainer.className = 'flex items-center gap-2 truncate';
-            truncateContainer.appendChild(greenCircle);
-            truncateContainer.appendChild(groupName);
-            const flexContainer = document.createElement('div');
-            flexContainer.className = 'flex items-center justify-between gap-2';
-            flexContainer.appendChild(truncateContainer);
-            const inviteButton = document.createElement('button');
-            inviteButton.className = 'bg-blue-600 pointer-events-auto rounded hover:bg-blue-500 px-2';
-            inviteButton.textContent = 'Invite';
-            flexContainer.appendChild(inviteButton);
-            groupItem.appendChild(flexContainer);
-            groupsList.appendChild(groupItem);
-            // inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
-            // });
-          });
-        }
+      if (friendlist.success) {
         const friendsList = document.getElementById('invFriend') as HTMLDivElement;
         if (friendsList) {
           friendsList.innerHTML = '';
@@ -506,7 +470,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
             friendItem.appendChild(flexContainer);
             friendsList.appendChild(friendItem);
             inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
-              /*const response = */await fetch(`/games/${game}/invite`, {
+              const response = await fetch(`/games/${game}/invite`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -517,14 +481,19 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
                   username: friend.username
                 })
               })
-              // if (!response.ok) {
-              //   const errorDiv = document.getElementById('loginError');
-              //   if (errorDiv) {
-              //     errorDiv.textContent = "Error inviting user";
-              //     errorDiv.classList.remove('hidden');
-              //   }
-              //   return;
-              // }
+              if (response.ok) {
+                inviteButton.remove();
+				const successMessage = document.createElement('span');
+				successMessage.className = 'text-green-500 ml-2';
+				successMessage.textContent = 'Invite sent!';
+				flexContainer.appendChild(successMessage);
+              } else {
+				inviteButton.remove();
+				const errorMessage = document.createElement('span');
+				errorMessage.className = 'text-red-500 ml-2';
+				errorMessage.textContent = 'Invite failed!';
+				flexContainer.appendChild(errorMessage);
+			  }
             });
           });
         }
@@ -565,7 +534,65 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     inv3.addEventListener('click', () => {
       inviteModal.classList.remove('hidden');
       inviteModal.classList.add('flex');
-      userinvite = 3;
+    });
+	inv3.addEventListener('click', async () => {
+      inviteModal.classList.remove('hidden', "pointer-events-none");
+      inviteModal.classList.add('flex', "pointer-events-auto");
+      friendlist = await getFriends(user1.token);
+      if (friendlist.success) {
+        const friendsList = document.getElementById('invFriend') as HTMLDivElement;
+        if (friendsList) {
+          friendsList.innerHTML = '';
+          friendlist.data.data.forEach((friend: any) => {
+            const friendItem = document.createElement('div');
+            friendItem.className = `w-full rounded bg-blue-950 px-3 py-2 text-left text-sm text-white pointer-events-none`;
+            const greenCircle = document.createElement('span');
+            greenCircle.className = 'h-2 w-2 flex-shrink-0 rounded-full bg-green-400';
+            const friendName = document.createElement('span');
+            friendName.className = 'truncate';
+            friendName.textContent = friend.username;
+            const truncateContainer = document.createElement('div');
+            truncateContainer.className = 'flex items-center gap-2 truncate';
+            truncateContainer.appendChild(greenCircle);
+            truncateContainer.appendChild(friendName);
+            const flexContainer = document.createElement('div');
+            flexContainer.className = 'flex items-center justify-between gap-2';  
+            flexContainer.appendChild(truncateContainer);
+            const inviteButton = document.createElement('button');
+            inviteButton.className = 'bg-blue-600 pointer-events-auto rounded hover:bg-blue-500 px-2';
+            inviteButton.textContent = 'Invite';
+            flexContainer.appendChild(inviteButton);
+            friendItem.appendChild(flexContainer);
+            friendsList.appendChild(friendItem);
+            inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
+              const response = await fetch(`/games/${game}/invite`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${user1.token}`
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  username: friend.username
+                })
+              })
+              if (response.ok) {
+                inviteButton.remove();
+				const successMessage = document.createElement('span');
+				successMessage.className = 'text-green-500 ml-2';
+				successMessage.textContent = 'Invite sent!';
+				flexContainer.appendChild(successMessage);
+              } else {
+				inviteButton.remove();
+				const errorMessage = document.createElement('span');
+				errorMessage.className = 'text-red-500 ml-2';
+				errorMessage.textContent = 'Invite failed!';
+				flexContainer.appendChild(errorMessage);
+			  }
+            });
+          });
+        }
+      }
     });
     if (user3.connected) {
       con3.classList.add('hidden');
@@ -602,7 +629,65 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     inv4.addEventListener('click', () => {
       inviteModal.classList.remove('hidden');
       inviteModal.classList.add('flex');
-      userinvite = 4;
+    });
+	inv4.addEventListener('click', async () => {
+      inviteModal.classList.remove('hidden', "pointer-events-none");
+      inviteModal.classList.add('flex', "pointer-events-auto");
+      friendlist = await getFriends(user1.token);
+      if (friendlist.success) {
+        const friendsList = document.getElementById('invFriend') as HTMLDivElement;
+        if (friendsList) {
+          friendsList.innerHTML = '';
+          friendlist.data.data.forEach((friend: any) => {
+            const friendItem = document.createElement('div');
+            friendItem.className = `w-full rounded bg-blue-950 px-3 py-2 text-left text-sm text-white pointer-events-none`;
+            const greenCircle = document.createElement('span');
+            greenCircle.className = 'h-2 w-2 flex-shrink-0 rounded-full bg-green-400';
+            const friendName = document.createElement('span');
+            friendName.className = 'truncate';
+            friendName.textContent = friend.username;
+            const truncateContainer = document.createElement('div');
+            truncateContainer.className = 'flex items-center gap-2 truncate';
+            truncateContainer.appendChild(greenCircle);
+            truncateContainer.appendChild(friendName);
+            const flexContainer = document.createElement('div');
+            flexContainer.className = 'flex items-center justify-between gap-2';  
+            flexContainer.appendChild(truncateContainer);
+            const inviteButton = document.createElement('button');
+            inviteButton.className = 'bg-blue-600 pointer-events-auto rounded hover:bg-blue-500 px-2';
+            inviteButton.textContent = 'Invite';
+            flexContainer.appendChild(inviteButton);
+            friendItem.appendChild(flexContainer);
+            friendsList.appendChild(friendItem);
+            inviteButton.addEventListener('click', async () => { // CA ICI CARLOS
+              const response = await fetch(`/games/${game}/invite`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${user1.token}`
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  username: friend.username
+                })
+              })
+              if (response.ok) {
+                inviteButton.remove();
+				const successMessage = document.createElement('span');
+				successMessage.className = 'text-green-500 ml-2';
+				successMessage.textContent = 'Invite sent!';
+				flexContainer.appendChild(successMessage);
+              } else {
+				inviteButton.remove();
+				const errorMessage = document.createElement('span');
+				errorMessage.className = 'text-red-500 ml-2';
+				errorMessage.textContent = 'Invite failed!';
+				flexContainer.appendChild(errorMessage);
+			  }
+            });
+          });
+        }
+      }
     });
     if (user4.connected) {
       con4.classList.add('hidden');
@@ -611,9 +696,6 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     }
   }
   let userId = "1";
-  if (userinvite === 2) {
-    console.log("suck my peanits");//REMOVE THIS
-  }
 
   const mfaModal = document.getElementById('mfaModal') as HTMLDivElement;
     const closeMFA = document.getElementById('closeMFA') as HTMLButtonElement;

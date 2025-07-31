@@ -206,6 +206,9 @@ export async function deletePastLobby() {
       		credentials: 'include'
     	});
 		localStorage.removeItem("gameId");
+		localStorage.removeItem("user2");
+		localStorage.removeItem("user3");
+		localStorage.removeItem("user4");
 	} 
 }
 
