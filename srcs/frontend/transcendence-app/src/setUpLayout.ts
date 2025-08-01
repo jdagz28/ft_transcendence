@@ -29,7 +29,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	const json = await response.json();
 
 	if (!response.ok) {
-	  console.error('Access check failed:', json);
+	  // console.error('Access check failed:', json);
 	  return { success: false, error: json};
 	}
 	const pfp = await fetch(json.avatar, {
@@ -61,7 +61,7 @@ export function renderNavBar(root: HTMLElement) {
     <nav class="flex items-center justify-between bg-blue-950 px-6 py-2 text-sm font-semibold text-white">
         <div class="flex items-center gap-6">
           <img src="/icons8-tailwindcss.svg" class="w-8 h-8"/>
-          <a href="#/main">Dashboard</a>
+          <a href="#/main">Home</a>
 					<a href="#/users/${user}">Profile</a>
           <a href="#/games/create">Games</a>
           <a href="#/tournaments">Tournament</a>
@@ -215,7 +215,7 @@ export function setupAppLayout() {
 	if (token/* && !navbarrendered*/) {
 	//navbarrendered = true;
   	renderNavBar(navContainer);
-	console.log("about to connect notifications");
+	// console.log("about to connect notifications");
     connectNotifications();
     initializePermanentChat();
    } else {

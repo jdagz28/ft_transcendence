@@ -3,11 +3,13 @@ import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 import { getFriends } from "../chat";
 import { chatWebSocket } from "../chat/chatWebSocket";
+import type { PlayerConfig } from "../types/game";
 
 type user = {
   username: string;
   userID: string;
   pfp: Blob;
+  avatarUrl: string;
   token: string;
   connected: boolean;
 };
@@ -37,6 +39,11 @@ type user = {
 //   `;
 // }
 
+let user1: user;
+let user2: user;
+let user3: user;
+let user4: user;
+
 function clearGameLocalStorage() {
   const userKeys = ["user", "username", "id", "pfp"];
   for (let i = 1; i <= 4; i++) {
@@ -47,7 +54,7 @@ function clearGameLocalStorage() {
   localStorage.removeItem("gamemode");
 }
 
-function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string) {
+function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
   let playersHTML: string;
   if (playerCount === "1" || playerCount === "Training") {
     playersHTML = `
@@ -116,7 +123,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
       <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
         <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">↑</div>
-        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user2.username}</span>
+        <span id="userName2" class="mx-2 flex-1 truncate text-center text-[25px]">${user2.username}</span>
         <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">↑</div>
       </div>
     </h2>
@@ -131,7 +138,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
       <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
         <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">L</div>
-        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user3.username}</span>
+        <span id="userName3" class="mx-2 flex-1 truncate text-center text-[25px]">${user3.username}</span>
         <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">L</div>
       </div>
     </h2>
@@ -146,7 +153,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     <h2 class="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 transform text-4xl font-bold text-white">
       <div class="flex w-64 items-center justify-between rounded-md bg-[rgba(20,50,90,0.70)] px-2 py-2">
         <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">5</div>
-        <span class="mx-2 flex-1 truncate text-center text-[25px]">${user4.username}</span>
+        <span id="userName4" class="mx-2 flex-1 truncate text-center text-[25px]">${user4.username}</span>
         <div class="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-white bg-transparent text-[30px] font-bold text-white">5</div>
       </div>
     </h2>
@@ -277,7 +284,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
   const userAvatar2 = document.getElementById('avatar2');
     if (userAvatar2 && user2.connected === true) {
       const img = document.createElement('img');
-      img.src = URL.createObjectURL(user2.pfp);
+      img.src = !user2.avatarUrl ? URL.createObjectURL(user2.pfp) : user2.avatarUrl;
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
       userAvatar2.innerHTML = '';
@@ -285,8 +292,8 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     }
   const userAvatar3 = document.getElementById('avatar3');
     if (userAvatar3 && user3.connected === true) {
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(user3.pfp);
+          const img = document.createElement('img');
+          img.src = !user3.avatarUrl ? URL.createObjectURL(user3.pfp) : user3.avatarUrl;
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
       userAvatar3.innerHTML = '';
@@ -295,7 +302,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
   const userAvatar4 = document.getElementById('avatar4');
     if (userAvatar4 && user4.connected === true) {
       const img = document.createElement('img');
-      img.src = URL.createObjectURL(user4.pfp);
+      img.src = !user4.avatarUrl ? URL.createObjectURL(user4.pfp) : user4.avatarUrl;
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
       userAvatar4.innerHTML = '';
@@ -303,7 +310,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     }
 }
 
-function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string, game: string) {
+function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: string) {
   const optionsBtn = document.getElementById('optionsBtn') as HTMLButtonElement;
   const optionsModal = document.getElementById('optionsModal') as HTMLDivElement;
   const closeOptions = document.getElementById('closeOptions') as HTMLButtonElement;
@@ -343,8 +350,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
           user2.token = "";
           user2.username = "Waiting...";
         }
-        renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-        setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+        renderLobbyHTML(root, playerCount);
+        setUpEventListeners(root, playerCount, game);
       }
       */
     });
@@ -378,8 +385,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
               user2.username = "Waiting...";
               localStorage.removeItem("user2");
             }
-            renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-            setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+            renderLobbyHTML(root, playerCount);
+            setUpEventListeners(root, playerCount, game);
           }
           */
       }
@@ -423,23 +430,20 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       userlog = 2;
     });
     dis2.addEventListener('click', async () => {
-			const response = await fetch(`/games/${game}/leave`, {
+			await fetch(`/games/${game}/leave`, {
 				method: 'DELETE',
 				headers: {
 					'Authorization': `Bearer ${user2.token}`
 				},
 				credentials: 'include'
 			});
-			if (!response.ok) {
-				throw new Error('Error leaving game');
-			}
       user2.connected = false;
       user2.userID = "-1";
       user2.username = "Waiting...";
       user2.token = "";
       localStorage.removeItem("user2");
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     });
     inv2.addEventListener('click', async () => {
       inviteModal.classList.remove('hidden', "pointer-events-none");
@@ -479,7 +483,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                  username: friend.username
+                  username: friend.username,
+                  slot: "user2"
                 })
               })
               if (response.ok) {
@@ -525,23 +530,20 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       userlog = 3;
     });
     dis3.addEventListener('click', async () => {
-			const response = await fetch(`/games/${game}/leave`, {
+			await fetch(`/games/${game}/leave`, {
 				method: 'DELETE',
 				headers: {
 					'Authorization': `Bearer ${user3.token}`
 				},
 				credentials: 'include'
 			});
-			if (!response.ok) {
-				throw new Error('Error leaving game');
-			}
       user3.connected = false;
       user3.userID = "-1";
       user3.username = "Waiting...";
       user3.token = "";
       localStorage.removeItem("user3");
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     });
     inv3.addEventListener('click', () => {
       inviteModal.classList.remove('hidden');
@@ -585,7 +587,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                  username: friend.username
+                  username: friend.username,
+                  slot: "user3"
                 })
               })
               if (response.ok) {
@@ -620,23 +623,20 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       userlog = 4;
     });
     dis4.addEventListener('click', async () => {
-			const response = await fetch(`/games/${game}/leave`, {
+			await fetch(`/games/${game}/leave`, {
 				method: 'DELETE',
 				headers: {
 					'Authorization': `Bearer ${user4.token}`
 				},
 				credentials: 'include'
 			});
-			if (!response.ok) {
-				throw new Error('Error leaving game');
-			}
       user4.connected = false;
       user4.userID = "-1";
       user4.username = "Waiting...";
       user4.token = "";
       localStorage.removeItem("user4");
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     });
     inv4.addEventListener('click', () => {
       inviteModal.classList.remove('hidden');
@@ -680,15 +680,16 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                  username: friend.username
+                  username: friend.username,
+                  slot: "user4"
                 })
               })
               if (response.ok) {
                 inviteButton.remove();
-                const successMessage = document.createElement('span');
-                successMessage.className = 'text-green-500 ml-2';
-                successMessage.textContent = 'Invite sent!';
-                flexContainer.appendChild(successMessage);
+				const successMessage = document.createElement('span');
+				successMessage.className = 'text-green-500 ml-2';
+				successMessage.textContent = 'Invite sent!';
+				flexContainer.appendChild(successMessage);
               } else {
 				inviteButton.remove();
 				const errorMessage = document.createElement('span');
@@ -756,7 +757,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
         return;
       }
       const mfa = await response.json();
-      let temp:user = {username: "", userID: "", pfp: new Blob, token: mfa.token, connected: true};
+      let temp:user = {username: "", userID: "", pfp: new Blob, token: mfa.token, connected: true, avatarUrl: ""};
         const getUser = await fetch('/users/me', {
           method: 'get',
           credentials: 'include',
@@ -831,8 +832,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
         errorDiv.textContent = "";
               errorDiv.classList.add('hidden');
       }
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     } catch (err) {
       console.error("Error verifying MFA code:", err);
       alert("An error occurred while verifying the code. Please try again.");
@@ -908,7 +909,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
     }
 
 
-          let temp:user = {username: "", userID: "", pfp: new Blob, token: data.token, connected: true};
+          let temp:user = {username: "", userID: "", pfp: new Blob, token: data.token, connected: true, avatarUrl: ""};
       const getUser = await fetch('/users/me', {
         method: 'get',
         credentials: 'include',
@@ -953,8 +954,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       localStorage.setItem("id4", user4.userID);
       localStorage.setItem("pfp4", json.avatar);
       }
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
         if (errorDiv && err instanceof Error) {
@@ -1133,9 +1134,10 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     // } else
     //  hasAccess = true;
   // if (!hasAccess) {
-  //  renderLobbyError(root.contentContainer);
-  //  return ;
+    //  renderLobbyError(root.contentContainer);
+    //  return ;
   // }
+
   const pfp = await fetch(localStorage.getItem("userPFP") ?? "", {
     method: 'get',
     credentials: 'include',
@@ -1144,9 +1146,9 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     },
   });
   const rawpfp:Blob = await pfp.blob();
-  let user1:user = {username: localStorage.getItem("userName") ?? "Waiting...", userID: localStorage.getItem("userID") ?? "-1", pfp: rawpfp, token: localStorage.getItem("token") ?? "", connected: true};
+  user1 = {username: localStorage.getItem("userName") ?? "Waiting...", userID: localStorage.getItem("userID") ?? "-1", pfp: rawpfp, token: localStorage.getItem("token") ?? "", connected: true, avatarUrl: "" };
   const user2tok = localStorage.getItem("user2");
-  let user2:user = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false};
+  user2 = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false, avatarUrl: ""};
   if (user2tok){
     user2.username = localStorage.getItem("username2") ?? "Error Loading";
     user2.userID = localStorage.getItem("id2") ?? "-1";
@@ -1162,7 +1164,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     user2.pfp = await pfp.blob();
   }
   const user3tok = localStorage.getItem("user3");
-  let user3:user = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false};
+  user3 = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false , avatarUrl: ""};
   if (user3tok){
     user3.username = localStorage.getItem("username3") ?? "Error Loading";
     user3.userID = localStorage.getItem("id3") ?? "-1";
@@ -1178,7 +1180,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     user3.pfp = await pfp.blob();
   }
   const user4tok = localStorage.getItem("user4");
-  let user4:user = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false};
+  user4 = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false, avatarUrl: ""};
   if (user4tok){
     user4.username = localStorage.getItem("username4") ?? "Error Loading";
     user4.userID = localStorage.getItem("id4") ?? "-1";
@@ -1193,7 +1195,168 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     });
     user4.pfp = await pfp.blob();
   }
-  
-  renderLobbyHTML(root.contentContainer, user1, user2, user3, user4, playerCount);
-  setUpEventListeners(root.contentContainer, user1, user2, user3, user4, playerCount, gameId)
+
+  const gamePlayers = await getGamePlayers(Number(gameId));
+  console.log("Game Players:", gamePlayers);
+  if (gamePlayers.length > 1) {
+    gamePlayers.forEach((gamePlayer: PlayerConfig) => {
+      if (gamePlayer.slot) {
+        if (gamePlayer.slot === "user2") {
+          localStorage.setItem("user2", "frominvite");
+          localStorage.setItem("username2", gamePlayer.username);
+          localStorage.setItem("id2", String(gamePlayer.player_id));
+          localStorage.setItem("pfp2", gamePlayer.avatar);
+          user2.username = gamePlayer.username;
+          user2.userID = String(gamePlayer.player_id);
+          user2.token = "frominvite";
+          user2.connected = true;
+          user2.avatarUrl = gamePlayer.avatar;
+          // user2.pfp = 
+        } else if (gamePlayer.slot === "user3") {
+          localStorage.setItem("user3", "frominvite");
+          localStorage.setItem("username3", gamePlayer.username);
+          localStorage.setItem("id3", String(gamePlayer.player_id));
+          localStorage.setItem("pfp3", gamePlayer.avatar);
+          user3.username = gamePlayer.username;
+          user3.userID = String(gamePlayer.player_id);
+          user3.token = "frominvite";
+          user3.connected = true;
+          user3.avatarUrl = gamePlayer.avatar;
+          // user3.pfp = 
+        } else if (gamePlayer.slot === "user4") {
+          localStorage.setItem("user4", "frominvite");
+          localStorage.setItem("username4", gamePlayer.username);
+          localStorage.setItem("id4", String(gamePlayer.player_id));
+          localStorage.setItem("pfp4", gamePlayer.avatar);
+          user4.username = gamePlayer.username;
+          user4.userID = String(gamePlayer.player_id);
+          user4.token = "frominvite";
+          user4.connected = true;
+          user4.avatarUrl = gamePlayer.avatar;
+          // user4.pfp = 
+        }
+      }
+    });
+  }
+  console.log("user2:", user2);
+
+  renderLobbyHTML(root.contentContainer, playerCount);
+  setUpEventListeners(root.contentContainer, playerCount, gameId)
+
+  const ws = new WebSocket(
+    `wss://${location.host}/games/${gameId}/ws`
+  );
+
+  ws.onopen = () => {
+    console.log('WebSocket connection established');
+  }
+
+  ws.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+    console.log('WebSocket message received:', msg);
+    if (msg.type === 'player-joined' ) {
+    	const gamePlayers = await getGamePlayers(Number(gameId));
+  		console.log("Game Players:", gamePlayers);
+  		if (gamePlayers.length > 1) {
+    		gamePlayers.forEach((gamePlayer: PlayerConfig) => {
+    			if (gamePlayer.slot) {
+        			if (gamePlayer.slot === "user2") {
+          				localStorage.setItem("user2", "frominvite");
+          				localStorage.setItem("username2", gamePlayer.username);
+          				localStorage.setItem("id2", String(gamePlayer.player_id));
+          				localStorage.setItem("pfp2", gamePlayer.avatar);
+          				user2.username = gamePlayer.username;
+          				user2.userID = String(gamePlayer.player_id);
+          				user2.token = "frominvite";
+          				user2.connected = true;
+          				user2.avatarUrl = gamePlayer.avatar;
+						const userAvatar2 = document.getElementById('avatar2');
+    					if (userAvatar2) {
+     						const img = document.createElement('img');
+      						img.src = user2.avatarUrl;
+      						img.alt = 'User Avatar';
+      						img.className = 'w-full h-full object-cover';
+      						userAvatar2.innerHTML = '';
+      						userAvatar2.appendChild(img);
+    					}
+						const userName2 = document.getElementById('userName2');
+						if (userName2) {
+	  						userName2.textContent = user2.username;
+						}
+						const con2 = document.getElementById('con2') as HTMLButtonElement;
+						const dis2 = document.getElementById('dis2') as HTMLButtonElement;
+						const inv2 = document.getElementById('inv2') as HTMLButtonElement;
+						if (con2 && dis2 && inv2) {
+							con2.classList.add('hidden');
+							inv2.classList.add('hidden');
+							dis2.classList.remove('hidden');
+						}
+        			} else if (gamePlayer.slot === "user3") {
+          				localStorage.setItem("user3", "frominvite");
+          				localStorage.setItem("username3", gamePlayer.username);
+          				localStorage.setItem("id3", String(gamePlayer.player_id));
+          				localStorage.setItem("pfp3", gamePlayer.avatar);
+          				user3.username = gamePlayer.username;
+          				user3.userID = String(gamePlayer.player_id);
+          				user3.token = "frominvite";
+          				user3.connected = true;
+          				user3.avatarUrl = gamePlayer.avatar;
+						const userAvatar3 = document.getElementById('avatar3');
+    					if (userAvatar3) {
+     						const img = document.createElement('img');
+      						img.src = user3.avatarUrl;
+      						img.alt = 'User Avatar';
+      						img.className = 'w-full h-full object-cover';
+      						userAvatar3.innerHTML = '';
+      						userAvatar3.appendChild(img);
+    					}
+						const userName3 = document.getElementById('userName3');
+						if (userName3) {
+	  						userName3.textContent = user3.username;
+						}
+						const con3 = document.getElementById('con3') as HTMLButtonElement;
+						const dis3 = document.getElementById('dis3') as HTMLButtonElement;
+						const inv3 = document.getElementById('inv3') as HTMLButtonElement;
+						if (con3 && dis3 && inv3) {
+							con3.classList.add('hidden');
+							inv3.classList.add('hidden');
+							dis3.classList.remove('hidden');
+						}
+        			} else if (gamePlayer.slot === "user4") {
+          				localStorage.setItem("user4", "frominvite");
+          				localStorage.setItem("username4", gamePlayer.username);
+          				localStorage.setItem("id4", String(gamePlayer.player_id));
+          				localStorage.setItem("pfp4", gamePlayer.avatar);
+          				user4.username = gamePlayer.username;
+          				user4.userID = String(gamePlayer.player_id);
+          				user4.token = "frominvite";
+          				user4.connected = true;
+          				user4.avatarUrl = gamePlayer.avatar;
+						const userAvatar4 = document.getElementById('avatar4');
+    					if (userAvatar4) {
+     						const img = document.createElement('img');
+      						img.src = user4.avatarUrl;
+      						img.alt = 'User Avatar';
+      						img.className = 'w-full h-full object-cover';
+      						userAvatar4.innerHTML = '';
+      						userAvatar4.appendChild(img);
+    					}
+						const userName4 = document.getElementById('userName4');
+						if (userName4) {
+	  						userName4.textContent = user4.username;
+						}
+						const con4 = document.getElementById('con4') as HTMLButtonElement;
+						const dis4 = document.getElementById('dis4') as HTMLButtonElement;
+						const inv4 = document.getElementById('inv4') as HTMLButtonElement;
+						if (con4 && dis4 && inv4) {
+							con4.classList.add('hidden');
+							inv4.classList.add('hidden');
+							dis4.classList.remove('hidden');
+						}
+        			}
+      			}
+    		});
+  		}
+    }
+  }
 }

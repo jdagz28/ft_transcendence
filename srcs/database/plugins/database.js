@@ -307,6 +307,7 @@ async function databaseConnector(fastify) {
                         DEFAULT 'pending',
         created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        slot           INTEGER DEFAULT NULL,
         FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE,
         FOREIGN KEY(user_id)       REFERENCES users(id)       ON DELETE CASCADE,
         UNIQUE (game_id, user_id)
@@ -397,6 +398,7 @@ async function databaseConnector(fastify) {
           CHECK(paddle_loc IN ('left','right')),
         paddle_side TEXT 
           CHECK(paddle_side IN ('top', 'bottom')),
+        slot DEFAULT NULL,
         UNIQUE(game_id, player_id),
         FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
         FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE

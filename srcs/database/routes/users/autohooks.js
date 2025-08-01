@@ -647,7 +647,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
             games.ended,
             game_players.paddle_loc as userPaddleLoc,
             game_settings.num_games || '-' || game_settings.num_matches as gameOptions,
-            CASE WHEN games.winner_id = ? THEN 'W' ELSE 'L' END as result
+            games.winner_id 
           FROM games
           JOIN game_players ON games.id = game_players.game_id
           JOIN game_settings ON games.id = game_settings.game_id
@@ -676,10 +676,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
           ORDER BY game_matches.id
         `)
         
-        const games = historyQuery.all(user.id, user.id)
+        const games = historyQuery.all(user.id)
         
         return games.map(game => {
-          const opponent = opponentQuery.get(game.gameId, game.userPaddleLoc)?.username 
+          const opponents = opponentQuery.all(game.gameId, game.userPaddleLoc)
+          const opponentUsernames = opponents.map(opp => opp.username)
+          const opponent = opponentUsernames.join(', ')
           
           const matchScores = matchScoresQuery.all(game.gameId)
           
@@ -716,11 +718,13 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
             else if (opponentScore > userScore) opponentWins++
           })
           
+          const result = userWins > opponentWins ? 'W' : 'L';
+          
           return {
             gameId: game.gameId,
             created: game.created,
             ended: game.ended,
-            result: game.result,
+            result: result,
             finalScore: `${userWins} - ${opponentWins}`,
             opponent: opponent,
             matchScores: matchScoresArray,

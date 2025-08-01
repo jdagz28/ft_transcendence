@@ -53,10 +53,11 @@ export function renderLoginPage(): void {
 
   localStorage.setItem('loginredir', "");
   const { token, user, provider } = extractOAuthParams();
-  console.log('OAuth params found:', { token, user, provider });
+  // console.log('OAuth params found:', { token, user, provider });
+  void provider;
   
   if (token && token !== 'null' && user && user !== 'null') {
-    console.log('Valid OAuth success, storing token and redirecting');
+    // console.log('Valid OAuth success, storing token and redirecting');
     localStorage.setItem('token', token);
     
     const redir = localStorage.getItem('loginredir') ?? '';

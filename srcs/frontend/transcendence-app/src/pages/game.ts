@@ -604,6 +604,7 @@ export async function renderGamePage(params: RouteParams) {
   function togglePause() {
     if (localGameState.gameOver) return;
     if (!localGameState.isPaused) {
+      alert("Game paused. Click or press Escape to resume.");
       localGameState.isPaused = true;
       pauseAt = performance.now();
       cancelAnimationFrame(gameLoop!);
