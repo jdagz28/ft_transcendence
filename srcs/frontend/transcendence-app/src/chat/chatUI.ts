@@ -400,7 +400,6 @@ export class ChatUIManager {
     try {
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (!messagesDiv) {
-        console.warn('Messages div not found, cannot display responded game invite');
         return;
       }
 
