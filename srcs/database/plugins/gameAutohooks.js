@@ -64,7 +64,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const row = selectQuery.get(gameId, userId)
         if (!row) {
-          throw new Error('Game not found or user not authorized')
+          // throw new Error('Game not found or user not authorized')
+          return { error: 'Game not found or user not authorized' }
         }
 
         const deathTimedInt = death_timed ? 1 : 0 
@@ -91,7 +92,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const games = query.all()
         if (!games) {
-          throw new Error('Failed to retrieve games')
+          // throw new Error('Failed to retrieve games')
+          return []
         }
         return games
       } catch (err) {
@@ -107,7 +109,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const game = query.get(gameId)
         if (!game) {
-          throw new Error('Game not found')
+          // throw new Error('Game not found')
+          return { error: 'Game not found' }
         }
         return game
       } catch (err) {
@@ -179,12 +182,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const checkGame = check.get(gameId)
         if (!checkGame) {
-          throw new Error('Game not found')
+          // throw new Error('Game not found')
+          return { error: 'Game not found' }
         }
         console.log('created by:', checkGame.created_by) //! DELETE
         console.log('userId:', userId) //! DELETE
         if (checkGame.created_by === Number(userId)) {
-          throw new Error('Creator cannot leave the game')
+          // throw new Error('Creator cannot leave the game')
+          return { error: 'Creator cannot leave the game' }
         }
 
         const query = fastify.db.prepare(
@@ -209,7 +214,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const checkGame = check.get(gameId, userId)
         if (!checkGame) {
-          throw new Error('Game not found or user not authorized')
+          // throw new Error('Game not found or user not authorized')
+          return { error: 'Game not found or user not authorized' }
         }
 
         const query = fastify.db.prepare(
@@ -232,6 +238,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const check = fastify.db.prepare(
           'SELECT mode FROM game_settings WHERE game_id = ?'
         ).get(gameId)
+        if (!check) {
+          return { error: 'Game not found' }
+        }
         if (check.mode === 'tournament') {
           query = fastify.db.prepare(`
             SELECT
@@ -290,7 +299,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           )
           const checkGame = check.get(gameId, userId)
           if (!checkGame) {
-            throw new Error('Game not found or user not authorized')
+            // throw new Error('Game not found or user not authorized')
+            return { error: 'Game not found or user not authorized' }
           }
         }
         if (checkTournament.mode === 'tournament') {
@@ -307,7 +317,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             SELECT player_id FROM game_players WHERE game_id = ? AND player_id = ?
           `).get(gameId, userId)
           if (creatorId.created_by !== Number(userId) && !playerCheck) {
-            throw new Error('User not authorized')
+            // throw new Error('User not authorized')
+            return { error: 'User not authorized' }
           }
         }
 
@@ -376,7 +387,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           )
           const checkGame = check.get(gameId, userId)
           if (!checkGame) {
-            throw new Error('Game not found or user not authorized')
+            // throw new Error('Game not found or user not authorized')
+            return { error: 'Game not found or user not authorized' }
           }
         }
         if (checkTournament.mode === 'tournament') {
@@ -397,7 +409,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             playerExist = playerCheck.get(gameId, p.userId)
           }
           if (creatorId.created_by !== Number(userId) && !playerExist) {
-            throw new Error('User not authorized')
+            // throw new Error('User not authorized')
+            return { error: 'User not authorized' }
           }
         }
 
@@ -406,7 +419,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const gameStatus = checkStatus.get(gameId)
         if (gameStatus.status !== 'pending') {
-          throw new Error('Game is not in pending status')
+          // throw new Error('Game is not in pending status')
+          return { error: 'Game is not in pending status' }
         }
 
         const startQuery = fastify.db.prepare(
@@ -474,14 +488,15 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const checkTournament = fastify.db.prepare(
           'SELECT mode FROM game_settings WHERE game_id = ?'
         ).get(gameId)
-        
+
         if (checkTournament.mode !== 'tournament') {
           const check = fastify.db.prepare(
             'SELECT * FROM games WHERE id = ? AND created_by = ?'
           )
           const checkGame = check.get(gameId, userId)
           if (!checkGame) {
-            throw new Error('Game not found or user not authorized')
+            // throw new Error('Game not found or user not authorized')
+            return { error: 'Game not found or user not authorized' }
           }
         } else {
           const query = fastify.db.prepare(`
@@ -502,10 +517,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           const playerExist = playerCheck.get(gameId, userId)
           
           if (creatorId.created_by !== Number(userId) && !playerExist) {
-            throw new Error('User not authorized')
+            // throw new Error('User not authorized')
+            return { error: 'User not authorized' }
           }
         }
-
 
         if (status === 'paused' || status === 'aborted') {
           const updateGame = fastify.db.prepare(`
@@ -714,6 +729,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         ORDER BY game_matches.started;
       `).all(gameId)
 
+      if (!summary || !matches) {
+        return { error: 'Game summary not found' }
+      }
+
       const matchesWonByLeft  = matches.filter(m => m.scoreLeft  > m.scoreRight).length;
       const matchesWonByRight = matches.filter(m => m.scoreRight > m.scoreLeft ).length;
 
@@ -768,7 +787,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         const options = query.get(gameId)
         if (!options) {
-          throw new Error('Game options not found')
+          // throw new Error('Game options not found')
+          return { error: 'Game options not found' }
         }
         const status = fastify.db.prepare(
           'SELECT status FROM games WHERE id = ?'
@@ -862,7 +882,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const invite = query.get(gameId, userId)
 
         if (!invite) {
-          throw new Error('Invite not found or already responded')
+          // throw new Error('Invite not found or already responded')
+          return { error: 'Invite not found or already responded' }
         }
 
         const gameStatus = fastify.db.prepare(`
@@ -870,7 +891,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         `).get(gameId)
         
         if (gameStatus.status !== 'pending') {
-          throw new Error('Game is not joinable')
+          // throw new Error('Game is not joinable')
+          return { error: 'Game is not joinable' }
         }
 
         const updateQuery = fastify.db.prepare(`
@@ -940,7 +962,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           )
           const checkGame = check.get(gameId, userId)
           if (!checkGame) {
-            throw new Error('Game not found or user not authorized')
+            // throw new Error('Game not found or user not authorized')
+            return { error: 'Game not found or user not authorized' }
           }
         }
         if (checkTournament.mode === 'tournament') {
@@ -957,7 +980,8 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
             SELECT player_id FROM game_players WHERE game_id = ? AND player_id = ?
           `).get(gameId, userId)
           if (creatorId.created_by !== Number(userId) && !playerCheck) {
-            throw new Error('User not authorized')
+            // throw new Error('User not authorized')
+            return { error: 'User not authorized' }
           }
         }
 
