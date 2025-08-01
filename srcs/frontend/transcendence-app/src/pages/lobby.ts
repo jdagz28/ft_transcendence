@@ -53,7 +53,7 @@ function clearGameLocalStorage() {
   localStorage.removeItem("gamemode");
 }
 
-function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string) {
+function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
   let playersHTML: string;
   if (playerCount === "1" || playerCount === "Training") {
     playersHTML = `
@@ -309,7 +309,7 @@ function renderLobbyHTML(root: HTMLDivElement, user1: user, user2: user, user3: 
     }
 }
 
-function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, user3: user, user4: user, playerCount: string, game: string) {
+function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: string) {
   const optionsBtn = document.getElementById('optionsBtn') as HTMLButtonElement;
   const optionsModal = document.getElementById('optionsModal') as HTMLDivElement;
   const closeOptions = document.getElementById('closeOptions') as HTMLButtonElement;
@@ -349,8 +349,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
           user2.token = "";
           user2.username = "Waiting...";
         }
-        renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-        setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+        renderLobbyHTML(root, playerCount);
+        setUpEventListeners(root, playerCount, game);
       }
       */
     });
@@ -384,8 +384,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
               user2.username = "Waiting...";
               localStorage.removeItem("user2");
             }
-            renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-            setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+            renderLobbyHTML(root, playerCount);
+            setUpEventListeners(root, playerCount, game);
           }
           */
       }
@@ -441,8 +441,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       user2.username = "Waiting...";
       user2.token = "";
       localStorage.removeItem("user2");
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     });
     inv2.addEventListener('click', async () => {
       inviteModal.classList.remove('hidden', "pointer-events-none");
@@ -530,8 +530,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       user3.username = "Waiting...";
       user3.token = "";
       localStorage.removeItem("user3");
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     });
     inv3.addEventListener('click', () => {
       inviteModal.classList.remove('hidden');
@@ -623,8 +623,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       user4.username = "Waiting...";
       user4.token = "";
       localStorage.removeItem("user4");
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     });
     inv4.addEventListener('click', () => {
       inviteModal.classList.remove('hidden');
@@ -820,8 +820,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
         errorDiv.textContent = "";
               errorDiv.classList.add('hidden');
       }
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
     } catch (err) {
       console.error("Error verifying MFA code:", err);
       alert("An error occurred while verifying the code. Please try again.");
@@ -942,8 +942,8 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
       localStorage.setItem("id4", user4.userID);
       localStorage.setItem("pfp4", json.avatar);
       }
-      renderLobbyHTML(root, user1, user2, user3, user4, playerCount);
-      setUpEventListeners(root, user1, user2, user3, user4, playerCount, game);
+      renderLobbyHTML(root, playerCount);
+      setUpEventListeners(root, playerCount, game);
       } catch (err: unknown) {
         const errorDiv = document.getElementById('loginError');
         if (errorDiv && err instanceof Error) {
@@ -1228,8 +1228,8 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
   }
   console.log("user2:", user2);
 
-  renderLobbyHTML(root.contentContainer, user1, user2, user3, user4, playerCount);
-  setUpEventListeners(root.contentContainer, user1, user2, user3, user4, playerCount, gameId)
+  renderLobbyHTML(root.contentContainer, playerCount);
+  setUpEventListeners(root.contentContainer, playerCount, gameId)
 
   const ws = new WebSocket(
     `wss://${location.host}/games/${gameId}/ws`
