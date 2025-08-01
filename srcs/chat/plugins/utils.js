@@ -73,36 +73,28 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
     },
 
     async sendMessage(data, fromUserId) {
-      console.log(`in send message my data.room = ${data.room} and typeof = ${data.room}`) // REMOVE THIS LOG
       if (!data.room || typeof data.room !== "number" || data.room == 0) {
         console.error("Field 'room' is missing or invalid must be a number")
         return {valid: false, reason: "Field 'room' is missing or invalid must be a number"}
       }
-      console.log('apres check room') // REMOVE THIS LOG
-      console.log(`typeof fromUserId = ${typeof fromUserId}`) // REMOVE THIS LOG
-      console.log(`typeof data.room = ${typeof data.room}`) // REMOVE THIS LOG
       if (!data.scope || !['dm', 'group'].includes(data.scope)) {
         console.error("Field 'scope' is missing or invalid. Must be 'dm' or 'group'");
         return {valid: false, reason: "Field 'scope' is missing or invalid. Must be 'dm' or 'group'"}
       }
-      console.log('apres check dm ou group') // REMOVE THIS LOG
 
       if(!data.message || typeof data.message !== "string") {
         console.error("Field 'message' is invalid");
         return {valid: false, reason: "Field 'message' is invalid"}
       }
-      console.log('apres check message') // REMOVE THIS LOG
       
       if (data.scope === 'dm') {
         try {
-          console.log('dans le try du dm') // REMOVE THIS LOG
           const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/send/dm`, {
             fromUserId: fromUserId,
             groupId: data.room,
             message: data.message
 
           })
-          console.log(`RESPONSE AXIOS SUCCESS: ${response.data.success}`) // REMOVE THIS LOG
           if (response.data && response.data.success === true) 
             return { 
               valid: true, 
@@ -115,7 +107,6 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
         }
       } else if (data.scope === 'group') {
         try {
-          console.log('dans le try du group') // REMOVE THIS LOG
           const response = await axios.post(`http://database:${process.env.DB_PORT}/chat/send/group`, {
             fromUserId: fromUserId,
             room: data.room,
@@ -133,7 +124,6 @@ module.exports = fp(async function chatHandlerRequest(fastify, opts) {
           return {valid: false, reason: err.response.data.error}
         }
       }
-      console.log('a la fin du sendMessage') // REMOVE THIS LOG
     }
   });
 })

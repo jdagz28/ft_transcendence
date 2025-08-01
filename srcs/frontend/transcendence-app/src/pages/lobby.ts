@@ -1,7 +1,8 @@
 import { type RouteParams, DEFAULT, ROUTE_MAIN, deletePastLobby } from "../router";
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
-import { getFriends, getChats } from "../chat";
+import { getFriends } from "../chat";
+import { chatWebSocket } from "../chat/chatWebSocket";
 
 type user = {
   username: string;
@@ -482,11 +483,21 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
                 })
               })
               if (response.ok) {
+                const res = await response.json();
+                const message = JSON.stringify({
+                  type: "game.invite",
+                  senderId: res.senderId,
+                  receiverId: res.receiverId,
+                  notifId: res.notifId,
+                  gameId: res.gameId,
+                  username: user1.username,
+                });
+                chatWebSocket.sendMessage("dm", res.roomId, message);
                 inviteButton.remove();
-				const successMessage = document.createElement('span');
-				successMessage.className = 'text-green-500 ml-2';
-				successMessage.textContent = 'Invite sent!';
-				flexContainer.appendChild(successMessage);
+                const successMessage = document.createElement('span');
+                successMessage.className = 'text-green-500 ml-2';
+                successMessage.textContent = 'Invite sent!';
+                flexContainer.appendChild(successMessage);
               } else {
 				inviteButton.remove();
 				const errorMessage = document.createElement('span');
@@ -673,10 +684,10 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
               })
               if (response.ok) {
                 inviteButton.remove();
-				const successMessage = document.createElement('span');
-				successMessage.className = 'text-green-500 ml-2';
-				successMessage.textContent = 'Invite sent!';
-				flexContainer.appendChild(successMessage);
+                const successMessage = document.createElement('span');
+                successMessage.className = 'text-green-500 ml-2';
+                successMessage.textContent = 'Invite sent!';
+                flexContainer.appendChild(successMessage);
               } else {
 				inviteButton.remove();
 				const errorMessage = document.createElement('span');

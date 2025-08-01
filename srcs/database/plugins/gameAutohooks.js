@@ -838,15 +838,24 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         
         const id = await fastify.notifications.gameInvite(inviter, userId, gameId)
 
-        const axios = require('axios')
-        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-invite`, {
-          gameId: gameId,
+        // const axios = require('axios')
+        // await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-invite`, {
+        //   gameId: gameId,
+        //   senderId: inviter,
+        //   receiverId: userId,
+        //   notifId: id
+        // })
+
+        const roomId = await fastify.dbChat.createDirectMessage(inviter, userId);
+
+        return {
+          message: `Game invite sent successfully to ${userId}`,
+          roomId: roomId,
           senderId: inviter,
           receiverId: userId,
-          notifId: id
-        })
-        
-        return { message: `Game invite sent successfully to ${userId}` }
+          notifId: id,
+          gameId: gameId
+        }
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to invite user to game')
@@ -997,5 +1006,5 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
   })
 }, {
   name: 'gameAutoHooks',
-  dependencies: ['tournamentAutoHooks', 'notificationPlugin']
+  dependencies: ['tournamentAutoHooks', 'notificationPlugin', 'chatAutoHooks']
 })

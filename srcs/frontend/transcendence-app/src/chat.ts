@@ -24,10 +24,8 @@ async function blockUser(userId: number, token: string | null): Promise<{ succes
       return { success: false, error: json };
     }
     
-    // Ajouter au cache local
     blockedUsersCache.add(userId);
     
-    // Rafraîchir la liste des DMs immédiatement
     refreshDMsList();
     
     return { success: true };

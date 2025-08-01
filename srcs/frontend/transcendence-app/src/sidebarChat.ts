@@ -142,3 +142,31 @@ export function getCurrentWebSocket(): WebSocket | null {
 export function isWebSocketConnected(): boolean {
   return chatWebSocket.isWebSocketConnected();
 }
+
+// ============================================================================ //
+// REFRESH FUNCTIONALITY                                                       //
+// ============================================================================ //
+
+export async function refreshSidebarChat(): Promise<void> {
+  const messagesDiv = document.getElementById('sidebar-chat-messages');
+  if (!messagesDiv) {
+    return;
+  }
+
+  if (!chatState.currentChatId || !chatState.currentChatType) {
+    return;
+  }
+
+  try {
+    
+    await openSidebarChat(
+      chatState.currentChatId,
+      chatState.currentChatName,
+      chatState.currentChatType,
+      chatState.currentUserId
+    );
+    
+  } catch (error) {
+    console.error('Error refreshing sidebar chat:', error);
+  }
+}

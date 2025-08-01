@@ -1,6 +1,7 @@
 import type { ChatMessage, ChatHistory } from './types';
 import { chatState } from './chatState';
 import { userModal } from './userModal';
+import { chatUI } from './chatUI';
 
 // ============================================================================ //
 // CHAT MESSAGES HANDLER                                                        //
@@ -139,10 +140,30 @@ export class ChatMessagesHandler {
       const history: ChatMessage[] | ChatHistory = await res.json();
       
       if (Array.isArray(history)) {
-        history.forEach((msg: ChatMessage) => {
+        for (const msg of history) {
           const isMe = msg.username === chatState.currentUser;
-          this.addMessageToUI(msg.username, msg.content, isMe);
-        });
+
+          try {
+            const parsedContent = JSON.parse(msg.content);
+            if (parsedContent.type === 'game.invite') {
+              const gameId = parsedContent.gameId || '';
+              const senderId = parsedContent.senderId || '';
+              const notifId = parsedContent.notifId || '';
+              const receiverId = parsedContent.receiverId || '';
+
+              const isRead = await chatUI.checkNotificationStatus(receiverId, notifId);
+              if (isRead) {
+                chatUI.displayGameInviteResponded(isMe, msg.username);
+              } else {
+                chatUI.displayGameInvite(senderId, gameId, receiverId, notifId, isMe, msg.username);
+              }
+            } else {
+              this.addMessageToUI(msg.username, msg.content, isMe);
+            }
+          } catch (error) {
+            this.addMessageToUI(msg.username, msg.content, isMe);
+          }
+        }
       } else if ((history as ChatHistory).error) {
         this.showErrorMessage((history as ChatHistory).error!);
       }
