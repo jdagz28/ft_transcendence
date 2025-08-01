@@ -29,7 +29,7 @@ export async function whoAmI(): Promise<loggedIn>{
 	const json = await response.json();
 
 	if (!response.ok) {
-	  console.error('Access check failed:', json);
+	  // console.error('Access check failed:', json);
 	  return { success: false, error: json};
 	}
 	const pfp = await fetch(json.avatar, {

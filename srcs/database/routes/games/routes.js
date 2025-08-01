@@ -40,8 +40,8 @@ module.exports = fp(
           console.log('Updating game options for gameId:', gameId, 'by userId:', userId) //! DELETE
           console.log('Options:', { num_games, num_matches, ball_speed, death_timed, time_limit }) //! DELETE
           const updatedGame = await fastify.dbGames.updateGameOptions(gameId, userId, num_games, num_matches, ball_speed, death_timed, time_limit)
-          if (!updatedGame) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (updatedGame.error) {
+            reply.status(400).send({ error: updatedGame.error })
             return
           }
           reply.status(200).send(updatedGame)
@@ -78,10 +78,10 @@ module.exports = fp(
       handler: async function getGamesHandler (request, reply) {
         try {
           const games = await fastify.dbGames.getGames()
-          if (!games) {
-            reply.status(400).send({ error: 'Failed to retrieve games' })
-            return
-          }
+          // if (!games) {
+          //   reply.status(400).send({ error: 'Failed to retrieve games' })
+          //   return
+          // }
           console.log('Games retrieved:', games) //! DELETE
           reply.status(200).send(games)
         } catch (err) {
@@ -97,7 +97,7 @@ module.exports = fp(
         try {
           const { gameId } = request.params
           const game = await fastify.dbGames.getGameById(gameId)
-          if (!game) {
+          if (game.error) {
             reply.status(404).send({ error: 'Game not found' })
             return
           }
@@ -147,8 +147,8 @@ module.exports = fp(
           const { gameId } = request.params
           const userId = request.user.id
           const result = await fastify.dbGames.leaveGame(gameId, userId)
-          if (!result) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (result.error) {
+            reply.status(400).send({ error: result.error })
             return
           }
           reply.status(200).send(result)
@@ -169,8 +169,8 @@ module.exports = fp(
           const { gameId } = request.params
           const userId = request.user.id
           const result = await fastify.dbGames.deleteGame(gameId, userId)
-          if (!result) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (result.error) {
+            reply.status(404).send({ error: result.error })
             return
           }
           reply.status(200).send(result)
@@ -190,8 +190,8 @@ module.exports = fp(
         try {
           const { gameId } = request.params
           const players = await fastify.dbGames.getGamePlayers(gameId)
-          if (!players) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (players.error) {
+            reply.status(404).send({ error: players.error })
             return
           }
           reply.status(200).send(players)
@@ -213,8 +213,11 @@ module.exports = fp(
           const userId = request.user.id
           const players = request.body.options
           const result = await fastify.dbGames.startGame(gameId, userId, players)
-          if (!result) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (result.error) {
+            if (fastify.db.inTransaction) {
+              fastify.db.exec('ROLLBACK')
+            }
+            reply.status(404).send({ error: result.error })
             return
           }
           reply.status(200).send(result)
@@ -239,8 +242,8 @@ module.exports = fp(
           const userId  = request.user.id
           const gameDetails = await fastify.dbGames.getGameDetails(gameId, userId)
           console.log('Game details retrieved:', gameDetails) //! DELETE
-          if (!gameDetails) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (gameDetails.error) {
+            reply.status(400).send({ error: gameDetails.error })
             return
           }
           reply.status(200).send(gameDetails)
@@ -263,8 +266,11 @@ module.exports = fp(
           const { status, matchId, stats } = request.body
           const userId = request.user.id
           const updatedGame = await fastify.dbGames.updateGameStatus(gameId, matchId, status, stats, userId)
-          if (!updatedGame) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (updatedGame.error) {
+            if (fastify.db.inTransaction) {
+              fastify.db.exec('ROLLBACK')
+            }
+            reply.status(400).send({ error: updatedGame.error })
             return
           }
           reply.status(200).send(updatedGame)
@@ -287,8 +293,8 @@ module.exports = fp(
         try {
           const { gameId } = request.params
           const summary = await fastify.dbGames.getGameSummary(gameId)
-          if (!summary) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (summary.error) {
+            reply.status(404).send({ error: summary.error })
             return
           }
           reply.status(200).send(summary)
@@ -356,10 +362,10 @@ module.exports = fp(
             return
           }
           const result = await fastify.dbGames.inviteToGame(gameId, userId, inviter, slot)
-          if (!result) {
-            reply.status(404).send({ error: 'Game not found' })
-            return
-          }
+          // if (!result) {
+          //   reply.status(404).send({ error: 'Game not found' })
+          //   return
+          // }
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)
@@ -379,8 +385,12 @@ module.exports = fp(
           const userId = request.user.id
           console.log('Responding to invite for gameId:', gameId, 'by userId:', userId, 'with response:', response) //! DELETE
           const result = await fastify.dbGames.respondToInvite(gameId, userId, response)
-          if (!result) {
-            reply.status(404).send({ error: 'Game not found' })
+          // if (!result) {
+          //   reply.status(404).send({ error: 'Game not found' })
+          //   return
+          // }
+          if (result.error) {
+            reply.status(400).send({ error: result.error })
             return
           }
           reply.status(200).send(result)
@@ -398,10 +408,10 @@ module.exports = fp(
           const userId = request.user.id
           console.log('Fetching invites for userId:', userId) //! DELETE
           const invites = await fastify.dbGames.getGameInvites(userId)
-          if (!invites) {
-            reply.status(404).send({ error: 'No invites found' })
-            return
-          }
+          // if (!invites) {
+          //   reply.status(404).send({ error: 'No invites found' })
+          //   return
+          // }
           reply.status(200).send(invites)
         } catch (err) {
           fastify.log.error(err)
@@ -423,8 +433,8 @@ module.exports = fp(
           const userId = request.user.id
           console.log('Updating in-game status for gameId:', gameId, 'to status:', status) //! DELETE
           const result = await fastify.dbGames.updateInGameStatus(userId, gameId, status)
-          if (!result) {
-            reply.status(404).send({ error: 'Game not found' })
+          if (result.error) {
+            reply.status(400).send({ error: result.error })
             return
           }
           reply.status(200).send(result)
