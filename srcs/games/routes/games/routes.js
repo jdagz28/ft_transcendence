@@ -251,8 +251,8 @@ module.exports = fp(
       onRequest: fastify.authenticate,
       handler: async function inviteToGameHandler(request, reply) {
         const { gameId } = request.params
-        const { username } = request.body
-        const result = await fastify.gameService.inviteToGame(request, gameId, username)
+        const { username, slot } = request.body
+        const result = await fastify.gameService.inviteToGame(request, gameId, username, slot)
         if (!result) {
           return reply.code(404).send({ error: 'Game not found' })
         }
@@ -271,6 +271,9 @@ module.exports = fp(
         const result = await fastify.gameService.respondToInvite(request, gameId, response)
         if (!result) {
           return reply.code(404).send({ error: 'Game not found' })
+        }
+        if (response === "accept" ) {
+          fastify.gameBroadcast(gameId, { type: "player-joined" })
         }
         return reply.send(result)
       }
@@ -318,6 +321,6 @@ module.exports = fp(
 
   }, {
     name: 'gameRoutes',
-    dependencies: [ 'gameAutoHooks']
+    dependencies: [ 'gameAutoHooks', 'wsBroadcast']
   }
 )

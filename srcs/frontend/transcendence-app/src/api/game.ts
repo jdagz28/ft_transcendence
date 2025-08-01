@@ -18,6 +18,7 @@ export async function getGamePlayers(gameId: number): Promise<any> {
     paddle_loc: string;
     alias?: string;
     avatar: string;
+    slot: string;
   }>;
 
   return data.map(player => ({
@@ -25,7 +26,8 @@ export async function getGamePlayers(gameId: number): Promise<any> {
     username: player.username,
     paddle_loc: player.paddle_loc,
     alias: player.alias,
-    avatar: player.avatar
+    avatar: player.avatar,
+    slot: player.slot
   }));
 }
 

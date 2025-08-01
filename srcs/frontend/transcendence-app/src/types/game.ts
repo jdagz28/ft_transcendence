@@ -16,6 +16,7 @@ export interface PlayerConfig {
   avatar: string;
   paddle_loc: string;
   paddle_side: 'left' | 'right';
+  slot: string;
 }
 
 export interface GameDetails {

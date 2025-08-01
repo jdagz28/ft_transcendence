@@ -183,9 +183,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       return data
     },
 
-    async inviteToGame(request, gameId, username) {
+    async inviteToGame(request, gameId, username, slot) {
       const { data } = await dbApi.post(`/games/${gameId}/invite`, 
-        { username }, 
+        { username, slot }, 
         { headers: internalHeaders(request) },
       )
       console.log('User invited to game:', data) //! DELETE
