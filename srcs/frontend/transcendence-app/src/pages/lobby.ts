@@ -283,7 +283,7 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
   const userAvatar2 = document.getElementById('avatar2');
     if (userAvatar2 && user2.connected === true) {
       const img = document.createElement('img');
-      img.src = user2.avatarUrl ?? URL.createObjectURL(user2.pfp);
+      img.src = !user2.avatarUrl ? URL.createObjectURL(user2.pfp) : user2.avatarUrl;
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
       userAvatar2.innerHTML = '';
@@ -292,7 +292,7 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
   const userAvatar3 = document.getElementById('avatar3');
     if (userAvatar3 && user3.connected === true) {
           const img = document.createElement('img');
-          img.src = user3.avatarUrl ?? URL.createObjectURL(user3.pfp);
+          img.src = !user3.avatarUrl ? URL.createObjectURL(user3.pfp) : user3.avatarUrl;
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
       userAvatar3.innerHTML = '';
@@ -301,7 +301,7 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
   const userAvatar4 = document.getElementById('avatar4');
     if (userAvatar4 && user4.connected === true) {
       const img = document.createElement('img');
-      img.src = user4.avatarUrl ?? URL.createObjectURL(user4.pfp);
+      img.src = !user4.avatarUrl ? URL.createObjectURL(user4.pfp) : user4.avatarUrl;
       img.alt = 'User Avatar';
       img.className = 'w-full h-full object-cover';
       userAvatar4.innerHTML = '';
