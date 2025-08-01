@@ -121,10 +121,19 @@ export async function renderTournamentPage() {
 
       if (isPlayer || isAdmin) {
         const btn = document.createElement("button");
-        btn.textContent = "Go to Lobby";
-        btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded font-semibold";
+        const tournamentStatus = tournament.status;
+        let url = "";
+        if (tournamentStatus === "pending") {
+          btn.textContent = "Go to Lobby";
+          btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded font-semibold";
+          url = `#/tournaments/${tournament.id}/lobby`;
+        } else if (tournamentStatus === "active" || tournamentStatus === "finished") {
+          btn.textContent = "View Bracket";
+          btn.className = "bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded font-semibold";
+          url = `#/tournaments/${tournament.id}/bracket`;
+        }
         btn.onclick = () => {
-          window.location.hash = `#/tournaments/${tournament.id}/lobby`;
+          window.location.hash = url;
         };
         actionTd.appendChild(btn);
       } else if (tournament.status === "pending" && openPlayers > 0 && tournament.settings.gameMode !== "private") {

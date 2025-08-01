@@ -101,7 +101,8 @@ export function buildPlayerSlot(opts: SlotOptions): {
       label.textContent  = loginEnabled ? "login" : "open";
 
       const dropdownEnabled = Boolean(opts.fetchCandidates);
-      caret.style.visibility = dropdownEnabled ? "visible" : "hidden";
+      // caret.style.visibility = dropdownEnabled ? "visible" : "hidden";
+      caret.style.visibility = "hidden";
       caret.style.cursor     = dropdownEnabled ? "pointer" : "default";
       
       if (loginEnabled) {

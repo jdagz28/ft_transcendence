@@ -1,5 +1,5 @@
 import { setupAppLayout, whoAmI } from "../setUpLayout";
-import { getTournamentPlayers, getTournamentDetails, getTournamentBrackets} from "../api/tournament";
+import { getTournamentPlayers, getTournamentDetails, getTournamentBrackets, getTournamentCreator} from "../api/tournament";
 import { type Player, type SlotState, buildPlayerSlot } from "@/components/playerSlots";
 
 
@@ -14,6 +14,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   }
   const slots = await getTournamentBrackets(tournamentId)
   const players = await getTournamentPlayers(tournamentId);
+  const creatorId = await getTournamentCreator(tournamentId);   
   const userData = await whoAmI();
   if (!userData.success) {
     console.error("Failed to get user data:", userData.error);
@@ -22,15 +23,10 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   }
 
   const userId = userData.data.id;
-  let authorized = false;
-  for (const player of players) {
-    if (player.id === userId) {
-      authorized = true;
-      break;
-    }
-  }
-  if (!authorized) {
-    window.location.hash = "/403"; 
+  const isTournamentAdmin = userId === creatorId;
+  const isPlayer = players.some(player => player.id === userId);
+  if (!isPlayer && !isTournamentAdmin) {
+    window.location.hash = "/403";
     return;
   }
 
@@ -51,7 +47,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   wrapper.appendChild(col1);
 
   const col2 = document.createElement("div");
-  col2.className = "flex flex-col items-center justify-center gap-32 relative"; 
+  col2.className = "flex flex-col items-center justify-center gap-32 relative";
   wrapper.appendChild(col2);
 
   const col3 = document.createElement("div");
@@ -125,7 +121,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
     });
 
     if (idx < round1Slots.length - 1) {
-      container.style.marginBottom = "96px"; 
+      container.style.marginBottom = "96px";
     }
 
     col1.appendChild(container);
@@ -142,16 +138,16 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
   let round2Slots = slots.brackets?.[1]?.slots ?? [];
   if (round2Slots.length === 0 && round1Slots.length > 0) {
     round2Slots = [{
-        slot: 0,
-        status: "pending",
-        players: [],
-        gameId: null,
-        winnerId: null,
-        score: {}
+      slot: 0,
+      status: "pending",
+      players: [],
+      gameId: null,
+      winnerId: null,
+      score: {}
     }];
   }
 
-  
+
   round2Slots.forEach((slot: any) => {
     const container = document.createElement("div");
     container.className = "flex flex-col items-center";
@@ -159,46 +155,46 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
     const header = document.createElement("div");
     header.className = "mb-2 flex items-center gap-2";
     header.innerText = `Championship Match`;
-    
+
     const isUserInGame = slot.players.some((p: any) => p.playerId === userId);
 
-    if (slot.status === "pending" && isUserInGame) {
-        const gameId = slot.gameId;
-        const playBtn = document.createElement("button");
-        playBtn.className = "px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-sm";
-        playBtn.textContent = "Play";
-        playBtn.onclick = () => window.location.hash = `#/tournaments/${tournamentId}/${gameId}`;
-        header.appendChild(playBtn);
+    if (slot.status === "pending" && (isUserInGame || isTournamentAdmin) && slot.players.length === 2 && slot.gameId) {
+      const gameId = slot.gameId;
+      const playBtn = document.createElement("button");
+      playBtn.className = "px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-sm";
+      playBtn.textContent = "Play";
+      playBtn.onclick = () => window.location.hash = `#/tournaments/${tournamentId}/${gameId}`;
+      header.appendChild(playBtn);
     } else if (slot.status === "finished") {
-        const scoreSpan = document.createElement("span");
-        scoreSpan.className = "text-sm ml-2 font-bold";
-        const p1 = slot.players[0];
-        const p2 = slot.players[1];
-        if (p1 && p2 && slot.score) {
-            scoreSpan.textContent = `${slot.score[p1.playerId] ?? 0} – ${slot.score[p2.playerId] ?? 0}`;
-            header.appendChild(scoreSpan);
-        }
+      const scoreSpan = document.createElement("span");
+      scoreSpan.className = "text-sm ml-2 font-bold";
+      const p1 = slot.players[0];
+      const p2 = slot.players[1];
+      if (p1 && p2 && slot.score) {
+        scoreSpan.textContent = `${slot.score[p1.playerId] ?? 0} – ${slot.score[p2.playerId] ?? 0}`;
+        header.appendChild(scoreSpan);
+      }
     }
     container.appendChild(header);
 
     for (let i = 0; i < 2; i++) {
-        const playerInfo = slot.players[i];
-        const player = playerInfo ? getPlayerById(playerInfo.playerId) : undefined;
-        const state: SlotState = player ? { kind: "filled", player } : { kind: "filled", player: createTbdPlayer() };
-        const playerSlot = buildPlayerSlot({ slotIndex: i, state });
-        
-        if (player) {
-          if (slot.status === 'finished' && slot.winnerId === player.id) {
-            playerSlot.el.classList.add("ring-2", "ring-sky-400");
-          }
-        }
-        container.appendChild(playerSlot.el);
+      const playerInfo = slot.players[i];
+      const player = playerInfo ? getPlayerById(playerInfo.playerId) : undefined;
+      const state: SlotState = player ? { kind: "filled", player } : { kind: "filled", player: createTbdPlayer() };
+      const playerSlot = buildPlayerSlot({ slotIndex: i, state });
 
-        if (i === 0) {
-            const spacer = document.createElement("div");
-            spacer.style.height = "32px";
-            container.appendChild(spacer);
+      if (player) {
+        if (slot.status === 'finished' && slot.winnerId === player.id) {
+          playerSlot.el.classList.add("ring-2", "ring-sky-400");
         }
+      }
+      container.appendChild(playerSlot.el);
+
+      if (i === 0) {
+        const spacer = document.createElement("div");
+        spacer.style.height = "32px";
+        container.appendChild(spacer);
+      }
     }
     col2.appendChild(container);
   });
@@ -210,8 +206,8 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
 
   const lastRound = slots.brackets[slots.brackets.length - 1];
   const finalMatch = lastRound?.slots[0];
-  const winner = finalMatch?.status === 'finished' && finalMatch.winnerId && finalMatch.round === 2
-    ? getPlayerById(finalMatch.winnerId) 
+  const winner = finalMatch?.status === 'finished' && finalMatch.winnerId
+    ? getPlayerById(finalMatch.winnerId)
     : undefined;
 
   const championState: SlotState = winner

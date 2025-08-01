@@ -115,7 +115,7 @@ module.exports = fp(
         try {
           const { gameId } = request.params
           const user = request.user.id
-          const game = await fastify.dbGames.joinGame(gameId, user)
+          const game = await fastify.dbGames.joinGame(gameId, user, null)
           if (!game) {
             reply.status(400).send({ error: 'Failed to join game' })
             return
@@ -348,14 +348,14 @@ module.exports = fp(
       handler: async function inviteToGameHandler(request, reply) {
         try {
           const { gameId } = request.params
-          const { username } = request.body
+          const { username, slot } = request.body
           const inviter = request.user.id
           const userId = await fastify.getUserId(username)
           if (!userId) {
             reply.status(404).send({ error: 'User not found' })
             return
           }
-          const result = await fastify.dbGames.inviteToGame(gameId, userId, inviter)
+          const result = await fastify.dbGames.inviteToGame(gameId, userId, inviter, slot)
           if (!result) {
             reply.status(404).send({ error: 'Game not found' })
             return

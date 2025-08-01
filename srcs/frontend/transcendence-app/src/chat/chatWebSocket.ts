@@ -14,7 +14,7 @@ export class ChatWebSocketManager {
     const token = chatState.getAuthToken();
     
     if (!chatState.currentWs || chatState.currentWs.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket not ready for joining all rooms');
+      // console.log('WebSocket not ready for joining all rooms');
       return;
     }
 
@@ -98,7 +98,7 @@ export class ChatWebSocketManager {
 
   async joinSpecificRoom(chatId: number, type: 'group' | 'dm'): Promise<void> {
     if (!chatState.currentWs || chatState.currentWs.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket not ready for joining specific room');
+      // console.log('WebSocket not ready for joining specific room');
       return;
     }
 
@@ -152,7 +152,7 @@ export class ChatWebSocketManager {
     chatState.setWebSocket(new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`));
 
     chatState.currentWs!.onopen = async () => {
-      console.log('Chat WebSocket connected');
+      // console.log('Chat WebSocket connected');
       await this.joinAllAvailableRooms();
     };
 
@@ -161,7 +161,7 @@ export class ChatWebSocketManager {
     };
 
     chatState.currentWs!.onclose = (event) => {
-      console.log('Chat WebSocket closed:', event.code, event.reason);
+      // console.log('Chat WebSocket closed:', event.code, event.reason);
       chatState.setWebSocket(null);
       
       if (event.code !== 1000 && chatState.isInitialized) {
@@ -184,7 +184,7 @@ export class ChatWebSocketManager {
   private handleWebSocketMessage(event: MessageEvent): void {
     try {
       const data = JSON.parse(event.data);
-      console.log('Received WebSocket message:', data);
+      // console.log('Received WebSocket message:', data);
 
       const messageHandlers: Record<string, Function> = {
         'user_blocked': () => userBlocking.handleUserBlocked(data.blocked_by_user_id, data.blocked_by_username),
@@ -192,7 +192,7 @@ export class ChatWebSocketManager {
         'user_unblocked': () => userBlocking.handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username),
         'user_unblocked_by_me': () => userBlocking.handleUserUnblockedByMe(data.unblocked_user_id),
         'friend_request_accepted': async () => {
-          console.log('Friend request accepted, rejoining all available rooms');
+          // console.log('Friend request accepted, rejoining all available rooms');
           await this.joinAllAvailableRooms();
         },
         'game.invite': () => chatUI.displayGameInvite(data.senderId, data.gameId, data.receiverId, data.notifId),
@@ -214,7 +214,7 @@ export class ChatWebSocketManager {
           const isMe = data.from === chatState.currentUser;
           chatMessages.addMessageToUI(data.from, data.message, isMe);
         } else {
-          console.log(`Message filtered out - from room ${data.roomId}, currently viewing room ${chatState.currentChatId}`);
+          // console.log(`Message filtered out - from room ${data.roomId}, currently viewing room ${chatState.currentChatId}`);
         }
       }
     } catch (error) {

@@ -2,7 +2,7 @@ import { whoAmI } from "../setUpLayout";
 import { openSidebarChat } from "../sidebarChat";
 import { chatWebSocket } from "../chat/chatWebSocket";
 import { chatSwitcher } from "../chat/chatSwitcher";
-
+import { ROUTE_MAIN } from "../router";
 
 let notificationWS: WebSocket | null = null;
 
@@ -220,9 +220,37 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		if (response.ok) {
 			btnDiv.remove();
 			setAnsweredButtons(contentWrapper);
-			if (chat) {
+			// if (chat) {
 				//reloadsidebarchat();
-			}
+			// }
+			const overlay = document.createElement('div');
+			overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+			
+			const box = document.createElement('div');
+			box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
+			
+			const h = document.createElement("h1");
+			h.textContent = `Remote Multiplayer:
+												Not Implemented`;
+			h.className = "text-2xl font-bold text-center";
+
+			const p = document.createElement("p");
+			p.textContent = "Invitation Accepted! Game will be in creator's browser.";
+			p.className = "text-center"
+			box.appendChild(h);
+			box.appendChild(p);
+
+			let buttonLabel = "Return to Main Menu";
+			const btn = document.createElement("button");
+			btn.textContent = buttonLabel;
+			btn.className = "w-full py-3 rounded-md text-lg font-semibold bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90 transition";
+			btn.onclick = () => {
+				window.location.hash = ROUTE_MAIN;
+				overlay.remove();
+			};
+			box.appendChild(btn);
+			overlay.appendChild(box);
+			document.body.appendChild(overlay);
 		} else {
 			btnDiv.remove();
 			setErrorButtons(contentWrapper);
@@ -257,6 +285,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 				//reloadsidebarchat();
 			}
 		} else {
+			alert('Game no longer available');
 			btnDiv.remove();
 			setErrorButtons(contentWrapper);
 			if (chat) {
@@ -626,7 +655,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 }
 
 function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDivElement {
-	console.log("Generating notification div for:", notif);
+	// console.log("Generating notification div for:", notif);
 	const notifItem = document.createElement("div");
 	notifItem.className = "notif-item flex items-center gap-3 rounded-md border border-gray-200 p-1 transition hover:bg-blue-100";
 
@@ -769,12 +798,12 @@ export async function populateNotifContainer(container: HTMLElement, id: number)
 
 export async function connectNotifications(): Promise<WebSocket | null> {
   const user = await whoAmI();
-  console.log('User data:', user);
+  // console.log('User data:', user);
   if (!user.success) {
     console.warn('User is not authenticated, cannot connect to notifications WebSocket');
     return null;
   }
-  console.log('Connecting to notifications WebSocket for user:', user.data.id);
+  // console.log('Connecting to notifications WebSocket for user:', user.data.id);
   	let notificationCount = 0;
 	const token = localStorage.getItem("token");
 	if (token) {
@@ -817,7 +846,7 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 	const notifModal = document.getElementById('notifModal');
 	const notifContainer = document.getElementById('notifContainer');
 	let open = false;
-	console.log('Open is', open);
+	// console.log('Open is', open);
 	if (notifBtn && notifModal && badge) {
 		notifBtn.addEventListener('click', (event) => {
 			if (notifModal.classList.contains('hidden')) {
@@ -869,7 +898,7 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 	
 
     notificationWS.onopen = () => {
-      console.log('Notifications WebSocket connected');
+      // console.log('Notifications WebSocket connected');
     };
 
     notificationWS.onmessage = (event) => {
@@ -896,11 +925,11 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 				badge.textContent = '';
 			}
 		}
-      console.log('WebSocket message received:', msg);
+      // console.log('WebSocket message received:', msg);
     };
 
     notificationWS.onclose = (event) => {
-      console.log('Notifications WebSocket closed:', event.code, event.reason);
+      // console.log('Notifications WebSocket closed:', event.code, event.reason);
       notificationWS = null;
 
       if (event.code !== 1000) {

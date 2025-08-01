@@ -3,6 +3,7 @@
   "$id": "schema:games:inviteUser",
   "required": [ "username" ],
   "properties": {
-    "username": { "type": "string" }
+    "username": { "type": "string" },
+    "slot": { "type": "string" }
   }
 }

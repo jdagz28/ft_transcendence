@@ -43,6 +43,43 @@ module.exports = fp(async function wsBroadcast (fastify) {
       fastify.tournamentClients[tournamentId].delete(socket)
     })
   }})
+
+  fastify.decorate('gameBroadcast', function (gameId, message) {
+    const clients = fastify.gameClients?.[gameId];
+    if (!clients)
+      return;
+    for (const client of clients) {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify(message));
+      }
+    }
+  });
+  fastify.decorate('gameClients', {})
+  fastify.route({
+    method: 'GET',
+    url: '/games/:gameId/ws',
+    handler: (req, reply) => {
+      reply.code(426).send({ error: 'Upgrade Required' });
+    },
+    wsHandler: (socket, request) => {
+    const gameId = request.params?.gameId || request.raw?.params?.gameId;
+    fastify.log.info(`WebSocket for game ${gameId} established`)
+    if (!socket) {
+      fastify.log.error('WebSocket does not have a socket property')
+      return
+    }
+
+    socket.gameId = gameId
+    if (!fastify.gameClients)
+      fastify.gameClients = {}
+    if (!fastify.gameClients[gameId])
+      fastify.gameClients[gameId] = new Set()
+    fastify.gameClients[gameId].add(socket)
+
+    socket.on('close', () => {
+      fastify.gameClients[gameId].delete(socket)
+    })
+  }})
 }, {
   name: 'wsBroadcast'
 })
