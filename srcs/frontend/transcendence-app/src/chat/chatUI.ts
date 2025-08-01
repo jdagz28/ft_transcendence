@@ -329,16 +329,21 @@ export class ChatUIManager {
   }
 
   private setupUsernameClickHandlers(): void {
-    const usernameElements = document.querySelectorAll('b[data-username]:not([data-handler-added])');
+    const usernameElements = document.querySelectorAll('b[data-username]');
     
     usernameElements.forEach(element => {
       const username = element.getAttribute('data-username');
       if (username) {
-        element.addEventListener('click', async (event) => {
+        element.removeAttribute('data-handler-added');
+        
+        const newElement = element.cloneNode(true) as HTMLElement;
+        element.parentNode?.replaceChild(newElement, element);
+        
+        newElement.addEventListener('click', async (event) => {
           const { userModal } = await import('./userModal');
           userModal.showUserModal(username, event as MouseEvent);
         });
-        element.setAttribute('data-handler-added', 'true');
+        newElement.setAttribute('data-handler-added', 'true');
       }
     });
   }
@@ -499,7 +504,7 @@ export class ChatUIManager {
         })
       });
 
-      fetch(`/notifications/${userId}/${notifId}`, {
+      await fetch(`/notifications/${userId}/${notifId}`, {
     			method: 'PATCH',
    				headers: {
       				'Authorization': `Bearer ${token}`,
@@ -511,6 +516,7 @@ export class ChatUIManager {
 
       const notifContainer = document.getElementById('notifContainer');
       if (notifContainer) {
+        console.log('Clearing notification container');
         notifContainer.innerHTML = '';
         populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
       }

@@ -191,14 +191,17 @@ export class ChatWebSocketManager {
           const messageData = JSON.parse(data.message);
           if (messageData.type === 'game.invite') {
             console.log('Game invite found in message:', messageData);
-            chatUI.displayGameInvite(
-              messageData.senderId || '',
-              messageData.gameId || '',
-              messageData.receiverId || '',
-              messageData.notifId || '',
-              false,
-              messageData.username || 'Unknown'
-            );
+            if (messageData.roomId === chatState.currentChatId)
+            {
+              chatUI.displayGameInvite(
+                messageData.senderId || '',
+                messageData.gameId || '',
+                messageData.receiverId || '',
+                messageData.notifId || '',
+                false,
+                messageData.username || 'Unknown'
+              );
+            }
             return;
           }
         } catch {
@@ -271,13 +274,16 @@ export class ChatWebSocketManager {
         message
       }));
       
-      try {
-        if (JSON.stringify(message).includes('game.invite')) {
-          chatUI.displayGameInviteResponded(true, 'Me');
-          return true;
-        }
-      } catch (error) {
+      if (room === chatState.currentChatId)
+      {
+        try {
+          if (JSON.stringify(message).includes('game.invite')) {
+            chatUI.displayGameInviteResponded(true, 'Me');
+            return true;
+          }
+        } catch (error) {
 
+        }
       }
       
       return true;

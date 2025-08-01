@@ -73,15 +73,20 @@ export class ChatMessagesHandler {
   }
 
   private setupUsernameClickHandlers(): void {
-    const usernameElements = document.querySelectorAll('b[data-username]:not([data-handler-added])');
+    const usernameElements = document.querySelectorAll('b[data-username]');
     
     usernameElements.forEach(element => {
       const username = element.getAttribute('data-username');
       if (username) {
-        element.addEventListener('click', (event) => {
+        element.removeAttribute('data-handler-added');
+        
+        const newElement = element.cloneNode(true) as HTMLElement;
+        element.parentNode?.replaceChild(newElement, element);
+        
+        newElement.addEventListener('click', (event) => {
           userModal.showUserModal(username, event as MouseEvent);
         });
-        element.setAttribute('data-handler-added', 'true');
+        newElement.setAttribute('data-handler-added', 'true');
       }
     });
   }

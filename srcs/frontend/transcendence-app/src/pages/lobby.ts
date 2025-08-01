@@ -491,6 +491,7 @@ function setUpEventListeners(root: HTMLDivElement, user1: user, user2: user, use
                   notifId: res.notifId,
                   gameId: res.gameId,
                   username: user1.username,
+                  roomId: res.roomId
                 });
                 chatWebSocket.sendMessage("dm", res.roomId, message);
                 inviteButton.remove();
