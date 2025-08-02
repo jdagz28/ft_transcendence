@@ -4,7 +4,6 @@ const fp = require('fastify-plugin')
 
 module.exports = fp(async function (fastify) {
   fastify.decorate('getUserId', async function (username) {
-    console.log('Looking for user ID:', username) //! DELETE
     const query = fastify.db.prepare(`  
       SELECT id FROM users WHERE username = ?
     `)

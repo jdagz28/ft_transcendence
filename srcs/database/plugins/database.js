@@ -65,6 +65,9 @@ async function databaseConnector(fastify) {
         `).run('Main');
       }
     } catch (error) {
+      if (db.inTransaction) {
+        db.exec('ROLLBACK');
+      }
       fastify.log.error('Error creating tables:', error);
     }
   }
