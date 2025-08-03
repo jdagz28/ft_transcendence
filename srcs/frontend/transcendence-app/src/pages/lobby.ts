@@ -1244,6 +1244,21 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
   
 }
 
+function resetPlayerSlot(slotNumber: number) {
+  const slot = `user${slotNumber}`;
+  localStorage.removeItem(`invite_slot_${slot}`);
+
+  const connectBtn = document.getElementById(`con${slotNumber}`) as HTMLButtonElement;
+  const inviteBtn = document.getElementById(`inv${slotNumber}`) as HTMLButtonElement;
+  const cancelBtn = document.getElementById(`cancelInvite${slotNumber}`) as HTMLButtonElement;
+
+  if (connectBtn && inviteBtn && cancelBtn) {
+    connectBtn.classList.remove('hidden');
+    inviteBtn.classList.remove('hidden');
+    cancelBtn.classList.add('hidden');
+  } 
+}
+
 export async function renderLobbyPage(params: RouteParams): Promise<void> {
   const root = setupAppLayout()
   const gameId = params.gameId;
@@ -1450,6 +1465,16 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
   ws.onmessage = async (event) => {
     const msg = JSON.parse(event.data);
     console.log('WebSocket message received:', msg);
+    if (msg.type === 'invite-declined') {
+      if (msg.slot === 'user2') {
+        resetPlayerSlot(2);
+      } else if (msg.slot === 'user3') {
+        resetPlayerSlot(3);
+      } else if (msg.slot === 'user4') {
+        resetPlayerSlot(4);
+      }
+    } 
+
     if (msg.type === 'player-joined' ) {
     	const gamePlayers = await getGamePlayers(Number(gameId));
       if (!gamePlayers) {

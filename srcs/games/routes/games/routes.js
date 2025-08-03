@@ -291,6 +291,8 @@ module.exports = fp(
         }
         if (response === "accept" ) {
           fastify.gameBroadcast(gameId, { type: "player-joined" })
+        } else if (response === "decline" && result.slot ) {
+          fastify.gameBroadcast(gameId, { type: "invite-declined", slot: result.slot })
         }
         return reply.send(result)
       }

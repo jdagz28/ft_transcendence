@@ -1007,6 +1007,10 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           }
         }
 
+        if (response === 'decline') {
+          return { message: 'Invite declined successfully', slot: invite.slot }
+        }
+
         try {
           const accepterName = fastify.db.prepare('SELECT username FROM users WHERE id = ?').get(userId)
           await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-responded`, {
