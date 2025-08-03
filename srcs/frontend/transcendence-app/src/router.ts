@@ -208,6 +208,9 @@ export async function deletePastLobby() {
 		localStorage.removeItem("user2");
 		localStorage.removeItem("user3");
 		localStorage.removeItem("user4");
+		localStorage.removeItem("user2");
+		localStorage.removeItem("user3");
+		localStorage.removeItem("user4");
 	} 
 }
 

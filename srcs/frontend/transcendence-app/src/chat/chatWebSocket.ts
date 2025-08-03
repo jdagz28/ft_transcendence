@@ -184,7 +184,30 @@ export class ChatWebSocketManager {
   private handleWebSocketMessage(event: MessageEvent): void {
     try {
       const data = JSON.parse(event.data);
-      // console.log('Received WebSocket message:', data);
+      console.log('Received WebSocket message:', data);
+
+      if (data.message) {
+        try {
+          const messageData = JSON.parse(data.message);
+          if (messageData.type === 'game.invite') {
+            console.log('Game invite found in message:', messageData);
+            if (messageData.roomId === chatState.currentChatId)
+            {
+              chatUI.displayGameInvite(
+                messageData.senderId || '',
+                messageData.gameId || '',
+                messageData.receiverId || '',
+                messageData.notifId || '',
+                false,
+                messageData.username || 'Unknown'
+              );
+            }
+            return;
+          }
+        } catch {
+
+        }
+      }
 
       const messageHandlers: Record<string, Function> = {
         'user_blocked': () => userBlocking.handleUserBlocked(data.blocked_by_user_id, data.blocked_by_username),
@@ -223,7 +246,7 @@ export class ChatWebSocketManager {
         chatMessages.showErrorMessage(messageText);
         console.warn('Server message:', messageText);
       } else {
-        console.error('Error parsing WebSocket message:', error, event.data);
+        
       }
     }
   }
@@ -243,7 +266,7 @@ export class ChatWebSocketManager {
     return chatState.currentWs !== null && chatState.currentWs.readyState === WebSocket.OPEN;
   }
 
-  sendMessage(scope: 'group' | 'dm', room: number, message: string): boolean {
+  sendMessage(scope: 'group' | 'dm', room: number, message: any): boolean {
     if (this.isWebSocketConnected() && chatState.currentWs) {
       chatState.currentWs.send(JSON.stringify({
         action: 'send',
@@ -251,6 +274,19 @@ export class ChatWebSocketManager {
         room,
         message
       }));
+      
+      if (room === chatState.currentChatId)
+      {
+        try {
+          if (JSON.stringify(message).includes('game.invite')) {
+            chatUI.displayGameInviteResponded(true, 'Me');
+            return true;
+          }
+        } catch (error) {
+
+        }
+      }
+      
       return true;
     }
     console.warn('Cannot send message: WebSocket not connected');
