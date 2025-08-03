@@ -36,7 +36,7 @@ module.exports = fp(
           200: fastify.getSchema('schema:users:userProfile')
         }
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function userProfileHandler (request, reply) {
         const user = await fastify.usersDataSource.getMeById(request, request.user.id)
         if (!user) {
@@ -50,7 +50,7 @@ module.exports = fp(
       schema: {
         consumes: ['multipart/form-data']
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function avatarHandler (request, reply) {
         const userId = Number(request.user.id)
         if (!userId) {
@@ -77,7 +77,7 @@ module.exports = fp(
     })
 
     fastify.get('/users/:userId/avatar', {
-      // onRequest: [fastify.authenticate],
+      // onRequest: fastify.authenticate,
       handler: async function avatarHandler (request, reply) {
         const userId = request.params.userId
         try {
@@ -103,7 +103,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:changePassword')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function changePassword (request, reply) {
         const userId = request.user.id
         const { newPassword } = request.body
@@ -121,7 +121,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:changeEmail')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function changeEmail(request, reply) {
         const userId = request.user.id
         const { newEmail } = request.body
@@ -138,7 +138,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:changeUsername')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function changeUsername(request, reply) {
         const userId = request.user.id
         const { newUsername } = request.body
@@ -155,7 +155,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:changeNickname')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function changeNickname(request, reply) {
         const userId = request.user.id
         const { newNickname } = request.body
@@ -175,7 +175,7 @@ module.exports = fp(
           200: fastify.getSchema('schema:users:userProfile')
         }
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function userProfileHandler (request, reply) {
         const username = request.params.username
         const user = await fastify.usersDataSource.getUserByUsername(request, username)
@@ -190,7 +190,7 @@ module.exports = fp(
       schema: {
         params: fastify.getSchema('schema:users:getUserByUsername')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function addFriendHandler (request, reply) {
         await fastify.usersDataSource.addFriend(request)
         return reply.send({ success: true })
@@ -201,7 +201,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:removeFriend')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function removeFriendHandler (request, reply) {
         await fastify.usersDataSource.removeFriend(request)
         return reply.send({ success: true })
@@ -212,7 +212,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:users:respondFriendRequest')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function addFriendHandler (request, reply) {
         await fastify.usersDataSource.respondFriendRequest(request)
         return reply.send({ success: true })
@@ -225,7 +225,7 @@ module.exports = fp(
           200: fastify.getSchema('schema:users:userFriends')
         }
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getMeFriendsHandler (request, reply) {
         const username = request.user.username
         const friends = await fastify.usersDataSource.getFriends(request, username)
@@ -237,7 +237,7 @@ module.exports = fp(
     })
 
     fastify.get('/users/me/friend-requests', {
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getMeFriendRequestsHandler (request, reply) {
         const username = request.user.username
         const friendRequests = await fastify.usersDataSource.getFriendRequests(request, username)
@@ -255,7 +255,7 @@ module.exports = fp(
           200: fastify.getSchema('schema:users:userFriends')
         }
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getFriendsHandler (request, reply) {
         const username = request.params.username
         const friends = await fastify.usersDataSource.getFriends(request, username)
@@ -272,7 +272,7 @@ module.exports = fp(
           200: { type: 'integer' }
         }
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getAiId (request, reply) {
          return fastify.aiUserId
       }
@@ -285,7 +285,7 @@ module.exports = fp(
           200: fastify.getSchema('schema:users:userProfile')
         }
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getUserByIdHandler (request, reply) {
         const user = await fastify.usersDataSource.getUserById(request, request.params.userId)
         if (!user) {
@@ -296,7 +296,7 @@ module.exports = fp(
     })
 
     fastify.get('/users/me/matches', {
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getMatchHistoryHandler (request, reply) {
         const username = request.user.username
         try {
@@ -313,7 +313,7 @@ module.exports = fp(
       schema: {
         params: fastify.getSchema('schema:users:getUserByUsername')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getMatchHistoryByUsernameHandler (request, reply) {
         const username = request.params.username
         try {
@@ -342,7 +342,7 @@ module.exports = fp(
       schema: {
         params: fastify.getSchema('schema:users:getUserById')
       },
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function getRemoteUserHandler (request, reply) {
         const userId = request.params.userId
         try {

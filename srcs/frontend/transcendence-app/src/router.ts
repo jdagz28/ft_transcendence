@@ -197,13 +197,13 @@ export async function deletePastLobby() {
 	const gameId = localStorage.getItem("gameId");
 	const tok = localStorage.getItem("token");
 	if (gameId && tok) {
-		await fetch(`/games/${gameId}`, {
-    		method: 'DELETE',
-    		headers: {
-       			'Authorization': `Bearer ${tok}`
-			},
-      		credentials: 'include'
-    	});
+	// 	await fetch(`/games/${gameId}`, {
+  //   		method: 'DELETE',
+  //   		headers: {
+  //      			'Authorization': `Bearer ${tok}`
+	// 		},
+  //     		credentials: 'include'
+  //   	});
 		localStorage.removeItem("gameId");
 		localStorage.removeItem("user2");
 		localStorage.removeItem("user3");
@@ -229,8 +229,7 @@ export function initRouter() {
       // console.log("Regex match result:", m);
       
       if (m) {
-        const GAME_RELATED_ROUTES = [ROUTE_LOBBY, ROUTE_GAME_PLAY, ROUTE_GAMES_PAGE];
-        if (!GAME_RELATED_ROUTES.includes(r.pattern)) {
+        if (r.pattern !== ROUTE_LOBBY) {
           await deletePastLobby();
         }
         r.handler({ ...params, ...extractParams(m, r.pattern) });
