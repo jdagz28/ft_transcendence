@@ -10,22 +10,22 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
   //   timeout: 2_000
   // });
 
-  function bearer (request) {
-    const authHeader = request.headers['authorization'];
-    const token = authHeader && authHeader.replace(/^Bearer\s+/i, '');
-    if (!token) {
-      throw fastify.httpErrors.unauthorized('Missing JWT')
-    }
-    return token;
-  }
+  // function bearer (request) {
+  //   const authHeader = request.headers['authorization'];
+  //   const token = authHeader && authHeader.replace(/^Bearer\s+/i, '');
+  //   if (!token) {
+  //     throw fastify.httpErrors.unauthorized('Missing JWT')
+  //   }
+  //   return token;
+  // }
 
   fastify.register(schemas)
 
   fastify.decorate('dbTournaments', {
+    // Creates a new tournament, its settings and adds the user as the first player
     async createTournament(request, userId, name, maxPlayers, gameMode, gameType) {
       try {
         fastify.db.exec('BEGIN')
-
         const query = fastify.db.prepare(
           'INSERT INTO tournaments (created_by, name, status) VALUES (?, ?, ?)'
         )
@@ -70,6 +70,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Joins a user to a tournament, either by accepting an invite or an open slot
     async joinTournament(request, tournamentId, userId, slotIndex) {
       try {
         const check = fastify.db.prepare(
@@ -162,6 +163,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Invites a user to join a tournament
     async inviteUserToTournament(tournamentId, userId, slotIndex) {
       try {
         const check = fastify.db.prepare(
@@ -169,20 +171,25 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
         
         const row = fastify.db.prepare(`
           SELECT 1 FROM tournament_players
           WHERE tournament_id = ? AND user_id = ?
         `).get(tournamentId, userId);
-        if (row) throw new Error('User already in tournament');
+        if (row) {
+          return { error: 'User already joined the tournament', status: 409 }
+        }
 
         const tournamentStatus = fastify.db.prepare(`
           SELECT status FROM tournaments WHERE id = ?
         `).get(tournamentId);
+        if (!tournamentStatus) {
+          return { error: 'Tournament not found', status: 404 }
+        }
         if (tournamentStatus.status !== 'pending') {
-          throw new Error('Tournament is not joinable')
+          return { error: 'Tournament is not joinable', status: 409 }
         }
 
         const result = fastify.db.prepare(`
@@ -207,6 +214,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves all tournament invites for a user
     async getTournamentInvites(tournamentId, user) {
       try {
         const check = fastify.db.prepare(
@@ -214,16 +222,14 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
 
         const query = fastify.db.prepare(
           'SELECT * FROM tournament_invites WHERE tournament_id = ? AND user_id = ?'
         )
         const invites = query.all(tournamentId, user)
-        if (!invites || invites.length === 0) {
-          return { message: 'No invites found for this tournament' }
-        }
+
         return invites
       } catch (err) {
         fastify.log.error(err)
@@ -231,6 +237,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Responds to a tournament invite, either accepting or declining it
     async respondToTournamentInvite(inviteId, userId, response, tournamentId) {
       try {
         const check = fastify.db.prepare(
@@ -238,10 +245,10 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkInvite = check.get(inviteId, userId)
         if (!checkInvite) {
-          throw new Error('Invite not found or user not authorized')
+          return { error: 'Invite not found', status: 404 }
         }
         if (checkInvite.tournament_id !== tournamentId) {
-          throw new Error('Invite does not belong to this tournament')
+          return { error: 'Invite does not belong to this tournament', status: 403 }
         }
 
         const updateQuery = fastify.db.prepare(
@@ -264,6 +271,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Leaves a tournament, removing the user from the tournament players
     async leaveTournament(tournamentId, userId) {
       try {
         const check = fastify.db.prepare(
@@ -271,10 +279,10 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
         if (checkTournament.created_by === Number(userId)) {
-          throw new Error('Creator cannot leave the tournament')
+          return { error: 'Creator cannot leave the tournament', status: 403 }
         }
 
         const query = fastify.db.prepare(
@@ -292,6 +300,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves all tournaments with their players and settings
     async getTournaments() {
       try {
         const rows = fastify.db.prepare(`
@@ -356,6 +365,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieve general tournament information
     async getTournamentById(tournamentId) {
       try {
         const query = fastify.db.prepare(
@@ -363,9 +373,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const tournament = query.get(tournamentId)
         if (!tournament) {
-          fastify.log.info('Tournament not found with ID:', tournamentId)
-          return {}
+          return { error: 'Tournament not found', status: 404 }
         }
+
         return tournament
       } catch (err) {
         fastify.log.error(err)
@@ -373,6 +383,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieve tournament settings
     async getTournamentSettings(tournamentId) {
       try {
         const query = fastify.db.prepare(
@@ -380,9 +391,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const settings = query.get(tournamentId)
         if (!settings) {
-          fastify.log.info('Tournament settings not found for ID:', tournamentId)
-          return {}
+          return { error: 'Tournament settings not found', status: 404 }
         }
+
         return settings
       } catch (err) {
         fastify.log.error(err)
@@ -390,6 +401,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieve all players in a tournament
     async getTournamentPlayers(tournamentId) {
       try {
         const accepted = fastify.db.prepare(
@@ -418,7 +430,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         `).all(tournamentId);
 
         if (!accepted || accepted.length === 0) {
-          throw new Error('No players found for this tournament')
+          return []
         }
         const baseURL =  "https://" + process.env.SERVER_NAME + ":" + process.env.SERVER_PORT
         return [...accepted, ...pending].map(p => ({
@@ -431,14 +443,20 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Deletes a tournament if it is in pending status and created by the user
     async deleteTournament(tournamentId, userId) {
       try {
-        const check = fastify.db.prepare(
-          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
-        )
-        const checkTournament = check.get(tournamentId, userId)
-        if (!checkTournament) {
-          throw new Error('Tournament not found or user not authorized')
+        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?');
+        const tournament = tourQuery.get(tournamentId);
+        if (!tournament) {
+          return { error: 'Tournament not found', status: 404 };
+        }
+
+        if (tournament.created_by !== Number(userId)) {
+          return { error: 'User not authorized to delete this tournament', status: 403 };
+        }
+        if (tournament.status !== 'pending') {
+          throw new Error('Tournament is not in pending status')
         }
 
         const query = fastify.db.prepare(
@@ -455,16 +473,19 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Starts a tournament by seeding the bracket and updating its status to active
     async startTournament(tournamentId, userId) {
       try{        
-        const check = fastify.db.prepare(
-          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
-        )
-        const checkResult = check.get(tournamentId, userId)
-        if (!checkResult) {
-          throw new Error('Tournament not found or user not authorized')
+        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?');
+        const tournament = tourQuery.get(tournamentId);
+        if (!tournament) {
+          return { error: 'Tournament not found', status: 404 };
         }
-        if (checkResult.status !== 'pending') {
+
+        if (tournament.created_by !== Number(userId)) {
+          return { error: 'User not authorized to delete this tournament', status: 403 };
+        }
+        if (tournament.status !== 'pending') {
           throw new Error('Tournament is not in pending status')
         }
         await fastify.dbTournaments.seedBracket(tournamentId);
@@ -491,6 +512,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Pairs off players randomly for the tournament bracket
     async pairOffPlayers (players) {
       try {
         const shuffledPlayers = players.sort(() => Math.random() - 0.5)
@@ -502,6 +524,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
             pairs.push([shuffledPlayers[i], null])
           }
         }
+
         return pairs
       } catch (err) {
         fastify.log.error(err)
@@ -509,6 +532,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Seeds the tournament bracket by creating matches and games for each pair of players
     async seedBracket(tournamentId) {
       try {
         const players = fastify.db.prepare(
@@ -516,7 +540,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         ).all(tournamentId).map(p => p.user_id)
 
         if (players.length < 2) {
-          throw new Error('Not enough players to seed the bracket')
+          return { success: false, message: 'Not enough players to seed bracket' }
         }
 
         if (players.length !== 4 && players.length !== 8 && players.length !== 16) {
@@ -527,7 +551,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           'SELECT * FROM tournament_settings WHERE tournament_id = ?'
         ).get(tournamentId)
         if (!tourConfig) {
-          throw new Error('Tournament settings not found')
+          return { success: false, message: 'Tournament settings not found' }
         }
 
 
@@ -558,9 +582,10 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           
           await fastify.notifications.gameTurn(player1, gameId);
           await fastify.notifications.gameTurn(player2, gameId);
-          
+  
           slot++
         }
+
         return { success: true, message: 'Tournament bracket seeded successfully' }
       } catch (err) {
         if (fastify.db.inTransaction)
@@ -570,15 +595,21 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Updates the tournament options if the user is the creator and the tournament is in pending status
     async updateTournamentOptions(tournamentId, userId, num_games, num_matches, ball_speed, death_timed, time_limit) {
       try {
         fastify.db.exec('BEGIN')
-        const check = fastify.db.prepare(
-          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
-        )
-        const checkTournament = check.get(tournamentId, userId)
-        if (!checkTournament) {
-          throw new Error('Tournament not found or user not authorized')
+        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?');
+        const tournament = tourQuery.get(tournamentId);
+        if (!tournament) {
+          return { error: 'Tournament not found', status: 404 };
+        }
+
+        if (tournament.created_by !== Number(userId)) {
+          return { error: 'User not authorized to delete this tournament', status: 403 };
+        }
+        if (tournament.status !== 'pending') {
+          return { error: 'Tournament is not in pending status', status: 403 };
         }
 
         const deathTimedInt = death_timed ? 1 : 0 
@@ -590,6 +621,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           throw new Error('Failed to update game options')
         }
         fastify.db.exec('COMMIT')
+
         return { message: 'Tournament options updated successfully' }
       } catch (err) {
         fastify.db.exec('ROLLBACK')
@@ -598,6 +630,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Creates a tournament alias for a user in a specific tournament
     async createTournamentAlias(tournamentId, userId, alias) {
       try {
         fastify.db.exec('BEGIN')
@@ -606,15 +639,14 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkPlayer = check.get(tournamentId, userId)
         if (!checkPlayer) {
-          throw new Error('User not authorized to create alias for this tournament')
+          return { error: 'User not found in tournament', status: 404 }
         }
         const insertAlias = fastify.db.prepare(
           'INSERT INTO tournament_aliases (tournament_id, user_id, alias) VALUES (?, ?, ?)'
         )
         const result = insertAlias.run(tournamentId, userId, alias)
         if (result.changes === 0) {
-          console.error('Failed to create tournament alias')
-          return { error: 'Failed to create tournament alias' }
+          throw new Error('Failed to create tournament alias')
         }
         fastify.db.exec('COMMIT')
         return { message: 'Tournament alias created successfully' }
@@ -625,6 +657,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Deletes a tournament alias for a user in a specific tournament
     async deleteTournamentAlias(tournamentId, userId, alias) {
       try {
         fastify.db.exec('BEGIN')
@@ -633,7 +666,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkAlias = check.get(tournamentId, userId, alias)
         if (!checkAlias) {
-          throw new Error('Tournament alias not found or user not authorized')
+          return { error: 'Tournament alias not found or user not authorized', status: 404 }
         }
         const deleteAlias = fastify.db.prepare(
           'DELETE FROM tournament_aliases WHERE tournament_id = ? AND user_id = ? AND alias = ?'
@@ -643,6 +676,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           throw new Error('Failed to delete tournament alias')
         }
         fastify.db.exec('COMMIT')
+        
         return { message: 'Tournament alias deleted successfully' }
       } catch (err) {
         fastify.db.exec('ROLLBACK')
@@ -651,16 +685,17 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves all aliases for a user in a specific tournament
     async getTournamentAliases(tournamentId) {
       try {
         const query = fastify.db.prepare(
           'SELECT * FROM tournament_aliases WHERE tournament_id = ?'
         )
         const aliases = query.all(tournamentId)
-        if (!aliases) {
-         fastify.log.info('No aliases found for this tournament')
+        if (aliases.length === 0) {
           return []
         }
+
         return aliases
       } catch (err) {
         fastify.log.error(err)
@@ -668,6 +703,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves the tournament brackets 
     async getTournamentBrackets(tournamentId) {
       try {
         const check = fastify.db.prepare(
@@ -675,7 +711,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
 
         const query = fastify.db.prepare(`
@@ -744,6 +780,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+
+    // Retrieves all games in the latest round of a tournament for a specific user
     async getTournamentGames(tournamentId, userId) {
       try {
         const check = fastify.db.prepare(
@@ -751,7 +789,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
 
         const checkRound = fastify.db.prepare(`
@@ -790,8 +828,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           ORDER BY tournament_games.round, tournament_games.slot
         `)
         const games = query.all(tournamentId, userId, checkRound.max_round)
-        if (!games) {
-          throw new Error('Failed to retrieve tournament games')
+        if (games.length === 0) {
+          return [] 
         }
         return games.map(g => ({
           tournamentGameId: g.tournamentGameId,
@@ -811,6 +849,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Handles if a tournament game is finished
     async onGameFinished(gameId) {
       let transactionActive = false;
       try {
@@ -818,12 +857,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           SELECT tournament_id, round FROM tournament_games WHERE game_id = ?
         `).get(gameId)
         if (!row) {
-          fastify.log.warn(`No tournament game found for gameId: ${gameId}`)
-          return
+          return { error: 'Game not found in tournament_games', status: 404 }
         }
-        fastify.log.info(`Found tournament game for gameId: ${gameId}`, row) //! DELETE
-        const { tournament_id: tournamentId, round } = row
-        fastify.log.info(`Processing tournament game ${gameId} for tournament ${tournamentId}, round ${round}`)  //! DELETE;        
+        const { tournament_id: tournamentId, round } = row  
 
         fastify.db.exec('BEGIN')
         transactionActive = true;
@@ -832,10 +868,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           SELECT winner_id FROM games WHERE id = ?
         `).get(gameId)
         if (!gameResult) {
-          throw new Error(`Game not found: ${gameId}`)
+          return { error: 'Game not found', status: 404 }
         }
         const winnerId = gameResult.winner_id
-        fastify.log.info(`Updating tournament game ${gameId} with winner: ${winnerId}`) //! DELETE
         
         const updateTourGame = fastify.db.prepare(`
           UPDATE tournament_games
@@ -843,26 +878,19 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           WHERE game_id = ?
         `)
         const updateResult = updateTourGame.run(winnerId, gameId)
-        fastify.log.info(`Update result for tournament game ${gameId}:`, updateResult) //! DELETE
         if (updateResult.changes === 0) {
           throw new Error(`Failed to update tournament_games for gameId: ${gameId}`)
         }
-        fastify.log.info(`Successfully updated tournament game ${gameId}`)
-        
+
         const pendingGames = fastify.db.prepare(`
           SELECT 1 FROM tournament_games
           WHERE tournament_id = ? AND round = ? AND status = 'pending'
         `).get(tournamentId, round)
-        fastify.log.info(`Pending games in round ${round} for tournament ${tournamentId}:`, pendingGames ? 'Yes' : 'No') //! DELETE
         fastify.db.exec('COMMIT')
         transactionActive = false;
         
         if (!pendingGames) {
           try {
-            if (typeof fastify.dbTournaments.nextRound !== 'function') {
-              throw new Error('nextRound function is not available')
-            }
-            fastify.log.info(`All games finished in round ${round}, advancing tournament ${tournamentId}`) //! DELETE
             await fastify.dbTournaments.nextRound(tournamentId, round)
           } catch (nextRoundError) {
             fastify.log.error('Failed to advance to next round:', {
@@ -889,6 +917,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Advances to the next round of the tournament
     async nextRound(tournamentId, prevRound) {
       const winners = fastify.db.prepare(`
         SELECT 
@@ -902,7 +931,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       `).all(tournamentId, prevRound)
 
       if (winners.length === 0) {
-        return
+        return []
       }
 
       if (winners.length === 1) {
@@ -915,6 +944,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         const tournamentName = fastify.db.prepare(`
           SELECT name FROM tournaments WHERE id = ?
         `).get(tournamentId)
+        if (!tournamentName) {
+          return { error: 'Tournament not found', status: 404 }
+        }
 
         await fastify.notifications.tournamentUpdate(tournamentId, `Tournament ${tournamentName} has finished! Winner: ${winners[0].username}`, 'finished')
 
@@ -926,7 +958,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         'SELECT * FROM tournament_settings WHERE tournament_id = ?'
       ).get(tournamentId)
       if (!tourConfig) {
-        throw new Error('Tournament settings not found')
+        return { error: 'Tournament settings not found', status: 404 }
       }
       const insertMatch = fastify.db.prepare(`
         INSERT INTO tournament_games (tournament_id, game_id, round, slot) VALUES (?, ?, ?, ?)
@@ -940,7 +972,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           player1, 'tournament', 2, 'local', tourConfig.game_mode
         )
         if (!gameId) {
-          throw new Error('Failed to create game for tournament match')
+          return { error: 'Failed to create game for next round', status: 500 }
         }
         fastify.db.prepare(
           'INSERT INTO game_players (game_id, player_id) VALUES (?, ?)'
@@ -952,6 +984,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves the summary of a tournament including games and players
     async getTournamentSummary(tournamentId) {
       try {
         const check = fastify.db.prepare(
@@ -959,7 +992,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
 
         const tourQuery = fastify.db.prepare(`
@@ -976,28 +1009,28 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         `)
         const tournament = tourQuery.get(tournamentId)
         if (!tournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
         const rows = fastify.db.prepare(`
           SELECT
-            tournament_games id AS tournamentGameId,
-            tournament_games round,
-            tournament_games slot,
-            tournament_games status  AS gameStatus,
-            tournament_games winner_id  AS gameWinnerId,
-            tournament_games game_id  AS gameId,
+            tournament_games.id AS tournamentGameId,
+            tournament_games.round,
+            tournament_games.slot,
+            tournament_games.status  AS gameStatus,
+            tournament_games.winner_id  AS gameWinnerId,
+            tournament_games.game_id  AS gameId,
             game_players.player_id AS playerId,
             tournament_aliases.alias AS playerAlias
           FROM tournament_games
-          JOIN game_players ON game_players.game_id = tournament_games game_id
+          JOIN game_players ON game_players.game_id = tournament_games.game_id
           LEFT JOIN tournament_aliases
-            ON  tournament_aliases.tournament_id = tournament_games tournament_id
-            AND tournament_aliases.user_id       = gp.player_id
-          WHERE tournament_games tournament_id = ?
-          ORDER BY tournament_games round DESC, tournament_games slot ASC
+            ON  tournament_aliases.tournament_id = tournament_games.tournament_id
+            AND tournament_aliases.user_id       = game_players.player_id
+          WHERE tournament_games.tournament_id = ?
+          ORDER BY tournament_games.round DESC, tournament_games.slot ASC
         `).all(tournamentId);
         if (!rows || rows.length === 0) {
-          throw new Error('No games found for this tournament')
+          return { error: 'No games found for this tournament', status: 404 }
         }
         const summary = {
           tournamentId: tournament.id,
@@ -1040,6 +1073,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves all players available to join a tournament
     async getAvailablePlayers(tournamentId) {
       try {
         const allUsers = fastify.db.prepare(
@@ -1058,6 +1092,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Retrieves the chat room ID for a specific tournament
     async getTournamentChat(tournamentId) {
       try {
         const check = fastify.db.prepare(
@@ -1065,20 +1100,21 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         )
         const checkTournament = check.get(tournamentId)
         if (!checkTournament) {
-          throw new Error('Tournament not found')
+          return { error: 'Tournament not found', status: 404 }
         }
         const checkPlayer = fastify.db.prepare(
           'SELECT * FROM tournament_players WHERE tournament_id = ?'
         ).get(tournamentId)
         if (!checkPlayer) {
-          throw new Error('Player not authorized to access this tournament chat')
+          return { error: 'Player not authorized to access this tournament chat', status: 403 }
         }
         const chatRoom = fastify.db.prepare(
           'SELECT chat_room_id FROM tournaments WHERE id = ?'
         ).get(tournamentId)
         if (!chatRoom || !chatRoom.chat_room_id) {
-          throw new Error('Chat room not found for this tournament')
+          return { error: 'Chat room not found for this tournament', status: 404 }
         }
+        
         return { chatRoomId: chatRoom.chat_room_id }
       } catch (err) {
         fastify.log.error(err)
@@ -1086,16 +1122,21 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
       }
     },
 
+    // Creates a tournament AI 
     async createTournamentAI(tournamentId, userId, slotIndex) {
       try {
-        fastify.log.debug('Creating tournament AI configuration for tournamentId:', tournamentId, 'userId:', userId, 'slotIndex:', slotIndex)
         fastify.db.exec('BEGIN')
-        const check = fastify.db.prepare(
-          'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
-        )
-        const checkTournament = check.get(tournamentId, userId)
-        if (!checkTournament) {
-          throw new Error('Tournament not found or user not authorized')
+        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?');
+        const tournament = tourQuery.get(tournamentId);
+        if (!tournament) {
+          return { error: 'Tournament not found', status: 404 };
+        }
+
+        if (tournament.created_by !== Number(userId)) {
+          return { error: 'User not authorized to delete this tournament', status: 403 };
+        }
+        if (tournament.status !== 'pending') {
+          throw new Error('Tournament is not in pending status')
         }
         const tourPlayersQuery = fastify.db.prepare(
           'INSERT INTO tournament_players (tournament_id, user_id, slot_index) VALUES (?, ?, ?)'

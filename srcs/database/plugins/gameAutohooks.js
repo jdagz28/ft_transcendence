@@ -497,6 +497,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         const checkTournament = fastify.db.prepare(
           'SELECT mode FROM game_settings WHERE game_id = ?'
         ).get(gameId)
+        if (!checkTournament) {
+          return { error: 'Game settings not found', status: 404 }
+        }
 
         if (checkTournament.mode !== 'tournament') {
           const gameQuery = fastify.db.prepare('SELECT created_by FROM games WHERE id = ?');
