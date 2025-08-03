@@ -884,14 +884,25 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
         
         const id = await fastify.notifications.gameInvite(inviter, userId, gameId)
-        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-invite`, {
-          gameId: gameId,
+
+        // const axios = require('axios')
+        // await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-invite`, {
+        //   gameId: gameId,
+        //   senderId: inviter,
+        //   receiverId: userId,
+        //   notifId: id
+        // })
+
+        const roomId = await fastify.dbChat.createDirectMessage(inviter, userId);
+
+        return {
+          message: `Game invite sent successfully to ${userId}`,
+          roomId: roomId,
           senderId: inviter,
           receiverId: userId,
-          notifId: id
-        })
-        
-        return { message: `Game invite sent successfully to ${userId}` }
+          notifId: id,
+          gameId: gameId
+        }
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to invite user to game')
@@ -901,15 +912,19 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     // Responds to a game invite.
     async respondToInvite(gameId, userId, response) {
       try {
-        const query = fastify.db.prepare(`
-          SELECT * FROM game_invites
-          WHERE game_id = ? AND user_id = ? AND status = 'pending'
-        `)
-        const invite = query.get(gameId, userId)
+        const inviteQuery = fastify.db.prepare(`
+          SELECT id, status, inviter_id, slot FROM game_invites
+          WHERE game_id = ? AND user_id = ?
+        `);
+        const invite = inviteQuery.get(gameId, userId);
 
         if (!invite) {
-          return { error: 'Invite not found or already responded', status: 404 }
+          return { error: 'Invite not found or it has been cancelled.', status: 404 };
         }
+        if (invite.status !== 'pending') {
+          return { error: 'You have already responded to this invite.', status: 409 };
+        }
+
 
         const gameStatus = fastify.db.prepare(`
           SELECT status FROM games WHERE id = ?
@@ -936,10 +951,9 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         try {
-          const friendId = invite.inviter_id //! CHECK
           const accepterName = fastify.db.prepare('SELECT username FROM users WHERE id = ?').get(userId)
           await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-responded`, {
-            requesterId: friendId,  //! CHECK
+            requesterId: friendId,
             accepterId: userId,
             accepterName: accepterName.username
           }, {
@@ -949,10 +963,60 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           console.error(`Failed to send WebSocket notification for game invite`);
         }
 
+        try {
+          const axios = require('axios');
+            const accepterName = fastify.db.prepare('SELECT username FROM users WHERE id = ?').get(userId)
+            await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-responded`, {
+              requesterId: friendId,
+              accepterId: userId,
+              accepterName: accepterName.username
+            }, {
+              timeout: 3000
+            });
+        } catch (err) {
+          console.error(`Failed to send WebSocket notification for game invite`);
+        }
+
         return { message: `Invite ${newStatus} successfully` }
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to respond to invite')
+      }
+    },
+
+    // Cancels a game invite.
+    async cancelInvite(gameId, requesterId, slotToCancel) {
+      try {
+        const game = fastify.db.prepare('SELECT creator_id FROM games WHERE id = ?').get(gameId);
+        if (!game || game.creator_id !== requesterId) {
+          return { error: 'Forbidden: Only the game creator can cancel invites.', status: 403 };
+        }
+
+        const invitee = fastify.db.prepare(`
+          SELECT user_id FROM game_invites WHERE game_id = ? AND slot = ? AND status = 'pending'
+        `).get(gameId, slotToCancel);
+
+        if (!invitee) {
+          return { error: 'No pending invite found for the specified slot', status: 404 };
+        }
+        if (invitee.status !== 'pending') {
+          return { error: 'Invite is not pending', status: 409 };
+        }
+
+        const result = fastify.db.prepare(`
+          DELETE FROM game_invites WHERE game_id = ? AND slot = ? AND status = 'pending'
+        `).run(gameId, slotToCancel);
+
+        if (result.changes === 0) {
+          throw new Error('No pending invite found for the specified slot');
+        }
+
+        // 
+
+        return { message: 'Invite successfully cancelled.' };
+      } catch (err) {
+        fastify.log.error(err);
+        throw new Error('Failed to cancel invite');
       }
     },
 
@@ -1048,5 +1112,5 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
   })
 }, {
   name: 'gameAutoHooks',
-  dependencies: ['tournamentAutoHooks', 'notificationPlugin']
+  dependencies: ['tournamentAutoHooks', 'notificationPlugin', 'chatAutoHooks']
 })

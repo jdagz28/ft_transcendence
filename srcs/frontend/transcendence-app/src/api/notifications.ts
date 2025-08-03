@@ -3,6 +3,8 @@ import { openSidebarChat } from "../sidebarChat";
 import { chatWebSocket } from "../chat/chatWebSocket";
 import { chatSwitcher } from "../chat/chatSwitcher";
 import { ROUTE_MAIN } from "../router";
+import { refreshSidebarChat } from "../sidebarChat";
+
 
 let notificationWS: WebSocket | null = null;
 
@@ -178,7 +180,7 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 	}
 }
 
-function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string, user_id: number, notif_id:number, chat: boolean) {
+function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string, user_id: number, notif_id:number) {
 	if (!gameId) {
 		console.error("Game ID is null, cannot generate game invite buttons");
 		return;
@@ -220,10 +222,8 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		if (response.ok) {
 			btnDiv.remove();
 			setAnsweredButtons(contentWrapper);
-			// if (chat) {
-				//reloadsidebarchat();
-			// }
-			const overlay = document.createElement('div');
+				refreshSidebarChat();
+				const overlay = document.createElement('div');
 			overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
 			
 			const box = document.createElement('div');
@@ -254,9 +254,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		} else {
 			btnDiv.remove();
 			setErrorButtons(contentWrapper);
-			if (chat) {
-				//reloadsidebarchat();
-			}
+				refreshSidebarChat();
 		}
 	}
 	denyBtn.onclick = async () => {
@@ -281,16 +279,11 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		if (response.ok) {
 			btnDiv.remove();
 			setAnsweredButtons(contentWrapper);
-			if (chat) {
-				//reloadsidebarchat();
-			}
+				refreshSidebarChat();
 		} else {
-			alert('Game no longer available');
 			btnDiv.remove();
 			setErrorButtons(contentWrapper);
-			if (chat) {
-				//reloadsidebarchat();
-			}
+				refreshSidebarChat();
 		}
 	}
 	blockBtn.onclick = async () => {
@@ -324,15 +317,11 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		if (response.ok) {
 			btnDiv.remove();
 			setAnsweredButtons(contentWrapper);
-			if (chat) {
-				//reloadsidebarchat();
-			}
+				refreshSidebarChat();
 		} else {
 			btnDiv.remove();
 			setErrorButtons(contentWrapper);
-			if (chat) {
-				//reloadsidebarchat();
-			}
+				refreshSidebarChat();
 		}
 	}
 }
@@ -641,7 +630,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 	if (notif.type === "friend.request") {
 		generateFriendRequestButtons(contentWrapper, Number(notif.requesterId), notif.message.replace(/ .*/,''), token, user_id, notif.id);
 	} else if (notif.type === "game.invite") {
-		generateGameInviteButtons(contentWrapper, Number(notif.gameId), Number(notif.senderId), token, user_id, notif.id, notif.chat || false);
+		generateGameInviteButtons(contentWrapper, Number(notif.gameId), Number(notif.senderId), token, user_id, notif.id);
 	} else if (notif.type === "tournament.invite") {
 		generateTournamentInviteButtons(contentWrapper, Number(notif.tournamentId), Number(notif.senderId), token, user_id, notif.id);
 	} else if (notif.type === "chat.invite") {
@@ -744,7 +733,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 	if (notif.type === "friend.request" && notif.is_read === 0) {
 		generateFriendRequestButtons(contentWrapper, notif.sender_id, notif.content.replace(/ .*/,''), token, id, notif.id);
 	} else if (notif.type === "game.invite" && notif.is_read === 0) {
-		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id, notif.chat || false);
+		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
 	} else if (notif.type === "tournament.invite" && notif.is_read === 0) {
 		generateTournamentInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
 	} else if (notif.type === "chat.invite" && notif.is_read === 0) {

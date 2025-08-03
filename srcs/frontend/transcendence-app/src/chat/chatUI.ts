@@ -329,29 +329,62 @@ export class ChatUIManager {
     document.removeEventListener('click', this.handleOutsideClick);
   }
 
+  private setupUsernameClickHandlers(): void {
+    const usernameElements = document.querySelectorAll('b[data-username]');
+    
+    usernameElements.forEach(element => {
+      const username = element.getAttribute('data-username');
+      if (username) {
+        element.removeAttribute('data-handler-added');
+        
+        const newElement = element.cloneNode(true) as HTMLElement;
+        element.parentNode?.replaceChild(newElement, element);
+        
+        newElement.addEventListener('click', async (event) => {
+          const { userModal } = await import('./userModal');
+          userModal.showUserModal(username, event as MouseEvent);
+        });
+        newElement.setAttribute('data-handler-added', 'true');
+      }
+    });
+  }
+
   // ============================================================================ //
   // GAME INVITE UI                                                               //
   // ============================================================================ //
 
-  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string): void {
+  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): void {
     try {
       console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
 
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (!messagesDiv) {
-        console.warn('Messages div not found, cannot display game invite in chat');
         return;
       }
 
       const inviteId = `game-invite-${gameId}-${Date.now()}`;
+      const alignClass = isMe ? 'justify-end' : 'justify-start';
+      const bgColor = isMe ? 'bg-blue-100 text-[#1a2740]' : 'bg-yellow-100 text-[#1a2740]';
+      const borderColor = isMe ? 'border-blue-300' : 'border-yellow-300';
+      const inviteText = isMe ? 'You sent a game invite' : 'You received a game invite';
+      
+      const displayName = isMe ? 'Me' : (senderUsername || 'Unknown');
+      const usernameDisplay = isMe || displayName === 'Me' 
+        ? `<b>${displayName}:</b>`
+        : `<b class="cursor-pointer hover:text-blue-400 hover:underline transition-colors duration-200" data-username="${displayName}">${displayName}:</b>`;
 
       messagesDiv.innerHTML += `
-        <div class="mb-2 flex justify-start">
-          <div class="bg-yellow-100 text-[#1a2740] rounded-lg px-3 py-2 max-w-[75%] shadow border border-yellow-300 text-sm">
-            <p class="mb-3">You received a game invite</p>
-            <div class="flex gap-2">
-              <button id="acceptGameBtn-${inviteId}" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">Accept</button>
-              <button id="declineGameBtn-${inviteId}" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">Decline</button>
+        <div class="mb-2 flex ${alignClass}">
+          <div class="max-w-[75%]">
+            <div class="mb-1 ${isMe ? 'text-right' : 'text-left'}">
+              <span class="text-xs text-gray-400">${usernameDisplay}</span>
+            </div>
+            <div class="${bgColor} rounded-lg px-3 py-2 shadow border ${borderColor} text-sm">
+              <p class="mb-3">${inviteText}</p>
+              <div class="flex gap-2">
+                <button id="acceptGameBtn-${inviteId}" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">Accept</button>
+                <button id="declineGameBtn-${inviteId}" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">Decline</button>
+              </div>
             </div>
           </div>
         </div>
@@ -361,10 +394,80 @@ export class ChatUIManager {
 
       setTimeout(() => {
         this.setupGameInviteButtons(inviteId, gameId, userId, notifId);
+        this.setupUsernameClickHandlers();
       }, 0);
 
     } catch (error) {
       console.error('Error displaying game invite in chat UI:', error);
+    }
+  }
+
+  displayGameInviteResponded(isMe: boolean = false, senderUsername?: string): void {
+    try {
+      const messagesDiv = document.getElementById('sidebar-chat-messages');
+      if (!messagesDiv) {
+        return;
+      }
+
+      const alignClass = isMe ? 'justify-end' : 'justify-start';
+      const inviteText = isMe ? 'You sent a game invite' : 'Invite To Play';
+      const statusText = isMe ? 'Invitation sent.' : 'Invitation responded.';
+
+      const displayName = isMe ? 'Me' : (senderUsername || 'Unknown');
+      const usernameDisplay = isMe || displayName === 'Me' 
+        ? `<b>${displayName}:</b>`
+        : `<b class="cursor-pointer hover:text-blue-400 hover:underline transition-colors duration-200" data-username="${displayName}">${displayName}:</b>`;
+
+      messagesDiv.innerHTML += `
+        <div class="mb-2 flex ${alignClass}">
+          <div class="max-w-[75%]">
+            <div class="mb-1 ${isMe ? 'text-right' : 'text-left'}">
+              <span class="text-xs text-gray-400">${usernameDisplay}</span>
+            </div>
+            <div class="bg-gray-200 text-gray-600 rounded-lg px-3 py-2 shadow border border-gray-300 text-sm opacity-70 cursor-not-allowed">
+              <p class="mb-2 font-medium">${inviteText}</p>
+              <p class="mb-2 italic">${statusText}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      setTimeout(() => {
+        this.setupUsernameClickHandlers();
+      }, 0);
+
+    } catch (error) {
+      console.error('Error displaying responded game invite:', error);
+    }
+  }
+
+  async checkNotificationStatus(userId: string, notifId: string): Promise<boolean> {
+    try {
+      const token = chatState.getAuthToken();
+      const response = await fetch(`https://localhost:4242/notifications/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.warn('Could not fetch notification status');
+        return false;
+      }
+
+      const data = await response.json();
+      
+      const notification = data.notifications?.find((notif: any) => {
+        return notif.id.toString() === notifId.toString();
+      });
+      
+      return notification ? notification.is_read === "read" : false;
+    } catch (error) {
+      console.error('Error checking notification status:', error);
+      return false;
     }
   }
 
@@ -402,7 +505,7 @@ export class ChatUIManager {
         })
       });
 
-      fetch(`/notifications/${userId}/${notifId}`, {
+      await fetch(`/notifications/${userId}/${notifId}`, {
     			method: 'PATCH',
    				headers: {
       				'Authorization': `Bearer ${token}`,
@@ -414,6 +517,7 @@ export class ChatUIManager {
 
       const notifContainer = document.getElementById('notifContainer');
       if (notifContainer) {
+        console.log('Clearing notification container');
         notifContainer.innerHTML = '';
         populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
       }
@@ -473,7 +577,9 @@ export class ChatUIManager {
       }
 
     } catch (error) {
-      alert('Already responded / Game no longer available');
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`)
+      } 
       window.location.reload();
       // console.error('Error responding to game invite:', error);
       // alert(`Failed to ${response} game invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);

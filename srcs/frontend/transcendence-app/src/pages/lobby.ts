@@ -2,6 +2,7 @@ import { type RouteParams, DEFAULT, ROUTE_MAIN, deletePastLobby } from "../route
 import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 import { getFriends } from "../chat";
+import { chatWebSocket } from "../chat/chatWebSocket";
 import type { PlayerConfig } from "../types/game";
 
 type user = {
@@ -487,11 +488,22 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
                 })
               })
               if (response.ok) {
+                const res = await response.json();
+                const message = JSON.stringify({
+                  type: "game.invite",
+                  senderId: res.senderId,
+                  receiverId: res.receiverId,
+                  notifId: res.notifId,
+                  gameId: res.gameId,
+                  username: user1.username,
+                  roomId: res.roomId
+                });
+                chatWebSocket.sendMessage("dm", res.roomId, message);
                 inviteButton.remove();
-				const successMessage = document.createElement('span');
-				successMessage.className = 'text-green-500 ml-2';
-				successMessage.textContent = 'Invite sent!';
-				flexContainer.appendChild(successMessage);
+                const successMessage = document.createElement('span');
+                successMessage.className = 'text-green-500 ml-2';
+                successMessage.textContent = 'Invite sent!';
+                flexContainer.appendChild(successMessage);
               } else {
 				inviteButton.remove();
 				const errorMessage = document.createElement('span');
