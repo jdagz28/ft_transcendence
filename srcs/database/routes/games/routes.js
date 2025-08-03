@@ -135,7 +135,7 @@ module.exports = fp(
       handler: async function leaveGameHandler(request, reply) {
         try {
           const { gameId } = request.params
-          const userId = request.user.id
+          const { userId } = request.body
           const result = await fastify.dbGames.leaveGame(gameId, userId)
           if (result.error) {
             if (result.status) {
@@ -357,6 +357,31 @@ module.exports = fp(
           }
           const result = await fastify.dbGames.inviteToGame(gameId, userId, inviter, slot)
 
+          reply.status(200).send(result)
+        } catch (err) {
+          fastify.log.error(err)
+          reply.status(500).send({ error: 'Internal Server Error' })
+        }
+      }
+    })
+
+    fastify.delete('/games/:gameId/invite', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+      },
+      onRequest: fastify.authenticate,
+      handler: async function cancelInviteHandler(request, reply) {
+        try {
+          const { gameId } = request.params
+          const { slot } = request.body
+          const userId = request.user.id
+          const result = await fastify.dbGames.cancelInvite(gameId, userId, slot)
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
+          }
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)

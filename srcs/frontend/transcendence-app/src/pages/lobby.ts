@@ -3,12 +3,11 @@ import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 import { getFriends } from "../chat";
 import { chatWebSocket } from "../chat/chatWebSocket";
-import type { PlayerConfig } from "../types/game";
 
 type user = {
   username: string;
   userID: string;
-  pfp: Blob;
+  // pfp: Blob;
   avatarUrl: string;
   token: string;
   connected: boolean;
@@ -101,6 +100,7 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
               Connect
           </button>
           <button id="inv2" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
+          <button id="cancelInvite2" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Cancel Invite</button>
       </div>`;
   } else if (playerCount === "4") {
     playersHTML = `
@@ -130,6 +130,7 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
     <button id="dis2" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Disconnect</button>
     <button id="con2" class="absolute top-full left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-6.25 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Connect</button>
     <button id="inv2" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
+    <button id="cancelInvite2" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Cancel Invite</button>
   </div>
 
   <!-- Player 3 -->
@@ -145,7 +146,8 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
     <button id="dis3" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Disconnect</button>
     <button id="con3" class="absolute top-full left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-6.25 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Connect</button>
     <button id="inv3" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
-  </div>
+    <button id="cancelInvite3" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Cancel Invite</button>
+    </div>
 
   <!-- Player 4 -->
   <div class="relative -mt-20 flex flex-col items-center">
@@ -160,6 +162,7 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
     <button id="dis4" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Disconnect</button>
     <button id="con4" class="absolute top-full left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-6.25 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Connect</button>
     <button id="inv4" class="absolute top-44 left-1/2 mt-6 -translate-x-1/2 rounded bg-white px-8 py-1 text-sm font-semibold text-gray-800 shadow transition duration-200 hover:bg-gray-100">Invite</button>
+    <button id="cancelInvite4" class="absolute top-full left-1/2 mt-6 hidden -translate-x-1/2 rounded bg-red-500 px-4 py-1 text-sm font-semibold text-white shadow transition duration-200 hover:bg-red-400">Cancel Invite</button>
   </div>
 </div>`;
   } else {
@@ -275,36 +278,36 @@ function renderLobbyHTML(root: HTMLDivElement, playerCount: string) {
   const userAvatar1 = document.getElementById('avatar1');
     if (userAvatar1  && user1.connected === true) {
       const img = document.createElement('img');
-      img.src = URL.createObjectURL(user1.pfp);
+      img.src = user1.avatarUrl;
       img.alt = 'User Avatar';
-      img.className = 'w-full h-full object-cover';
+      img.className = 'w-full h-full object-cover rounded-full';
       userAvatar1.innerHTML = '';
       userAvatar1.appendChild(img);
     }
   const userAvatar2 = document.getElementById('avatar2');
     if (userAvatar2 && user2.connected === true) {
       const img = document.createElement('img');
-      img.src = !user2.avatarUrl ? URL.createObjectURL(user2.pfp) : user2.avatarUrl;
+      img.src = user2.avatarUrl;
       img.alt = 'User Avatar';
-      img.className = 'w-full h-full object-cover';
+      img.className = 'w-full h-full object-cover rounded-full';
       userAvatar2.innerHTML = '';
       userAvatar2.appendChild(img);
     }
   const userAvatar3 = document.getElementById('avatar3');
     if (userAvatar3 && user3.connected === true) {
-          const img = document.createElement('img');
-          img.src = !user3.avatarUrl ? URL.createObjectURL(user3.pfp) : user3.avatarUrl;
+      const img = document.createElement('img');
+      img.src = user3.avatarUrl;
       img.alt = 'User Avatar';
-      img.className = 'w-full h-full object-cover';
+      img.className = 'w-full h-full object-cover rounded-full';
       userAvatar3.innerHTML = '';
       userAvatar3.appendChild(img);
     }
   const userAvatar4 = document.getElementById('avatar4');
     if (userAvatar4 && user4.connected === true) {
       const img = document.createElement('img');
-      img.src = !user4.avatarUrl ? URL.createObjectURL(user4.pfp) : user4.avatarUrl;
+      img.src = user4.avatarUrl;
       img.alt = 'User Avatar';
-      img.className = 'w-full h-full object-cover';
+      img.className = 'w-full h-full object-cover rounded-full';
       userAvatar4.innerHTML = '';
       userAvatar4.appendChild(img);
     }
@@ -399,12 +402,15 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
   const con2 = document.getElementById("con2") as HTMLButtonElement;
   const dis2 = document.getElementById("dis2") as HTMLButtonElement;
   const inv2 = document.getElementById("inv2") as HTMLButtonElement;
+  const cancelInvite2 = document.getElementById("cancelInvite2") as HTMLButtonElement;
   const con3 = document.getElementById("con3") as HTMLButtonElement;
   const dis3 = document.getElementById("dis3") as HTMLButtonElement;
   const inv3 = document.getElementById("inv3") as HTMLButtonElement;
+  const cancelInvite3 = document.getElementById("cancelInvite3") as HTMLButtonElement;
   const con4 = document.getElementById("con4") as HTMLButtonElement;
   const dis4 = document.getElementById("dis4") as HTMLButtonElement;
   const inv4 = document.getElementById("inv4") as HTMLButtonElement;
+  const cancelInvite4 = document.getElementById("cancelInvite4") as HTMLButtonElement;
   let userlog:number = 1;
   let friendlist;
 
@@ -423,25 +429,45 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
     inviteModal.classList.add('hidden', "pointer-events-none");
   });
 
-  if (con2 && dis2 && inv2) {
+  if (con2 && dis2 && inv2 && cancelInvite2) {
+    if (localStorage.getItem('invite_slot_user2') === 'true') {
+      con2.classList.add('hidden');
+      inv2.classList.add('hidden');
+      cancelInvite2.classList.remove('hidden');
+    }
+
     con2.addEventListener('click', () => {
       loginModal.classList.remove('hidden');
       loginModal.classList.add('flex');
       userlog = 2;
     });
     dis2.addEventListener('click', async () => {
+      let token;
+      if (user2.token === "fromInvite") {
+        token = user1.token;
+      }
+      else {
+        token = user2.token;
+      }
 			await fetch(`/games/${game}/leave`, {
 				method: 'DELETE',
 				headers: {
-					'Authorization': `Bearer ${user2.token}`
+          'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
 				},
-				credentials: 'include'
+				credentials: 'include',
+        body: JSON.stringify({ 
+          slot: 'user2',
+          username: user2.username,
+          userId: user2.userID
+        })
 			});
       user2.connected = false;
       user2.userID = "-1";
       user2.username = "Waiting...";
       user2.token = "";
       localStorage.removeItem("user2");
+      localStorage.removeItem("invite_slot_user2");
       renderLobbyHTML(root, playerCount);
       setUpEventListeners(root, playerCount, game);
     });
@@ -504,44 +530,103 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
                 successMessage.className = 'text-green-500 ml-2';
                 successMessage.textContent = 'Invite sent!';
                 flexContainer.appendChild(successMessage);
+                localStorage.setItem('invite_slot_user2', 'true');
+                con2.classList.add('hidden');
+                inv2.classList.add('hidden');
+                cancelInvite2.classList.remove('hidden');
+
+                inviteModal.classList.remove('flex', "pointer-events-auto");
+                inviteModal.classList.add('hidden', "pointer-events-none");
               } else {
-				inviteButton.remove();
-				const errorMessage = document.createElement('span');
-				errorMessage.className = 'text-red-500 ml-2';
-				errorMessage.textContent = 'Invite failed!';
-				flexContainer.appendChild(errorMessage);
-			  }
+                inviteButton.remove();
+                const errorMessage = document.createElement('span');
+                errorMessage.className = 'text-red-500 ml-2';
+                errorMessage.textContent = 'Invite failed!';
+                flexContainer.appendChild(errorMessage);
+              }
             });
           });
         }
       }
     });
+    cancelInvite2.addEventListener('click', async () => {
+      const token = localStorage.getItem("token") ?? "";
+      const response = await fetch(`/games/${game}/invite`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ slot: 'user2' })
+      });
+      if (response.ok) {
+        localStorage.removeItem('invite_slot_user2');
+        con2.classList.remove('hidden');
+        inv2.classList.remove('hidden');
+        cancelInvite2.classList.add('hidden');
+      } else {
+        alert("Failed to cancel invite");
+      }
+    });
+
     if (user2.connected) {
       con2.classList.add('hidden');
       inv2.classList.add('hidden');
+      cancelInvite2.classList.add('hidden');
       dis2.classList.remove('hidden');
+    } else if (localStorage.getItem('invite_slot_user2') === 'true') {
+      con2.classList.add('hidden');
+      inv2.classList.add('hidden');
+      dis2.classList.add('hidden');
+      cancelInvite2.classList.remove('hidden');
+    } else {
+      dis2.classList.add('hidden');
+      cancelInvite2.classList.add('hidden');
+      con2.classList.remove('hidden');
+      inv2.classList.remove('hidden');
     }
+
   }
 
-  if (con3 && dis3 && inv3) {
+  if (con3 && dis3 && inv3 && cancelInvite3) {
+    if (localStorage.getItem('invite_slot_user3') === 'true') {
+      con3.classList.add('hidden');
+      inv3.classList.add('hidden');
+      cancelInvite3.classList.remove('hidden');
+    }
     con3.addEventListener('click', () => {
       loginModal.classList.remove('hidden');
       loginModal.classList.add('flex');
       userlog = 3;
     });
     dis3.addEventListener('click', async () => {
+      let token;
+      if (user3.token === "fromInvite") {
+        token = user1.token;
+      }
+      else {
+        token = user3.token;
+      }
 			await fetch(`/games/${game}/leave`, {
 				method: 'DELETE',
 				headers: {
-					'Authorization': `Bearer ${user3.token}`
+          'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
 				},
-				credentials: 'include'
+				credentials: 'include',
+        body: JSON.stringify({
+          slot: 'user3',
+          username: user3.username,
+          userId: user3.userID
+        })
 			});
       user3.connected = false;
       user3.userID = "-1";
       user3.username = "Waiting...";
       user3.token = "";
       localStorage.removeItem("user3");
+      localStorage.removeItem("invite_slot_user3");
       renderLobbyHTML(root, playerCount);
       setUpEventListeners(root, playerCount, game);
     });
@@ -593,48 +678,107 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
               })
               if (response.ok) {
                 inviteButton.remove();
-				const successMessage = document.createElement('span');
-				successMessage.className = 'text-green-500 ml-2';
-				successMessage.textContent = 'Invite sent!';
-				flexContainer.appendChild(successMessage);
+                const successMessage = document.createElement('span');
+                successMessage.className = 'text-green-500 ml-2';
+                successMessage.textContent = 'Invite sent!';
+                flexContainer.appendChild(successMessage);
+                localStorage.setItem('invite_slot_user3', 'true');
+                con3.classList.add('hidden');
+                inv3.classList.add('hidden');
+                cancelInvite3.classList.remove('hidden');
+
+                inviteModal.classList.remove('flex', "pointer-events-auto");
+                inviteModal.classList.add('hidden', "pointer-events-none");
               } else {
-				inviteButton.remove();
-				const errorMessage = document.createElement('span');
-				errorMessage.className = 'text-red-500 ml-2';
-				errorMessage.textContent = 'Invite failed!';
-				flexContainer.appendChild(errorMessage);
-			  }
+                inviteButton.remove();
+                const errorMessage = document.createElement('span');
+                errorMessage.className = 'text-red-500 ml-2';
+                errorMessage.textContent = 'Invite failed!';
+                flexContainer.appendChild(errorMessage);
+              }
             });
           });
         }
       }
     });
+    cancelInvite3.addEventListener('click', async () => {
+      const token = localStorage.getItem("token") ?? "";
+      const response = await fetch(`/games/${game}/invite`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ slot: 'user3' })
+      });
+      if (response.ok) {
+        localStorage.removeItem('invite_slot_user3');
+        con3.classList.remove('hidden');
+        inv3.classList.remove('hidden');
+        cancelInvite3.classList.add('hidden');
+      } else {
+        alert("Failed to cancel invite");
+      }
+    });
+
     if (user3.connected) {
       con3.classList.add('hidden');
       inv3.classList.add('hidden');
+      cancelInvite3.classList.add('hidden');
       dis3.classList.remove('hidden');
+    } else if (localStorage.getItem('invite_slot_user3') === 'true') {
+      con3.classList.add('hidden');
+      inv3.classList.add('hidden');
+      dis3.classList.add('hidden');
+      cancelInvite3.classList.remove('hidden');
+    } else {
+      dis3.classList.add('hidden');
+      cancelInvite3.classList.add('hidden');
+      con3.classList.remove('hidden');
+      inv3.classList.remove('hidden');
     }
   }
 
-  if (con4 && dis4 && inv4) {
+  if (con4 && dis4 && inv4 && cancelInvite4) {
+    if (localStorage.getItem('invite_slot_user4') === 'true') {
+      con4.classList.add('hidden');
+      inv4.classList.add('hidden');
+      cancelInvite4.classList.remove('hidden');
+    }
+
     con4.addEventListener('click', () => {
       loginModal.classList.remove('hidden');
       loginModal.classList.add('flex');
       userlog = 4;
     });
     dis4.addEventListener('click', async () => {
+      let token;
+      if (user4.token === "fromInvite") {
+        token = user1.token;
+      }
+      else {
+        token = user4.token;
+      }
 			await fetch(`/games/${game}/leave`, {
 				method: 'DELETE',
 				headers: {
-					'Authorization': `Bearer ${user4.token}`
+          'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
 				},
-				credentials: 'include'
+				credentials: 'include',
+        body: JSON.stringify({
+          slot: 'user4',
+          username: user4.username,
+          userId: user4.userID
+        })
 			});
       user4.connected = false;
       user4.userID = "-1";
       user4.username = "Waiting...";
       user4.token = "";
       localStorage.removeItem("user4");
+      localStorage.removeItem("invite_slot_user4");
       renderLobbyHTML(root, playerCount);
       setUpEventListeners(root, playerCount, game);
     });
@@ -686,26 +830,66 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
               })
               if (response.ok) {
                 inviteButton.remove();
-				const successMessage = document.createElement('span');
-				successMessage.className = 'text-green-500 ml-2';
-				successMessage.textContent = 'Invite sent!';
-				flexContainer.appendChild(successMessage);
+                const successMessage = document.createElement('span');
+                successMessage.className = 'text-green-500 ml-2';
+                successMessage.textContent = 'Invite sent!';
+                flexContainer.appendChild(successMessage);
+                localStorage.setItem('invite_slot_user4', 'true');
+                con4.classList.add('hidden');
+                inv4.classList.add('hidden');
+                cancelInvite4.classList.remove('hidden');
+                inviteModal.classList.remove('flex', "pointer-events-auto");
+                inviteModal.classList.add('hidden', "pointer-events-none");
               } else {
-				inviteButton.remove();
-				const errorMessage = document.createElement('span');
-				errorMessage.className = 'text-red-500 ml-2';
-				errorMessage.textContent = 'Invite failed!';
-				flexContainer.appendChild(errorMessage);
-			  }
+				        inviteButton.remove();
+                const errorMessage = document.createElement('span');
+                errorMessage.className = 'text-red-500 ml-2';
+                errorMessage.textContent = 'Invite failed!';
+                flexContainer.appendChild(errorMessage);
+              }
             });
           });
         }
       }
     });
+    if (cancelInvite4) {
+      cancelInvite4.addEventListener('click', async () => {
+        const token = localStorage.getItem("token") ?? "";
+        const response = await fetch(`/games/${game}/invite`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          credentials: 'include',
+          body: JSON.stringify({ slot: 'user4' })
+        });
+        if (response.ok) {
+          localStorage.removeItem('invite_slot_user4');
+          con4.classList.remove('hidden');
+          inv4.classList.remove('hidden');
+          cancelInvite4.classList.add('hidden');
+        } else {
+          alert("Failed to cancel invite");
+        }
+      });
+    }
+
     if (user4.connected) {
       con4.classList.add('hidden');
       inv4.classList.add('hidden');
+      cancelInvite4.classList.add('hidden');
       dis4.classList.remove('hidden');
+    } else if (localStorage.getItem('invite_slot_user4') === 'true') {
+      con4.classList.add('hidden');
+      inv4.classList.add('hidden');
+      dis4.classList.add('hidden');
+      cancelInvite4.classList.remove('hidden');
+    } else {
+      dis4.classList.add('hidden');
+      cancelInvite4.classList.add('hidden');
+      con4.classList.remove('hidden');
+      inv4.classList.remove('hidden');
     }
   }
   let userId = "1";
@@ -757,7 +941,7 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
         return;
       }
       const mfa = await response.json();
-      let temp:user = {username: "", userID: "", pfp: new Blob, token: mfa.token, connected: true, avatarUrl: ""};
+      let temp:user = {username: "", userID: "", token: mfa.token, connected: true, avatarUrl: ""};
         const getUser = await fetch('/users/me', {
           method: 'get',
           credentials: 'include',
@@ -796,36 +980,40 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
     }
 
       const json: userData = await getUser.json();
-      const pfp = await fetch(json.avatar, {
-      method: 'get',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json',
-        'Authorization': `Bearer ${temp.token}`,
-        },
-      });
-      temp.pfp = await pfp.blob();
+      // const pfp = await fetch(json.avatar, {
+      // method: 'get',
+      //   credentials: 'include',
+      //   headers: { 'Content-Type': 'application/json',
+      //   'Authorization': `Bearer ${temp.token}`,
+      //   },
+      // });
+      // temp.pfp = await pfp.blob();
       temp.username = json.username;
       temp.userID = json.id.toString();
+      temp.avatarUrl = json.avatar;
       if (userlog === 2) {
       user2 = temp;
       localStorage.setItem("user2", user2.token);
       localStorage.setItem("username2", user2.username);
       localStorage.setItem("id2", user2.userID);
-      localStorage.setItem("pfp2", json.avatar);
+      // localStorage.setItem("pfp2", json.avatar);
+      localStorage.setItem("pfp2", user2.avatarUrl)
       }
       else if (userlog === 3) {
       user3 = temp;
       localStorage.setItem("user3", user3.token);
       localStorage.setItem("username3", user3.username);
       localStorage.setItem("id3", user3.userID);
-      localStorage.setItem("pfp3", json.avatar);
+      // localStorage.setItem("pfp3", json.avatar);
+      localStorage.setItem("pfp3", user3.avatarUrl);
       }
       else if (userlog === 4) {
       user4 = temp;
       localStorage.setItem("user4", user4.token);
       localStorage.setItem("username4", user4.username);
       localStorage.setItem("id4", user4.userID);
-      localStorage.setItem("pfp4", json.avatar);
+      // localStorage.setItem("pfp4", json.avatar);
+      localStorage.setItem("pfp4", user4.avatarUrl);
       }
       const errorDiv = document.getElementById('loginError');
       if (errorDiv) {
@@ -909,7 +1097,7 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
     }
 
 
-          let temp:user = {username: "", userID: "", pfp: new Blob, token: data.token, connected: true, avatarUrl: ""};
+          let temp:user = {username: "", userID: "", token: data.token, connected: true, avatarUrl: ""};
       const getUser = await fetch('/users/me', {
         method: 'get',
         credentials: 'include',
@@ -923,36 +1111,40 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
             throw new Error(errorData.message || 'Error Fetching User Data');
       }
       const json: userData = await getUser.json();
-      const pfp = await fetch(json.avatar, {
-      method: 'get',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json',
-        'Authorization': `Bearer ${temp.token}`,
-        },
-      });
-      temp.pfp = await pfp.blob();
+      // const pfp = await fetch(json.avatar, {
+      // method: 'get',
+      //   credentials: 'include',
+      //   headers: { 'Content-Type': 'application/json',
+      //   'Authorization': `Bearer ${temp.token}`,
+      //   },
+      // });
+      // temp.pfp = await pfp.blob();
       temp.username = json.username;
       temp.userID = json.id.toString();
+      temp.avatarUrl = json.avatar;
       if (userlog === 2) {
       user2 = temp;
       localStorage.setItem("user2", user2.token);
       localStorage.setItem("username2", user2.username);
       localStorage.setItem("id2", user2.userID);
-      localStorage.setItem("pfp2", json.avatar);
+      // localStorage.setItem("pfp2", json.avatar);
+      localStorage.setItem("pfp2", user2.avatarUrl);
       }
       else if (userlog === 3) {
       user3 = temp;
       localStorage.setItem("user3", user3.token);
       localStorage.setItem("username3", user3.username);
       localStorage.setItem("id3", user3.userID);
-      localStorage.setItem("pfp3", json.avatar);
+      // localStorage.setItem("pfp3", json.avatar);
+      localStorage.setItem("pfp3", user3.avatarUrl);
       }
       else if (userlog === 4) {
       user4 = temp;
       localStorage.setItem("user4", user4.token);
       localStorage.setItem("username4", user4.username);
       localStorage.setItem("id4", user4.userID);
-      localStorage.setItem("pfp4", json.avatar);
+      // localStorage.setItem("pfp4", json.avatar);
+      localStorage.setItem("pfp4", user4.avatarUrl);
       }
       renderLobbyHTML(root, playerCount);
       setUpEventListeners(root, playerCount, game);
@@ -1070,6 +1262,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     return;
   }
   const userId = user.data.id;
+  localStorage.setItem("avatarUrl", user.data.avatar);
   console.log("User ID:", userId);
   const isCreator = await isGameCreator(Number(gameId), userId);
 	console.log("Is Creator:", isCreator);
@@ -1138,102 +1331,105 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     //  return ;
   // }
 
-  const pfp = await fetch(localStorage.getItem("userPFP") ?? "", {
-    method: 'get',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-    },
-  });
-  const rawpfp:Blob = await pfp.blob();
-  user1 = {username: localStorage.getItem("userName") ?? "Waiting...", userID: localStorage.getItem("userID") ?? "-1", pfp: rawpfp, token: localStorage.getItem("token") ?? "", connected: true, avatarUrl: "" };
+  // const pfp = await fetch(localStorage.getItem("userPFP") ?? "", {
+  //   method: 'get',
+  //   credentials: 'include',
+  //   headers: { 'Content-Type': 'application/json',
+  //   'Authorization': `Bearer ${token}`,
+  //   },
+  // });
+  // const rawpfp:Blob = await pfp.blob();
+  user1 = {username: localStorage.getItem("userName") ?? "Waiting...", userID: localStorage.getItem("userID") ?? "-1",  token: localStorage.getItem("token") ?? "", connected: true, avatarUrl: localStorage.getItem("avatarUrl") ?? "" };
   const user2tok = localStorage.getItem("user2");
-  user2 = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false, avatarUrl: ""};
+  user2 = {username: "Waiting...", userID: '-1', token: "", connected: false, avatarUrl: ""};
   if (user2tok){
     user2.username = localStorage.getItem("username2") ?? "Error Loading";
     user2.userID = localStorage.getItem("id2") ?? "-1";
     user2.token = user2tok;
     user2.connected = true;
-    const pfp = await fetch(localStorage.getItem("pfp2") ?? "", {
-      method: 'get',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-    },
-    });
-    user2.pfp = await pfp.blob();
+    // const pfp = await fetch(localStorage.getItem("pfp2") ?? "", {
+    //   method: 'get',
+    //     credentials: 'include',
+    //     headers: { 'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${token}`,
+    // },
+    // });
+    // user2.pfp = await pfp.blob();
+    user2.avatarUrl = localStorage.getItem("pfp2") ?? "";
   }
   const user3tok = localStorage.getItem("user3");
-  user3 = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false , avatarUrl: ""};
+  user3 = {username: "Waiting...", userID: '-1', token: "", connected: false , avatarUrl: ""};
   if (user3tok){
     user3.username = localStorage.getItem("username3") ?? "Error Loading";
     user3.userID = localStorage.getItem("id3") ?? "-1";
     user3.token = user3tok;
     user3.connected = true;
-    const pfp = await fetch(localStorage.getItem("pfp3") ?? "", {
-      method: 'get',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-    },
-    });
-    user3.pfp = await pfp.blob();
+    // const pfp = await fetch(localStorage.getItem("pfp3") ?? "", {
+    //   method: 'get',
+    //     credentials: 'include',
+    //     headers: { 'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${token}`,
+    // },
+    // });
+    // user3.pfp = await pfp.blob();
+    user3.avatarUrl = localStorage.getItem("pfp3") ?? "";
   }
   const user4tok = localStorage.getItem("user4");
-  user4 = {username: "Waiting...", userID: '-1', pfp: new Blob, token: "", connected: false, avatarUrl: ""};
+  user4 = {username: "Waiting...", userID: '-1', token: "", connected: false, avatarUrl: ""};
   if (user4tok){
     user4.username = localStorage.getItem("username4") ?? "Error Loading";
     user4.userID = localStorage.getItem("id4") ?? "-1";
     user4.token = user4tok;
     user4.connected = true;
-    const pfp = await fetch(localStorage.getItem("pfp4") ?? "", {
-      method: 'get',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-    },
-    });
-    user4.pfp = await pfp.blob();
+    // const pfp = await fetch(localStorage.getItem("pfp4") ?? "", {
+    //   method: 'get',
+    //     credentials: 'include',
+    //     headers: { 'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${token}`,
+    // },
+    // });
+    // user4.pfp = await pfp.blob();
+    user4.avatarUrl = localStorage.getItem("pfp4") ?? "";
   }
 
   const gamePlayers = await getGamePlayers(Number(gameId));
-  console.log("Game Players:", gamePlayers);
-  if (gamePlayers.length > 1) {
-    gamePlayers.forEach((gamePlayer: PlayerConfig) => {
+    if (!gamePlayers) {
+      console.error("Failed to fetch game players after player joined");
+      return;
+    }
+    if (gamePlayers.length > 1) {
+      gamePlayers.forEach((gamePlayer: any) => {
       if (gamePlayer.slot) {
         if (gamePlayer.slot === "user2") {
-          localStorage.setItem("user2", "frominvite");
+          localStorage.setItem("user2", "fromInvite");
           localStorage.setItem("username2", gamePlayer.username);
-          localStorage.setItem("id2", String(gamePlayer.player_id));
+          localStorage.setItem("id2", String(gamePlayer.id));
           localStorage.setItem("pfp2", gamePlayer.avatar);
           user2.username = gamePlayer.username;
-          user2.userID = String(gamePlayer.player_id);
-          user2.token = "frominvite";
+          user2.userID = String(gamePlayer.id);
+          user2.token = "fromInvite";
           user2.connected = true;
           user2.avatarUrl = gamePlayer.avatar;
-          // user2.pfp = 
         } else if (gamePlayer.slot === "user3") {
-          localStorage.setItem("user3", "frominvite");
+          localStorage.setItem("user3", "fromInvite");
           localStorage.setItem("username3", gamePlayer.username);
-          localStorage.setItem("id3", String(gamePlayer.player_id));
+          localStorage.setItem("id3", String(gamePlayer.id));
           localStorage.setItem("pfp3", gamePlayer.avatar);
           user3.username = gamePlayer.username;
-          user3.userID = String(gamePlayer.player_id);
-          user3.token = "frominvite";
+          user3.userID = String(gamePlayer.id);
+          user3.token = "fromInvite";
           user3.connected = true;
           user3.avatarUrl = gamePlayer.avatar;
-          // user3.pfp = 
         } else if (gamePlayer.slot === "user4") {
-          localStorage.setItem("user4", "frominvite");
+          localStorage.setItem("user4", "fromInvite");
           localStorage.setItem("username4", gamePlayer.username);
-          localStorage.setItem("id4", String(gamePlayer.player_id));
+          localStorage.setItem("id4", String(gamePlayer.id));
           localStorage.setItem("pfp4", gamePlayer.avatar);
           user4.username = gamePlayer.username;
-          user4.userID = String(gamePlayer.player_id);
-          user4.token = "frominvite";
+          user4.userID = String(gamePlayer.id);
+          user4.token = "fromInvite";
           user4.connected = true;
           user4.avatarUrl = gamePlayer.avatar;
-          // user4.pfp = 
         }
       }
     });
@@ -1256,18 +1452,23 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
     console.log('WebSocket message received:', msg);
     if (msg.type === 'player-joined' ) {
     	const gamePlayers = await getGamePlayers(Number(gameId));
-  		console.log("Game Players:", gamePlayers);
+      if (!gamePlayers) {
+        console.error("Failed to fetch game players after player joined");
+        return;
+      }
   		if (gamePlayers.length > 1) {
-    		gamePlayers.forEach((gamePlayer: PlayerConfig) => {
+    		gamePlayers.forEach((gamePlayer: any) => {
+          console.log("Processing player object:", gamePlayer); 
     			if (gamePlayer.slot) {
         			if (gamePlayer.slot === "user2") {
-          				localStorage.setItem("user2", "frominvite");
+                  localStorage.removeItem("invite_slot_user2");
+          				localStorage.setItem("user2", "fromInvite");
           				localStorage.setItem("username2", gamePlayer.username);
-          				localStorage.setItem("id2", String(gamePlayer.player_id));
+          				localStorage.setItem("id2", String(gamePlayer.id));
           				localStorage.setItem("pfp2", gamePlayer.avatar);
           				user2.username = gamePlayer.username;
-          				user2.userID = String(gamePlayer.player_id);
-          				user2.token = "frominvite";
+          				user2.userID = String(gamePlayer.id);
+          				user2.token = "fromInvite";
           				user2.connected = true;
           				user2.avatarUrl = gamePlayer.avatar;
 						const userAvatar2 = document.getElementById('avatar2');
@@ -1275,7 +1476,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
      						const img = document.createElement('img');
       						img.src = user2.avatarUrl;
       						img.alt = 'User Avatar';
-      						img.className = 'w-full h-full object-cover';
+      						img.className = 'w-full h-full object-cover rounded-full';
       						userAvatar2.innerHTML = '';
       						userAvatar2.appendChild(img);
     					}
@@ -1286,19 +1487,22 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 						const con2 = document.getElementById('con2') as HTMLButtonElement;
 						const dis2 = document.getElementById('dis2') as HTMLButtonElement;
 						const inv2 = document.getElementById('inv2') as HTMLButtonElement;
-						if (con2 && dis2 && inv2) {
+            const cancelInvite2 = document.getElementById('cancelInvite2') as HTMLButtonElement;
+						if (con2 && dis2 && inv2 && cancelInvite2) {
 							con2.classList.add('hidden');
 							inv2.classList.add('hidden');
 							dis2.classList.remove('hidden');
+							cancelInvite2.classList.add('hidden');
 						}
         			} else if (gamePlayer.slot === "user3") {
-          				localStorage.setItem("user3", "frominvite");
+                  localStorage.removeItem("invite_slot_user3");
+          				localStorage.setItem("user3", "fromInvite");
           				localStorage.setItem("username3", gamePlayer.username);
-          				localStorage.setItem("id3", String(gamePlayer.player_id));
+          				localStorage.setItem("id3", String(gamePlayer.id));
           				localStorage.setItem("pfp3", gamePlayer.avatar);
           				user3.username = gamePlayer.username;
-          				user3.userID = String(gamePlayer.player_id);
-          				user3.token = "frominvite";
+          				user3.userID = String(gamePlayer.id);
+          				user3.token = "fromInvite";
           				user3.connected = true;
           				user3.avatarUrl = gamePlayer.avatar;
 						const userAvatar3 = document.getElementById('avatar3');
@@ -1306,7 +1510,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
      						const img = document.createElement('img');
       						img.src = user3.avatarUrl;
       						img.alt = 'User Avatar';
-      						img.className = 'w-full h-full object-cover';
+      						img.className = 'w-full h-full object-cover rounded-full';
       						userAvatar3.innerHTML = '';
       						userAvatar3.appendChild(img);
     					}
@@ -1317,19 +1521,22 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 						const con3 = document.getElementById('con3') as HTMLButtonElement;
 						const dis3 = document.getElementById('dis3') as HTMLButtonElement;
 						const inv3 = document.getElementById('inv3') as HTMLButtonElement;
-						if (con3 && dis3 && inv3) {
+            const cancelInvite3 = document.getElementById('cancelInvite3') as HTMLButtonElement;
+						if (con3 && dis3 && inv3 && cancelInvite3) {
 							con3.classList.add('hidden');
 							inv3.classList.add('hidden');
 							dis3.classList.remove('hidden');
+							cancelInvite3.classList.add('hidden');
 						}
         			} else if (gamePlayer.slot === "user4") {
-          				localStorage.setItem("user4", "frominvite");
+                  localStorage.removeItem("invite_slot_user4");
+          				localStorage.setItem("user4", "fromInvite");
           				localStorage.setItem("username4", gamePlayer.username);
-          				localStorage.setItem("id4", String(gamePlayer.player_id));
+          				localStorage.setItem("id4", String(gamePlayer.id));
           				localStorage.setItem("pfp4", gamePlayer.avatar);
           				user4.username = gamePlayer.username;
-          				user4.userID = String(gamePlayer.player_id);
-          				user4.token = "frominvite";
+          				user4.userID = String(gamePlayer.id);
+          				user4.token = "fromInvite";
           				user4.connected = true;
           				user4.avatarUrl = gamePlayer.avatar;
 						const userAvatar4 = document.getElementById('avatar4');
@@ -1337,7 +1544,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
      						const img = document.createElement('img');
       						img.src = user4.avatarUrl;
       						img.alt = 'User Avatar';
-      						img.className = 'w-full h-full object-cover';
+      						img.className = 'w-full h-full object-cover rounded-full';
       						userAvatar4.innerHTML = '';
       						userAvatar4.appendChild(img);
     					}
@@ -1348,10 +1555,12 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 						const con4 = document.getElementById('con4') as HTMLButtonElement;
 						const dis4 = document.getElementById('dis4') as HTMLButtonElement;
 						const inv4 = document.getElementById('inv4') as HTMLButtonElement;
-						if (con4 && dis4 && inv4) {
+            const cancelInvite4 = document.getElementById('cancelInvite4') as HTMLButtonElement;
+						if (con4 && dis4 && inv4 && cancelInvite4) {
 							con4.classList.add('hidden');
 							inv4.classList.add('hidden');
 							dis4.classList.remove('hidden');
+							cancelInvite4.classList.add('hidden');
 						}
         			}
       			}

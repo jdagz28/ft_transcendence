@@ -108,7 +108,7 @@ module.exports = fp(
       onRequest: fastify.authenticate,
       handler: async function leaveGameHandler(request, reply) {
         const { gameId } = request.params
-        const userId = request.user.id
+        const userId = request.body.userId || request.user.id 
         const result = await fastify.gameService.leaveGame(request, gameId, userId)
         if (!result) {
           return reply.code(404).send({ error: 'Game not found' })
@@ -253,6 +253,23 @@ module.exports = fp(
         const { gameId } = request.params
         const { username, slot } = request.body
         const result = await fastify.gameService.inviteToGame(request, gameId, username, slot)
+        if (!result) {
+          return reply.code(404).send({ error: 'Game not found' })
+        }
+        return reply.send(result)
+      }
+    })
+
+    fastify.delete('/games/:gameId/invite', {
+      schema: {
+        params: fastify.getSchema('schema:games:gameID'),
+        body: fastify.getSchema('schema:games:cancelInvite')
+      },
+      onRequest: fastify.authenticate,
+      handler: async function cancelInviteHandler(request, reply) {
+        const { gameId } = request.params
+        const { slot } = request.body
+        const result = await fastify.gameService.cancelInvite(request, gameId, slot)
         if (!result) {
           return reply.code(404).send({ error: 'Game not found' })
         }
