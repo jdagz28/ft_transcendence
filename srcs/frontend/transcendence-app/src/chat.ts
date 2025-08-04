@@ -1,5 +1,8 @@
 import { openSidebarChat } from "./sidebarChat";
 import { setupAppLayout } from "./setUpLayout";
+import { chatSwitcher } from "./chat/chatSwitcher";
+import { chatState } from "./chat/chatState";
+import { userBlocking } from "./chat/userBlocking";
 
 interface BlockedUser {
   id: number;
@@ -366,6 +369,9 @@ async function loadDMs(token: string | null) {
         const result = await blockUser(dm.id, token);
         if (result.success) {
           alert(`User: ${dm.username} Blocked !`);
+          if (chatState.currentChatName === dm.username && chatState.currentChatType === 'dm') {
+            chatSwitcher.showBlockedDMView(dm.id, dm.username);
+          }
         } else {
           alert("Not possible to block this user: " + (result.error?.error || "Unknown error"));
         }
@@ -415,6 +421,26 @@ async function loadDMs(token: string | null) {
         unblockBtn.addEventListener('click', async () => {
           const result = await unblockUser(dm.id, token);
           if (result.success) {
+            await userBlocking.handleUserUnblockedByMe(dm.id);
+            
+            if (chatState.currentChatName === dm.username && chatState.currentChatType === "dm")
+            {
+              const messagesDiv = document.getElementById('sidebar-chat-messages');
+              if (messagesDiv && chatState.currentChatId) {
+                messagesDiv.innerHTML = '<div class="text-gray-400 text-center">Chargin messages...</div>';
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const { chatMessages } = await import('./chat/chatMessages');
+                await chatMessages.loadChatHistory(chatState.currentChatId, chatState.currentChatType);
+              } else {
+                const canJoin = await canIJoinDm(dm.id, token);
+                if (canJoin.success) {
+                  await new Promise(resolve => setTimeout(resolve, 300));
+                  openSidebarChat(canJoin.data.Room, dm.username, "dm", dm.id);
+                }
+              }
+            }
           } else {
             alert("Not possible to unblock this user: " + (result.error?.error || "Unknown error"));
           }

@@ -1,4 +1,5 @@
 import { chatState } from './chatState';
+import { chatWebSocket } from './chatWebSocket';
 
 // ============================================================================ //
 // USER MODAL HANDLER                                                           //
@@ -23,9 +24,23 @@ export class UserModalHandler {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
 
+    const gameId = localStorage.getItem('gameId');
+    console.log(`Game ID from localStorage: ${gameId}`);
+    console.log(`Current chat type: ${chatState.currentChatType}`);
+    const shouldShowGameInvite = gameId && chatState.currentChatType === 'dm';
+
     const dropdown = document.createElement('div');
     dropdown.id = 'user-dropdown-menu';
     dropdown.className = 'fixed bg-[#1a2740] border border-gray-600 rounded-lg shadow-xl z-[9999] min-w-[180px] animate-in fade-in zoom-in-95 duration-200';
+    
+    const gameInviteButton = shouldShowGameInvite ? `
+      <button id="invite-to-game" class="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-7 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+        </svg>
+        Invite to Game
+      </button>
+    ` : '';
     
     dropdown.innerHTML = `
       <div class="py-2">
@@ -38,6 +53,7 @@ export class UserModalHandler {
           </svg>
           View Profile
         </button>
+        ${gameInviteButton}
         <button id="invite-to-group" class="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -68,6 +84,7 @@ export class UserModalHandler {
   private setupDropdownEvents(username: string): void {
     const viewProfileBtn = document.getElementById('view-profile');
     const inviteToGroupBtn = document.getElementById('invite-to-group');
+    const inviteToGameBtn = document.getElementById('invite-to-game');
 
     const handleOutsideClick = (e: MouseEvent) => {
       const dropdown = document.getElementById('user-dropdown-menu');
@@ -98,6 +115,42 @@ export class UserModalHandler {
     inviteToGroupBtn?.addEventListener('click', () => {
       this.showGroupInviteModal(username);
     });
+
+    inviteToGameBtn?.addEventListener('click', () => {
+      this.inviteUserToGame(username);
+    });
+  }
+
+  private async inviteUserToGame(username: string): Promise<void> {
+    console.log(`Inviting ${username} to game...`);
+    const game = localStorage.getItem('gameId');
+    const token = chatState.getAuthToken();
+    
+    const response = await fetch(`/games/${game}/invite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        username: username,
+        slot: "user2"
+      })
+    })
+    if (response.ok) {
+      const res = await response.json();
+      const message = JSON.stringify({
+        type: "game.invite",
+        senderId: res.senderId,
+        receiverId: res.receiverId,
+        notifId: res.notifId,
+        gameId: res.gameId,
+        username: username,
+        roomId: res.roomId
+      });
+      chatWebSocket.sendMessage("dm", res.roomId, message);
+    }
   }
 
   private hideModal(): void {

@@ -217,7 +217,7 @@ export class ChatSwitcherManager {
     }
   }
 
-  private async showBlockedDMView(userId: number, username: string): Promise<void> {
+  async showBlockedDMView(userId: number, username: string): Promise<void> {
     chatState.setCurrentChat(null, username, 'dm', userId);
     
     const blockingInfo = await userBlocking.getBlockingInfo(userId);
