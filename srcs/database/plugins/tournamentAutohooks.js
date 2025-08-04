@@ -598,8 +598,12 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     // Updates the tournament options if the user is the creator and the tournament is in pending status
     async updateTournamentOptions(tournamentId, userId, num_games, num_matches, ball_speed, death_timed, time_limit) {
       try {
-        fastify.db.exec('BEGIN')
-        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?')
+        let transactionHere = false
+        if (!fastify.db.inTransaction) {
+          fastify.db.exec('BEGIN')
+          transactionHere = true
+        }
+        const tourQuery = fastify.db.prepare('SELECT * FROM tournaments WHERE id = ?')
         const tournament = tourQuery.get(tournamentId)
         if (!tournament) {
           return { error: 'Tournament not found', status: 404 }
@@ -620,7 +624,9 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (updateResult.changes === 0) {
           throw new Error('Failed to update game options')
         }
-        fastify.db.exec('COMMIT')
+        if (transactionHere) {
+          fastify.db.exec('COMMIT')
+        }
 
         return { message: 'Tournament options updated successfully' }
       } catch (err) {
