@@ -446,7 +446,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     // Deletes a tournament if it is in pending status and created by the user
     async deleteTournament(tournamentId, userId) {
       try {
-        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?')
+        const tourQuery = fastify.db.prepare('SELECT created_by, status FROM tournaments WHERE id = ?')
         const tournament = tourQuery.get(tournamentId)
         if (!tournament) {
           return { error: 'Tournament not found', status: 404 }
