@@ -138,9 +138,30 @@ export class UserBlockingManager {
     refreshDMsList();
   }
 
-  handleUserUnblocked(_unblockedByUserId: number, unblockedByUsername: string): void {
+  async handleUserUnblocked(_unblockedByUserId: number, unblockedByUsername: string): Promise<void> {
     chatState.removeBlockedUser(unblockedByUsername);
     refreshDMsList();
+    if (chatState.currentChatType === 'dm' && chatState.currentChatName === unblockedByUsername) {
+      const response = await fetch('https://localhost:4242/chat/can-join/dm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${chatState.getAuthToken()}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: _unblockedByUserId
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.Room) {
+          chatMessages.clearMessages();
+          await chatMessages.loadChatHistory(data.Room, 'dm');
+        }
+      }
+    }
   }
 
   async handleUserBlockedByMe(blockedUserId: number): Promise<void> {

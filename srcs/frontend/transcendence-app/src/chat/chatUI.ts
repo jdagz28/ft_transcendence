@@ -64,13 +64,6 @@ export class ChatUIManager {
             </div>
           </div>
           <div class="flex items-center gap-2 ml-2">
-            <button id="chatMenuBtn" class="text-white text-xl hover:text-gray-400 px-2" title="Menu">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <circle cx="5" cy="12" r="2" fill="currentColor"/>
-                <circle cx="12" cy="12" r="2" fill="currentColor"/>
-                <circle cx="19" cy="12" r="2" fill="currentColor"/>
-              </svg>
-            </button>
             <button id="closeSidebarChat" class="text-white text-xl hover:text-red-400">✖</button>
           </div>
         </div>
@@ -156,7 +149,6 @@ export class ChatUIManager {
     this.setupChatForm();
     this.setupCloseButton();
     this.setupChatSwitcher();
-    this.setupChatMenu();
     this.setupOutsideClickHandler();
   }
 
@@ -187,87 +179,6 @@ export class ChatUIManager {
       console.log('Chat switcher button clicked from chatUI!');
       const { chatSwitcher: chatSwitcherModule } = await import('./chatSwitcher');
       await chatSwitcherModule.toggleChatSwitcher();
-    });
-  }
-
-  private setupChatMenu(): void {
-    const chatMenuBtn = document.getElementById('chatMenuBtn');
-    if (!chatMenuBtn) return;
-
-    chatMenuBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      
-      if (chatState.currentChatType !== 'dm' || !chatState.currentUserId) {
-        console.log('Chat menu only available for DM chats');
-        return;
-      }
-
-      const existingMenu = document.getElementById('chatUserMenu');
-      if (existingMenu) {
-        existingMenu.remove();
-        return;
-      }
-
-      try {
-        const { userBlocking } = await import('./userBlocking');
-        const isBlocked = await userBlocking.isUserBlocked(chatState.currentUserId);
-        
-        const menu = document.createElement('div');
-        menu.id = 'chatUserMenu';
-        menu.className = 'absolute top-full right-0 mt-1 bg-[#1a2740] border border-gray-600 rounded-lg shadow-xl z-50 min-w-[120px]';
-        menu.innerHTML = `
-          <div class="p-2">
-            <button id="toggleBlockUser" class="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#22325a] rounded transition-colors">
-              ${isBlocked ? 'Unblock User' : 'Block User'}
-            </button>
-          </div>
-        `;
-
-        const menuContainer = chatMenuBtn.parentElement;
-        if (menuContainer) {
-          menuContainer.style.position = 'relative';
-          menuContainer.appendChild(menu);
-        }
-
-        const toggleBlockBtn = menu.querySelector('#toggleBlockUser');
-        if (toggleBlockBtn) {
-          toggleBlockBtn.addEventListener('click', async () => {
-            const userId = chatState.currentUserId;
-            if (!userId) return;
-
-            try {
-              let success;
-              if (isBlocked) {
-                success = await userBlocking.unblockUser(userId);
-              } else {
-                success = await userBlocking.blockUser(userId);
-              }
-
-              if (success) {
-                console.log(`User ${isBlocked ? 'unblocked' : 'blocked'} successfully`);
-              }
-            } catch (error) {
-              console.error('Error toggling user block status:', error);
-            }
-
-            menu.remove();
-          });
-        }
-
-        const handleOutsideClick = (event: Event) => {
-          if (!menu.contains(event.target as Node) && !chatMenuBtn.contains(event.target as Node)) {
-            menu.remove();
-            document.removeEventListener('click', handleOutsideClick);
-          }
-        };
-        
-        setTimeout(() => {
-          document.addEventListener('click', handleOutsideClick);
-        }, 0);
-
-      } catch (error) {
-        console.error('Error setting up chat menu:', error);
-      }
     });
   }
 
