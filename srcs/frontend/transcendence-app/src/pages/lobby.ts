@@ -45,7 +45,7 @@ let user3: user;
 let user4: user;
 
 function clearGameLocalStorage() {
-  const userKeys = ["user", "username", "id", "pfp"];
+  const userKeys = ["user", "username", "id", "pfp", "invite_slot_user"];
   for (let i = 1; i <= 4; i++) {
     userKeys.forEach(key => {
       localStorage.removeItem(`${key}${i}`);

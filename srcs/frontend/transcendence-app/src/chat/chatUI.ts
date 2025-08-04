@@ -626,7 +626,61 @@ export class ChatUIManager {
 
   public async gameInviteFromNotif(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
     try {
-      await this.respondToGameInvite(gameId, response, inviteId, userId, notifId);
+      void(notifId);
+      const notifContainer = document.getElementById('notifContainer');
+      if (notifContainer) {
+        console.log('Clearing notification container');
+        notifContainer.innerHTML = '';
+        populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
+      }
+
+      const acceptBtn = document.getElementById(`acceptGameBtn-${inviteId}`);
+      const declineBtn = document.getElementById(`declineGameBtn-${inviteId}`);
+      
+      if (acceptBtn && declineBtn) {
+        const container = acceptBtn.parentElement;
+        if (container) {
+          const responseText = response === 'accept' ? 'Invitation accepted!' : 'Invitation declined.';
+          const textColor = response === 'accept' ? 'text-green-700' : 'text-red-700';
+          container.innerHTML = `<p class="${textColor} font-medium">${responseText}</p>`;
+        }
+      }
+
+      console.log(`Game invite ${response}ed for game ${gameId}`);
+      
+      if (response === 'accept') {
+        // setTimeout(() => {
+        //   window.location.hash = `#/games/${gameId}/lobby`;
+        // }, 1500);
+        const overlay = document.createElement('div');
+        overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+        
+        const box = document.createElement('div');
+        box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
+        
+        const h = document.createElement("h1");
+        h.textContent = `Remote Multiplayer:
+                         Not Implemented`;
+        h.className = "text-2xl font-bold text-center";
+
+        const p = document.createElement("p");
+        p.textContent = "Invitation Accepted! Game will be in creator's browser.";
+        p.className = "text-center"
+        box.appendChild(h);
+        box.appendChild(p);
+
+        let buttonLabel = "Return to Main Menu";
+        const btn = document.createElement("button");
+        btn.textContent = buttonLabel;
+        btn.className = "w-full py-3 rounded-md text-lg font-semibold bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90 transition";
+        btn.onclick = () => {
+          window.location.hash = ROUTE_MAIN;
+          overlay.remove();
+        };
+        box.appendChild(btn);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+      }
     } catch (error) {
       console.error('Error handling game invite from notification:', error);
     }
