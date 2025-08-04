@@ -4,6 +4,8 @@ import { chatMessages } from './chatMessages';
 import { populateNotifContainer } from '../api/notifications';
 import { ROUTE_MAIN } from '../router';
 import { chatWebSocket } from './chatWebSocket';
+import { getGameOptions } from '../api/game';
+import { whoAmI } from '../setUpLayout';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -89,9 +91,9 @@ export class ChatUIManager {
     this.renderSidebarUI(chatName);
     await chatMessages.loadChatHistory(chatId, type);
     this.setupEventListeners();
-
-    this.lobbyShowGameInvitePrompt();
     
+    const gameSettings = await getGameOptions(Number(localStorage.getItem('gameId')) || -1);
+    this.lobbyShowGameInvitePrompt(gameSettings.max_players);
   }
 
   async openDefaultMainGroup(): Promise<void> {
@@ -231,6 +233,11 @@ export class ChatUIManager {
         return;
       }
 
+      if (this.invitesSentCount >= this.maxPlayers - 1) {
+        alert(`You have already sent the max invites to ${this.invitesSentCount} players. `);
+        return;
+      }
+
       const token = localStorage.getItem("token");
       const response = await fetch(`/games/${gameId}/options`, {
         method: 'GET',
@@ -287,6 +294,9 @@ export class ChatUIManager {
         }
         if (inviteRes.ok) {
           localStorage.setItem(`invite_slot_user${smallestSlot}`, 'true');
+          this.invitesSentCount++;
+          this.updateInviteUIState();
+
           const res = await inviteRes.json();
           const message = JSON.stringify({
             type: "game.invite",
@@ -319,17 +329,60 @@ export class ChatUIManager {
     `;
     this.setupChatForm();
   }
+  
+  private maxPlayers = 0;
+  private invitesSentCount = 0;
 
-  public lobbyShowGameInvitePrompt(): void {
+  public lobbyShowGameInvitePrompt(max_players: number): void {
+    this.maxPlayers = max_players;
+    this.invitesSentCount = 0;
+
+    for (let i = 2; i <= 4; i++) {
+      if (localStorage.getItem(`invite_slot_user${i}`)) {
+        this.invitesSentCount++;
+      }
+    }
+
     const chatForm = document.getElementById('sidebar-chat-form');
     if (!chatForm) return;
 
     const gameId = localStorage.getItem('gameId');
 
     if (gameId && chatState.currentChatType === 'dm') {
-      this.renderGameInvitePrompt(gameId);
+      if (this.invitesSentCount < this.maxPlayers - 1) {
+        this.renderGameInvitePrompt(gameId);
+      } else {
+        this.restoreDefaultChatForm();
+      }
+    }
+    this.updateInviteUIState();
+  }
+
+  private updateInviteUIState(): void {
+    const sendBtn = document.getElementById('send-chat-game-invite') as HTMLButtonElement;
+    if (!sendBtn) return;
+
+    if (this.invitesSentCount >= (this.maxPlayers - 1)) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Max Invites Sent";
+      sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send";
+      sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
   }
+
+  public updateInvitesCountOnSlotChange(): void {
+    this.invitesSentCount = 0;
+    for (let i = 2; i <= this.maxPlayers; i++) {
+      if (localStorage.getItem(`invite_slot_user${i}`) === 'true') {
+        this.invitesSentCount++;
+      }
+    }
+    this.updateInviteUIState();
+  }
+
 
   enableChatForm(): void {
     const chatForm = document.getElementById('sidebar-chat-form') as HTMLFormElement;
@@ -400,9 +453,18 @@ export class ChatUIManager {
   // GAME INVITE UI                                                               //
   // ============================================================================ //
 
-  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): void {
+  async displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): Promise<void> {
     try {
       console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
+
+      const currentUser = await whoAmI();
+      if (!currentUser.success) {
+        return;
+      }
+      let isSender = false;
+      if (currentUser) {
+        isSender = currentUser.data.id === Number(senderId);
+      }
 
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (!messagesDiv) {
@@ -423,14 +485,16 @@ export class ChatUIManager {
       messagesDiv.innerHTML += `
         <div class="mb-2 flex ${alignClass}">
           <div class="max-w-[75%]">
-            <div class="mb-1 ${isMe ? 'text-right' : 'text-left'}">
+            <div class="mb-1 ${isSender ? 'text-right' : 'text-left'}">
               <span class="text-xs text-gray-400">${usernameDisplay}</span>
             </div>
             <div class="${bgColor} rounded-lg px-3 py-2 shadow border ${borderColor} text-sm">
               <p class="mb-3">${inviteText}</p>
               <div class="flex gap-2">
-                <button id="acceptGameBtn-${inviteId}" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">Accept</button>
-                <button id="declineGameBtn-${inviteId}" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">Decline</button>
+                ${!isSender ? `
+                  <button id="acceptGameBtn-${inviteId}" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">Accept</button>
+                  <button id="declineGameBtn-${inviteId}" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">Decline</button>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -439,10 +503,16 @@ export class ChatUIManager {
 
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-      setTimeout(() => {
-        this.setupGameInviteButtons(inviteId, gameId, userId, notifId);
-        this.setupUsernameClickHandlers();
-      }, 0);
+      if (!isSender) {
+        setTimeout(() => {
+          this.setupGameInviteButtons(inviteId, gameId, userId, notifId);
+          this.setupUsernameClickHandlers();
+        }, 0);
+      } else {
+        setTimeout(() => {
+          this.setupUsernameClickHandlers();
+        }, 0);
+      }
 
     } catch (error) {
       console.error('Error displaying game invite in chat UI:', error);

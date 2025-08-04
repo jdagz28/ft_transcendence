@@ -4,6 +4,7 @@ import { chatMessages } from './chatMessages';
 import { chatUI } from './chatUI';
 import { userBlocking } from './userBlocking';
 import { userModal } from './userModal';
+import { getGameOptions } from '../api/game';
 
 // ============================================================================ //
 // CHAT SWITCHER MANAGER                                                        //
@@ -206,9 +207,10 @@ export class ChatSwitcherManager {
           await chatState.getCurrentUserFromAPI();
         }
         await chatMessages.loadChatHistory(canJoinData.Room, 'dm');
+        const gameSettings = await getGameOptions(Number(localStorage.getItem('gameId')) || -1);
         
         chatUI.enableChatForm();
-        chatUI.lobbyShowGameInvitePrompt();
+        chatUI.lobbyShowGameInvitePrompt(gameSettings.max_players);
 
         console.log(`Switched to viewing DM with: ${username} (already connected via WebSocket)`);
         this.hideChatSwitcher();

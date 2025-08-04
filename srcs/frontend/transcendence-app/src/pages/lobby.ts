@@ -1287,7 +1287,6 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 	if (tempId && tempId !== params.gameId)
 		await deletePastLobby();
 	localStorage.setItem("gameId", gameId);
-	chatUI.lobbyShowGameInvitePrompt();
 
 	const token = localStorage.getItem("token") ?? "";
 	const user = await whoAmI();
@@ -1346,6 +1345,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 	}
 
 	const playerCount = String(gameSettings.max_players);
+	chatUI.lobbyShowGameInvitePrompt(gameSettings.max_players);
 
 	// const response = await fetch(`/games/${game}/join`, {
 	//   method: 'PATCH',
@@ -1493,6 +1493,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 			} else if (msg.slot === 'user4') {
 				resetPlayerSlot(4);
 			}
+			chatUI.updateInvitesCountOnSlotChange();
 		}
 
 		if (msg.type === 'player-joined') {
@@ -1614,6 +1615,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 						// }
 						// 	}
 					}
+					chatUI.updateInvitesCountOnSlotChange();
 				});
 			}
 		}
