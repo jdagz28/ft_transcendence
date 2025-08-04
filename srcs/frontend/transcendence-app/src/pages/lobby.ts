@@ -3,6 +3,7 @@ import { setupAppLayout, type userData, whoAmI } from "../setUpLayout";
 import { getGameOptions, getGamePlayers, isGameCreator, updateGameOptions } from "../api/game";
 import { getFriends } from "../chat";
 import { chatWebSocket } from "../chat/chatWebSocket";
+import { chatUI } from "../chat/chatUI";
 
 type user = {
   username: string;
@@ -1270,6 +1271,8 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
   if (tempId && tempId !== params.gameId)
 	await deletePastLobby();
   localStorage.setItem("gameId", gameId);
+  chatUI.lobbyShowGameInvitePrompt();
+
   const token = localStorage.getItem("token") ?? "";
 	const user = await whoAmI();
   if (!user.success) {

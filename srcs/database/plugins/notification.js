@@ -10,9 +10,8 @@ const notificationsApi = axios.create({
 
 module.exports = fp(async function notificationPlugin(fastify, opts) {
   fastify.decorate('notifications', {
-    /**
-     * Sends the notification for a specific user to the notification container. 
-     */
+
+    // Sends the notification for a specific user to the notification container. 
     async notifyUser(userId, notification) {
       try {
         await notificationsApi.post(`/notify/user/${userId}`, notification);
@@ -21,9 +20,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       }
     },
 
-    /**
-     * Broadcasts a notification to all users.
-      */
+    // Broadcasts a notification to all users.
     async broadcast(notification) {
       try {
         await notificationsApi.post(`/notify/broadcast`, notification);
@@ -32,9 +29,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       }
     },
 
-    /**
-     * Sends a friend request notification.
-     */
+    // Sends a friend request notification.
     async friendRequest(requesterId, recipientId, requesterName) {
       const message = `${requesterName} sent you a friend request`;
       const result = await fastify.notifications.writeNotificationToDB(
@@ -50,9 +45,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       });
     },
 
-    /**
-     * Sends a game turn notification.
-     */
+    // Sends a game turn notification.
     async gameTurn(playerId, gameId) {
       const message = `It's your turn! Game ${gameId} is ready for you.`;
       const result = await fastify.notifications.writeNotificationToDB(
@@ -67,9 +60,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       });
     },
 
-    /**
-     * Broadast a tournament update notification
-     */
+    // Broadcast a tournament update notification
     async tournamentUpdate(tournamentId, message) {
       const result = await fastify.notifications.writeNotificationToDB(
         null, null, 'tournament.update', tournamentId, message, null
@@ -84,9 +75,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       
     },
 
-    /**
-     * Sends a game invite notification.
-     */
+    // Sends a game invite notification.
     async gameInvite(senderId, recipientId, gameId) {
       const message = `You have been invited to join a game by user ${senderId}`;
       const result = await fastify.notifications.writeNotificationToDB(
@@ -103,9 +92,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       return id;
     },
 
-    /**
-     * Sends a tournament invite notification. 
-     */
+    // Sends a tournament invite notification.
     async tournamentInvite(senderId, recipientId, tournamentId) {
       const message = `You have been invited to join a tournament by user ${senderId}`;
       const result = await fastify.notifications.writeNotificationToDB(
@@ -121,9 +108,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       });
     },
 
-    /**
-     * Sends a group chat invite notification.
-     */
+    // Sends a group chat invite notification.
     async groupChatInvite(senderId, sendedToId, groupId, groupName, message) {
       const result = await fastify.notifications.writeNotificationToDB(
         sendedToId, senderId, 'chat.invite', groupId, message, groupName
@@ -139,9 +124,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       });
     },
 
-    /**
-     * Write notification entry to the database.
-     */
+    // Write notification entry to the database.
     async writeNotificationToDB(userID, senderID, type, type_id, message, name) {
       const query = fastify.db.prepare(`
         INSERT INTO notifications (user_id, sender_id, type, type_id, content, name)

@@ -3,6 +3,7 @@ import { chatState } from './chatState';
 import { chatMessages } from './chatMessages';
 import { populateNotifContainer } from '../api/notifications';
 import { ROUTE_MAIN } from '../router';
+import { chatWebSocket } from './chatWebSocket';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -95,6 +96,9 @@ export class ChatUIManager {
     this.renderSidebarUI(chatName);
     await chatMessages.loadChatHistory(chatId, type);
     this.setupEventListeners();
+
+    this.lobbyShowGameInvitePrompt();
+    
   }
 
   async openDefaultMainGroup(): Promise<void> {
@@ -283,6 +287,110 @@ export class ChatUIManager {
       }
     }
   };
+
+  private renderGameInvitePrompt(gameId: string): void {
+    const form = document.getElementById('sidebar-chat-form') as HTMLFormElement;
+    if (!form) return;
+
+    const inviteeName = chatState.currentChatName;
+    form.innerHTML = `
+      <div class="w-full bg-[#1e2d4b] p-3 rounded-lg text-white text-center">
+        <p class="text-sm text-gray-300 mb-2">Invite ${inviteeName} to your game?</p>
+        <button id="send-chat-game-invite" 
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+          Send
+        </button>
+        <button id="cancel-chat-game-invite"
+                class="w-full text-gray-400 hover:text-white text-xs py-1 mt-2">
+            Cancel
+        </button>
+      </div>
+    `;
+
+    this.setupGameInvitePromptListeners(gameId);
+  }
+
+  private setupGameInvitePromptListeners(gameId: string): void {
+    const sendBtn = document.getElementById('send-chat-game-invite');
+    const cancelBtn = document.getElementById('cancel-chat-game-invite');
+
+    sendBtn?.addEventListener('click', async () => {
+      if (!chatState.currentWs || chatState.currentChatType !== 'dm') {
+        alert("Error: Can only send invites in a DM chat.");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/games/${gameId}/options`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const gameSettings = await response.json();
+        console.log("Game settings retrieved successfully:", gameSettings); //! DELETE
+
+        if (gameSettings.mode === "multiplayer" && gameSettings.max_players == 2) {
+          const inviteRes = await fetch(`/games/${gameId}/invite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              username: chatState.currentChatName,
+              slot: "user2"
+            })
+          });
+          if (inviteRes.ok) {
+            const res = await inviteRes.json();
+            const message = JSON.stringify({
+              type: "game.invite",
+              senderId: res.senderId,
+              receiverId: res.receiverId,
+              notifId: res.notifId,
+              gameId: res.gameId,
+              username: localStorage.getItem("userName"),
+              roomId: res.roomId
+            });
+            chatWebSocket.sendMessage("dm", res.roomId, message);
+          }
+        }
+      }
+
+      this.restoreDefaultChatForm();
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+      this.restoreDefaultChatForm();
+    });
+  }
+
+  private restoreDefaultChatForm(): void {
+    const form = document.getElementById('sidebar-chat-form');
+    if (!form) return;
+
+    form.innerHTML = `
+      <input type="text" id="sidebar-chat-input" class="flex-1 rounded p-2 bg-[#f8f8e7] text-[#11294d] placeholder-gray-500" placeholder="Message..." />
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded transition-colors">Send</button>
+    `;
+    this.setupChatForm();
+  }
+
+  public lobbyShowGameInvitePrompt(): void {
+    const chatForm = document.getElementById('sidebar-chat-form');
+    if (!chatForm) return;
+
+    const gameId = localStorage.getItem('gameId');
+
+    if (gameId && chatState.currentChatType === 'dm') {
+      this.renderGameInvitePrompt(gameId);
+    }
+  }
 
   enableChatForm(): void {
     const chatForm = document.getElementById('sidebar-chat-form') as HTMLFormElement;
