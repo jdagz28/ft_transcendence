@@ -1498,29 +1498,33 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
           				user2.token = "fromInvite";
           				user2.connected = true;
           				user2.avatarUrl = gamePlayer.avatar;
-						const userAvatar2 = document.getElementById('avatar2');
-    					if (userAvatar2) {
-     						const img = document.createElement('img');
-      						img.src = user2.avatarUrl;
-      						img.alt = 'User Avatar';
-      						img.className = 'w-full h-full object-cover rounded-full';
-      						userAvatar2.innerHTML = '';
-      						userAvatar2.appendChild(img);
-    					}
-						const userName2 = document.getElementById('userName2');
-						if (userName2) {
-	  						userName2.textContent = user2.username;
-						}
-						const con2 = document.getElementById('con2') as HTMLButtonElement;
-						const dis2 = document.getElementById('dis2') as HTMLButtonElement;
-						const inv2 = document.getElementById('inv2') as HTMLButtonElement;
-            const cancelInvite2 = document.getElementById('cancelInvite2') as HTMLButtonElement;
-						if (con2 && dis2 && inv2 && cancelInvite2) {
-							con2.classList.add('hidden');
-							inv2.classList.add('hidden');
-							dis2.classList.remove('hidden');
-							cancelInvite2.classList.add('hidden');
-						}
+                  renderLobbyHTML(root.contentContainer, playerCount);
+                  setUpEventListeners(root.contentContainer, playerCount, gameId);
+						// const userAvatar2 = document.getElementById('avatar2');
+    				// 	if (userAvatar2) {
+     				// 		const img = document.createElement('img');
+      			// 			img.src = user2.avatarUrl;
+      			// 			img.alt = 'User Avatar';
+      			// 			img.className = 'w-full h-full object-cover rounded-full';
+      			// 			userAvatar2.innerHTML = '';
+      			// 			userAvatar2.appendChild(img);
+    				// 	}
+						// const userName2 = document.getElementById('userName2');
+            // console.log("User 2 Name:", user2.username);
+						// if (userName2) {
+            //   console.log("Setting User 2 Name:", user2.username);  
+            //   userName2.textContent = user2.username;
+						// }
+						// const con2 = document.getElementById('con2') as HTMLButtonElement;
+						// const dis2 = document.getElementById('dis2') as HTMLButtonElement;
+						// const inv2 = document.getElementById('inv2') as HTMLButtonElement;
+            // const cancelInvite2 = document.getElementById('cancelInvite2') as HTMLButtonElement;
+						// if (con2 && dis2 && inv2 && cancelInvite2) {
+						// 	con2.classList.add('hidden');
+						// 	inv2.classList.add('hidden');
+						// 	dis2.classList.remove('hidden');
+						// 	cancelInvite2.classList.add('hidden');
+						// }
         			} else if (gamePlayer.slot === "user3") {
           				localStorage.setItem("user3", "fromInvite");
           				localStorage.setItem("username3", gamePlayer.username);
@@ -1531,28 +1535,30 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
           				user3.token = "fromInvite";
           				user3.connected = true;
           				user3.avatarUrl = gamePlayer.avatar;
-						const userAvatar3 = document.getElementById('avatar3');
-    					if (userAvatar3) {
-     						const img = document.createElement('img');
-      						img.src = user3.avatarUrl;
-      						img.alt = 'User Avatar';
-      						img.className = 'w-full h-full object-cover rounded-full';
-      						userAvatar3.innerHTML = '';
-      						userAvatar3.appendChild(img);
-    					}
-						const userName3 = document.getElementById('userName3');
-						if (userName3) {
-	  						userName3.textContent = user3.username;
-						}
-						const con3 = document.getElementById('con3') as HTMLButtonElement;
-						const dis3 = document.getElementById('dis3') as HTMLButtonElement;
-						const inv3 = document.getElementById('inv3') as HTMLButtonElement;
-            const cancelInvite3 = document.getElementById('cancelInvite3') as HTMLButtonElement;
-						if (con3 && dis3 && inv3 && cancelInvite3) {
-							con3.classList.add('hidden');
-							inv3.classList.add('hidden');
-							dis3.classList.remove('hidden');
-							cancelInvite3.classList.add('hidden');
+                  renderLobbyHTML(root.contentContainer, playerCount);
+                  setUpEventListeners(root.contentContainer, playerCount, gameId);
+						// const userAvatar3 = document.getElementById('avatar3');
+    				// 	if (userAvatar3) {
+     				// 		const img = document.createElement('img');
+      			// 			img.src = user3.avatarUrl;
+      			// 			img.alt = 'User Avatar';
+      			// 			img.className = 'w-full h-full object-cover rounded-full';
+      			// 			userAvatar3.innerHTML = '';
+      			// 			userAvatar3.appendChild(img);
+    				// 	}
+						// const userName3 = document.getElementById('userName3');
+						// if (userName3) {
+	  				// 		userName3.textContent = user3.username;
+						// }
+						// const con3 = document.getElementById('con3') as HTMLButtonElement;
+						// const dis3 = document.getElementById('dis3') as HTMLButtonElement;
+						// const inv3 = document.getElementById('inv3') as HTMLButtonElement;
+            // const cancelInvite3 = document.getElementById('cancelInvite3') as HTMLButtonElement;
+						// if (con3 && dis3 && inv3 && cancelInvite3) {
+						// 	con3.classList.add('hidden');
+						// 	inv3.classList.add('hidden');
+						// 	dis3.classList.remove('hidden');
+						// 	cancelInvite3.classList.add('hidden');
 						}
         			} else if (gamePlayer.slot === "user4") {
           				localStorage.setItem("user4", "fromInvite");
@@ -1564,30 +1570,32 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
           				user4.token = "fromInvite";
           				user4.connected = true;
           				user4.avatarUrl = gamePlayer.avatar;
-						const userAvatar4 = document.getElementById('avatar4');
-    					if (userAvatar4) {
-     						const img = document.createElement('img');
-      						img.src = user4.avatarUrl;
-      						img.alt = 'User Avatar';
-      						img.className = 'w-full h-full object-cover rounded-full';
-      						userAvatar4.innerHTML = '';
-      						userAvatar4.appendChild(img);
-    					}
-						const userName4 = document.getElementById('userName4');
-						if (userName4) {
-	  						userName4.textContent = user4.username;
-						}
-						const con4 = document.getElementById('con4') as HTMLButtonElement;
-						const dis4 = document.getElementById('dis4') as HTMLButtonElement;
-						const inv4 = document.getElementById('inv4') as HTMLButtonElement;
-            const cancelInvite4 = document.getElementById('cancelInvite4') as HTMLButtonElement;
-						if (con4 && dis4 && inv4 && cancelInvite4) {
-							con4.classList.add('hidden');
-							inv4.classList.add('hidden');
-							dis4.classList.remove('hidden');
-							cancelInvite4.classList.add('hidden');
-						}
-        			}
+                  renderLobbyHTML(root.contentContainer, playerCount);
+                  setUpEventListeners(root.contentContainer, playerCount, gameId);
+						// const userAvatar4 = document.getElementById('avatar4');
+    				// 	if (userAvatar4) {
+     				// 		const img = document.createElement('img');
+      			// 			img.src = user4.avatarUrl;
+      			// 			img.alt = 'User Avatar';
+      			// 			img.className = 'w-full h-full object-cover rounded-full';
+      			// 			userAvatar4.innerHTML = '';
+      			// 			userAvatar4.appendChild(img);
+    				// 	}
+						// const userName4 = document.getElementById('userName4');
+						// if (userName4) {
+	  				// 		userName4.textContent = user4.username;
+						// }
+						// const con4 = document.getElementById('con4') as HTMLButtonElement;
+						// const dis4 = document.getElementById('dis4') as HTMLButtonElement;
+						// const inv4 = document.getElementById('inv4') as HTMLButtonElement;
+            // const cancelInvite4 = document.getElementById('cancelInvite4') as HTMLButtonElement;
+						// if (con4 && dis4 && inv4 && cancelInvite4) {
+						// 	con4.classList.add('hidden');
+						// 	inv4.classList.add('hidden');
+						// 	dis4.classList.remove('hidden');
+						// 	cancelInvite4.classList.add('hidden');
+						// }
+        		// 	}
       			}
     		});
   		}
