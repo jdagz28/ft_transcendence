@@ -208,6 +208,7 @@ export class ChatSwitcherManager {
         await chatMessages.loadChatHistory(canJoinData.Room, 'dm');
         
         chatUI.enableChatForm();
+        chatUI.lobbyShowGameInvitePrompt();
 
         console.log(`Switched to viewing DM with: ${username} (already connected via WebSocket)`);
         this.hideChatSwitcher();

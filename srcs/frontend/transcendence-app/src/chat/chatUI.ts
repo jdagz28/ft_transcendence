@@ -3,6 +3,7 @@ import { chatState } from './chatState';
 import { chatMessages } from './chatMessages';
 import { populateNotifContainer } from '../api/notifications';
 import { ROUTE_MAIN } from '../router';
+import { chatWebSocket } from './chatWebSocket';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -95,6 +96,9 @@ export class ChatUIManager {
     this.renderSidebarUI(chatName);
     await chatMessages.loadChatHistory(chatId, type);
     this.setupEventListeners();
+
+    this.lobbyShowGameInvitePrompt();
+    
   }
 
   async openDefaultMainGroup(): Promise<void> {
@@ -283,6 +287,138 @@ export class ChatUIManager {
       }
     }
   };
+
+  private renderGameInvitePrompt(gameId: string): void {
+    const form = document.getElementById('sidebar-chat-form') as HTMLFormElement;
+    if (!form) return;
+
+    const inviteeName = chatState.currentChatName;
+    form.innerHTML = `
+      <div class="w-full bg-[#1e2d4b] p-3 rounded-lg text-white text-center">
+        <p class="text-sm text-gray-300 mb-2">Invite ${inviteeName} to your game?</p>
+        <button id="send-chat-game-invite" 
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+          Send
+        </button>
+        <button id="cancel-chat-game-invite"
+                class="w-full text-gray-400 hover:text-white text-xs py-1 mt-2">
+            Cancel
+        </button>
+      </div>
+    `;
+
+    this.setupGameInvitePromptListeners(gameId);
+  }
+
+  private setupGameInvitePromptListeners(gameId: string): void {
+    const sendBtn = document.getElementById('send-chat-game-invite');
+    const cancelBtn = document.getElementById('cancel-chat-game-invite');
+
+    sendBtn?.addEventListener('click', async () => {
+      if (!chatState.currentWs || chatState.currentChatType !== 'dm') {
+        alert("Error: Can only send invites in a DM chat.");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/games/${gameId}/options`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const gameSettings = await response.json();
+
+        let inviteRes;
+        let smallestSlot = 2;
+        if (gameSettings.mode === "multiplayer" && gameSettings.max_players == 2) {
+          inviteRes = await fetch(`/games/${gameId}/invite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              username: chatState.currentChatName,
+              slot: "user2"
+            })
+          });
+        } else if (gameSettings.mode === "multiplayer" && gameSettings.max_players == 4) {
+          for (let i = 2; i <= 4; i++) {
+            const slot = localStorage.getItem(`invite_slot_user${i}`);
+            if (!slot) {
+              smallestSlot = i;
+              break;
+            }
+          }
+
+          inviteRes = await fetch(`/games/${gameId}/invite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              username: chatState.currentChatName,
+              slot: `user${smallestSlot}`
+            })
+          });
+        }
+        if (!inviteRes) {
+          alert("Error: Could not send game invite. Please try again.");
+          this.restoreDefaultChatForm();
+          return;
+        }
+        if (inviteRes.ok) {
+          localStorage.setItem(`invite_slot_user${smallestSlot}`, 'true');
+          const res = await inviteRes.json();
+          const message = JSON.stringify({
+            type: "game.invite",
+            senderId: res.senderId,
+            receiverId: res.receiverId,
+            notifId: res.notifId,
+            gameId: res.gameId,
+            username: localStorage.getItem("userName"),
+            roomId: res.roomId
+          });
+          chatWebSocket.sendMessage("dm", res.roomId, message);
+        }
+      }
+
+      this.restoreDefaultChatForm();
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+      this.restoreDefaultChatForm();
+    });
+  }
+
+  private restoreDefaultChatForm(): void {
+    const form = document.getElementById('sidebar-chat-form');
+    if (!form) return;
+
+    form.innerHTML = `
+      <input type="text" id="sidebar-chat-input" class="flex-1 rounded p-2 bg-[#f8f8e7] text-[#11294d] placeholder-gray-500" placeholder="Message..." />
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded transition-colors">Send</button>
+    `;
+    this.setupChatForm();
+  }
+
+  public lobbyShowGameInvitePrompt(): void {
+    const chatForm = document.getElementById('sidebar-chat-form');
+    if (!chatForm) return;
+
+    const gameId = localStorage.getItem('gameId');
+
+    if (gameId && chatState.currentChatType === 'dm') {
+      this.renderGameInvitePrompt(gameId);
+    }
+  }
 
   enableChatForm(): void {
     const chatForm = document.getElementById('sidebar-chat-form') as HTMLFormElement;
@@ -488,6 +624,68 @@ export class ChatUIManager {
     }
   }
 
+  public async gameInviteFromNotif(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
+    try {
+      void(notifId);
+      const notifContainer = document.getElementById('notifContainer');
+      if (notifContainer) {
+        console.log('Clearing notification container');
+        notifContainer.innerHTML = '';
+        populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
+      }
+
+      const acceptBtn = document.getElementById(`acceptGameBtn-${inviteId}`);
+      const declineBtn = document.getElementById(`declineGameBtn-${inviteId}`);
+      
+      if (acceptBtn && declineBtn) {
+        const container = acceptBtn.parentElement;
+        if (container) {
+          const responseText = response === 'accept' ? 'Invitation accepted!' : 'Invitation declined.';
+          const textColor = response === 'accept' ? 'text-green-700' : 'text-red-700';
+          container.innerHTML = `<p class="${textColor} font-medium">${responseText}</p>`;
+        }
+      }
+
+      console.log(`Game invite ${response}ed for game ${gameId}`);
+      
+      if (response === 'accept') {
+        // setTimeout(() => {
+        //   window.location.hash = `#/games/${gameId}/lobby`;
+        // }, 1500);
+        const overlay = document.createElement('div');
+        overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+        
+        const box = document.createElement('div');
+        box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
+        
+        const h = document.createElement("h1");
+        h.textContent = `Remote Multiplayer:
+                         Not Implemented`;
+        h.className = "text-2xl font-bold text-center";
+
+        const p = document.createElement("p");
+        p.textContent = "Invitation Accepted! Game will be in creator's browser.";
+        p.className = "text-center"
+        box.appendChild(h);
+        box.appendChild(p);
+
+        let buttonLabel = "Return to Main Menu";
+        const btn = document.createElement("button");
+        btn.textContent = buttonLabel;
+        btn.className = "w-full py-3 rounded-md text-lg font-semibold bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90 transition";
+        btn.onclick = () => {
+          window.location.hash = ROUTE_MAIN;
+          overlay.remove();
+        };
+        box.appendChild(btn);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+      }
+    } catch (error) {
+      console.error('Error handling game invite from notification:', error);
+    }
+  }
+
   private async respondToGameInvite(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
     try {
       const token = chatState.getAuthToken();
@@ -577,7 +775,9 @@ export class ChatUIManager {
       }
 
     } catch (error) {
-      alert('Already responded / Game no longer available');
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`)
+      } 
       window.location.reload();
       // console.error('Error responding to game invite:', error);
       // alert(`Failed to ${response} game invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);

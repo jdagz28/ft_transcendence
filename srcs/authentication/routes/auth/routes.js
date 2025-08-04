@@ -290,7 +290,7 @@ module.exports = fp(
       schema: {
         body: fastify.getSchema('schema:auth:changePassword'),
       },
-      onRequest: [fastify.authenticate], 
+      onRequest: fastify.authenticate, 
       handler: async function changePasswordHandler(request, reply) {
         const { newPassword } = request.body
         const userId = request.params.userId
@@ -315,7 +315,7 @@ module.exports = fp(
     })
 
     fastify.post('/auth/:userId/mfa/generate', {
-      onRequest: [fastify.authenticate],
+      onRequest: fastify.authenticate,
       handler: async function generateMFAsecret(request, reply) {
         const userId = request.user.id
         const username = request.user.username
@@ -338,7 +338,7 @@ module.exports = fp(
     })
 
     fastify.put('/auth/:userId/mfa/disable', {
-      onRequest: [ fastify.authenticate ],
+      onRequest: fastify.authenticate,
       handler: async function disableMFAhandler(request, reply) {
         const userId = request.user.id
         try {

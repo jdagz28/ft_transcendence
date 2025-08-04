@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "$id": "schema:games:cancelInvite",
+  "required": [ "slot" ],
+  "properties": {
+    "slot": { "type": "string" }
+  }
+}
