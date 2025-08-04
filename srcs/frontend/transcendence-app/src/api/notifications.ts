@@ -4,6 +4,7 @@ import { chatWebSocket } from "../chat/chatWebSocket";
 import { chatSwitcher } from "../chat/chatSwitcher";
 import { ROUTE_MAIN } from "../router";
 import { refreshSidebarChat } from "../sidebarChat";
+import { chatUI } from "../chat/chatUI";
 
 
 let notificationWS: WebSocket | null = null;
@@ -221,6 +222,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		})
 		if (response.ok) {
 			btnDiv.remove();
+			chatUI.gameInviteFromNotif(String(gameId), "accept", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
 				const overlay = document.createElement('div');
@@ -278,6 +280,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		})
 		if (response.ok) {
 			btnDiv.remove();
+			chatUI.gameInviteFromNotif(String(gameId), "decline", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
 		} else {

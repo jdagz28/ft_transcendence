@@ -192,6 +192,15 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       return data
     },
 
+    async cancelInvite(request, gameId, slot) {
+      const { data } = await dbApi.delete(`/games/${gameId}/invite`, {
+        headers: internalHeaders(request),
+        data: { slot }
+      });
+      console.log('Invite cancelled:', data) //! DELETE
+      return data
+    },
+
     async respondToInvite(request, gameId, response) {
       const { data } = await dbApi.patch(`/games/invites/respond`, 
         { gameId, response },

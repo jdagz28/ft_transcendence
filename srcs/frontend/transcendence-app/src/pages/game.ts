@@ -51,8 +51,10 @@ function winnerPromptBox(state: GameState, players: PlayerConfig[], totalGames: 
   const container = document.getElementById('game-container');
   if (!container) return;
 
+  if (container.querySelector('.winner-overlay')) return;
+
   const overlay = document.createElement('div');
-  overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+  overlay.className = "winner-overlay absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
   
   const box = document.createElement('div');
   box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
@@ -130,10 +132,6 @@ export async function renderGamePage(params: RouteParams) {
       break;
     }
   }
-
-  console.log('Players:', players);
-  console.log('User ID:', userId);
-  console.log('Authorize:', authorize);
   
   const config: GameDetails = await getConfig(gameId);
   const mode = config.settings.mode;
@@ -146,13 +144,12 @@ export async function renderGamePage(params: RouteParams) {
       }
     }
   }
-  console.log('Config:', config);
 
   let tournamentId = 0;
   if (mode === "tournament") {
     tournamentId = await getTournamentId(gameId);
   }
-  console.log('Tournament ID:', tournamentId);
+
   if (config.status !== "active") {
     window.location.hash = '#/403';
     return;
@@ -320,6 +317,7 @@ export async function renderGamePage(params: RouteParams) {
 
 
   function stepLocalPhysics(state: GameState) {
+    if (state.isPaused || state.gameOver || !state.gameStarted) return;
     const ball = state.ball;
     ball.x += ball.vx;
     ball.y += ball.vy;
@@ -378,7 +376,6 @@ export async function renderGamePage(params: RouteParams) {
         matchId: currMatchId,
         stats: statsTracker.finishMatch()
       };
-      console.log(`Sending status update for match ${currMatchId}:`, body); //!DELETE
       sendStatus(gameId, body);
       if (state.totalScore[side] !== totalGames) 
         currMatchId++;
@@ -386,17 +383,15 @@ export async function renderGamePage(params: RouteParams) {
 
     if (state.totalScore[side] === totalGames && mode !== "training") {
       state.gameOver = true;
-      console.log('Game finished, sending final stats...'); //!DELETE
-      console.log(`Final stats for game ${gameId}, match ${currMatchId}:`, statsTracker.finishSession()); //!DELETE
       sendStatus(gameId, { 
         status: 'finished',
         gameId: gameId,
         matchId: currMatchId,
         stats: statsTracker.finishSession()
       });
-      cleanup();
+    } else {
+        resetBall(state.ball, state);
     }
-    resetBall(state.ball, state);
   }
 
   function resetBall(ball: any, state: any) {
@@ -407,6 +402,7 @@ export async function renderGamePage(params: RouteParams) {
   }
 
   function updatePaddles(state:any) {
+    if (state.isPaused || state.gameOver || !state.gameStarted) return;
     const paddleSpeed = 8;
     for (const ctrl of controllers) {
       const paddle = state.players.find((p: LocalPlayer) => p.side === ctrl.side)!;
@@ -418,60 +414,51 @@ export async function renderGamePage(params: RouteParams) {
   }
 
   function gameLoopFn(ts: number) {
-    if (localGameState.gameStarted) {
+    if (!localGameState.isPaused && localGameState.gameStarted && !localGameState.gameOver) {
       aiOpponents.forEach(ai => ai.think(ts));
       stepLocalPhysics(localGameState);
       updatePaddles(localGameState);
     }
     render(localGameState);
-    if (!localGameState.gameOver)
+    if (!localGameState.gameOver) {
       gameLoop = requestAnimationFrame(gameLoopFn);
+    }
   }
 
   function startGame() {
     if (!gameLoop) gameLoop = requestAnimationFrame(gameLoopFn);
   }
 
-  document.addEventListener('keydown', e => { 
+  const consolidatedHandleKeyDown = (e: KeyboardEvent) => {
     const k = e.key;
     const c = e.code;
-    if (k in keyState) 
-      keyState[k] = true;
-    if (c in keyState) 
-      keyState[c] = true; 
-    if (e.key === 'Enter') 
-      localGameState.gameStarted = true; 
-  });
-  const handleKeyDown = (e: KeyboardEvent) => { 
-    const k = e.key;
-    const c = e.code;
-    if (k in keyState) 
-      keyState[k] = true;
-    if (c in keyState) 
-      keyState[c] = true; 
-    if (e.key === 'Enter') 
-      localGameState.gameStarted = true; 
+
+    if (k === 'Enter' && !localGameState.gameStarted) {
+      localGameState.gameStarted = true;
+    }
+
+    if (k === 'Escape' && localGameState.gameStarted) {
+      togglePause();
+    }
+
+    if (k in keyState) keyState[k] = true;
+    if (c in keyState) keyState[c] = true;
   };
 
- 
-  document.addEventListener('keyup', e => { 
+  const consolidatedHandleKeyUp = (e: KeyboardEvent) => {
     const k = e.key;
     const c = e.code;
-    if (k in keyState) 
-      keyState[k] = false;
-    if (c in keyState) 
-      keyState[c] = false;
-  });
-  const handleKeyUp = (e: KeyboardEvent) => { 
-    const k = e.key;
-    const c = e.code;
-    if (k in keyState) 
-      keyState[k] = false;
-    if (c in keyState) 
-      keyState[c] = false;
+    if (k in keyState) keyState[k] = false;
+    if (c in keyState) keyState[c] = false;
   };
 
-  canvas.onclick = () => localGameState.gameStarted = true;
+  canvas.onclick = () => {
+    if (!localGameState.gameStarted) {
+      localGameState.gameStarted = true;
+    } else if (localGameState.isPaused) {
+      togglePause(); // Resume the game if it's paused.
+    }
+  };
 
   abortBtn.addEventListener('click', () => {
     if (localGameState.gameOver) return;
@@ -498,10 +485,14 @@ export async function renderGamePage(params: RouteParams) {
     }
     drawBall(ctx, state.ball);
     drawPaddles(ctx, state.players);
-    if (!state.gameStarted) drawStartMessage(ctx, canvasWidth, canvasHeight);
-    if ((state.totalScore.left == totalGames || state.totalScore.right == totalGames) && mode != "training")
-      winnerPromptBox(state, players, totalGames, tournamentId, cleanup);
-      // drawWinner(ctx, canvasWidth, canvasHeight, state.totalScore);
+
+    if (!state.gameStarted) {
+        drawStartMessage(ctx, canvasWidth, canvasHeight);
+    } else if (state.isPaused) {
+        drawPauseMessage(ctx, canvasWidth, canvasHeight);
+    } else if (state.gameOver) {
+        winnerPromptBox(state, players, totalGames, tournamentId, cleanup);
+    }
   }
 
   function drawStartMessage(ctx:CanvasRenderingContext2D, w:number, h:number) {
@@ -512,11 +503,21 @@ export async function renderGamePage(params: RouteParams) {
     ctx.textAlign = 'center'; 
     ctx.fillText('Press ENTER or Click to Start', w / 2, h / 2);
     if (totalPlayers == 2)
-      ctx.fillText('Player 1: W/S keys | Player 2: Arrow keys', w / 2, h / 2 + 50); 
+      ctx.fillText('Player 1: W/S keys | Player 2: Up/Down keys', w / 2, h / 2 + 50); 
     else if (totalPlayers == 4)
       ctx.fillText('Left Paddle 1: W / L | Right Paddle: Arrow Up / Numpad 5', w / 2, h / 2 + 50); 
     else
-      ctx.fillText('Player 1: Arrow W/S keys', w / 2, h / 2 + 50); 
+      ctx.fillText('Player 1: W/S keys', w / 2, h / 2 + 50); 
+  }
+
+  function drawPauseMessage(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'white';
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Paused', w / 2, h / 2);
+    ctx.fillText('Press ESC or Click Canvas to Resume', w / 2, h / 2 + 40);
   }
 
   function drawBall(ctx:CanvasRenderingContext2D, b:any) {
@@ -582,32 +583,16 @@ export async function renderGamePage(params: RouteParams) {
     drawRow(score.right, canvasWidth / 2 + 50 + radius);
   }
 
-  // function drawWinner(
-  //   ctx:CanvasRenderingContext2D, 
-  //   w:number, 
-  //   h:number, 
-  //   score: { left:number, right:number }
-  // ) {
-  //   ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
-  //   ctx.fillRect(0,0,w,h);
-  //   ctx.fillStyle = 'white'; 
-  //   ctx.font = '80px sans-serif'; 
-  //   ctx.textAlign = 'center'; 
-  //   let winner;
-  //   if (score.left >= totalGames)
-  //     winner = "Left paddle wins!";
-  //   else
-  //     winner = "Right paddle wins!";
-  //   ctx.fillText(winner, w / 2, h / 2);
-  // }
-
+ 
   function togglePause() {
     if (localGameState.gameOver) return;
-    if (!localGameState.isPaused) {
-      alert("Game paused. Click or press Escape to resume.");
-      localGameState.isPaused = true;
+    localGameState.isPaused = !localGameState.isPaused;
+
+    if (localGameState.isPaused) {
+
       pauseAt = performance.now();
       cancelAnimationFrame(gameLoop!);
+      gameLoop = null;
       sendStatus(gameId, {
         status: 'paused',
         gameId: gameId,
@@ -615,7 +600,6 @@ export async function renderGamePage(params: RouteParams) {
       });
     } else {
       statsTracker.shiftTimes(performance.now() - pauseAt);
-      localGameState.isPaused = false;
       gameLoop = requestAnimationFrame(gameLoopFn);
       sendStatus(gameId, {
         status: 'active',
@@ -624,25 +608,6 @@ export async function renderGamePage(params: RouteParams) {
       });
     }
   }
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') togglePause();
-  });
-  const handleEscapeKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') togglePause();
-  };
-
-  document.addEventListener('click', e => {
-    if (!canvas.contains(e.target as Node)) togglePause();
-  });
-
-  const handleClickOutside = (e: MouseEvent) => {
-    const target = e.target as Node;
-    if (abortBtn.contains(target)) {
-      return;
-    }
-    togglePause();
-  };
 
   const handleBeforeUnload = () => {
     if (!localGameState.gameOver) {
@@ -655,23 +620,19 @@ export async function renderGamePage(params: RouteParams) {
   };
   window.addEventListener('beforeunload', handleBeforeUnload);
 
-  document.addEventListener('keydown', handleKeyDown);
-  document.addEventListener('keyup', handleKeyUp);
-  document.addEventListener('keydown', handleEscapeKey);
-  document.addEventListener('click', handleClickOutside);
+  document.addEventListener('keydown', consolidatedHandleKeyDown);
+  document.addEventListener('keyup', consolidatedHandleKeyUp);
 
   const cleanup = () => {
     window.removeEventListener('beforeunload', handleBeforeUnload);
-    document.removeEventListener('keydown', handleKeyDown);
-    document.removeEventListener('keyup', handleKeyUp);
-    document.removeEventListener('keydown', handleEscapeKey);
-    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('keydown', consolidatedHandleKeyDown);
+    document.removeEventListener('keyup', consolidatedHandleKeyUp);
     
     if (gameLoop) {
       cancelAnimationFrame(gameLoop);
+      gameLoop = null;
     }
   };
-  
 
   render(localGameState);
   startGame();  

@@ -13,12 +13,9 @@ module.exports = fp(
         try {
           const userId = request.user.id
           const { name, maxPlayers, gameMode, gameType } = request.body
-          const tournament = await fastify.dbTournaments.createTournament(request, userId, name, maxPlayers, gameMode, gameType)
-          if (!tournament) {
-            reply.status(400).send({ error: 'Failed to create tournament' })
-            return
-          }
-          reply.status(201).send(tournament)
+          const tournamentId = await fastify.dbTournaments.createTournament(request, userId, name, maxPlayers, gameMode, gameType)
+          
+          reply.status(201).send(tournamentId)
         } catch (err) {
           fastify.log.error(err)
           reply.status(500).send({ error: 'Internal Server Error' })
@@ -37,10 +34,13 @@ module.exports = fp(
           const userId = request.user.id
           const { slotIndex } = request.body
           const result = await fastify.dbTournaments.joinTournament(request, tournamentId, userId, slotIndex)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
+
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)
@@ -60,10 +60,13 @@ module.exports = fp(
           const { tournamentId } = request.params
           const { userId, slotIndex } = request.body
           const result = await fastify.dbTournaments.inviteUserToTournament(tournamentId, userId, slotIndex)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
+
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)
@@ -78,10 +81,10 @@ module.exports = fp(
         try {
           const { userId } = request.params
           const invites = await fastify.dbTournaments.getTournamentInvites(userId)
-          if (!invites) {
-            reply.status(404).send({ error: 'No invites found' })
-            return
+          if (invites.error) {
+            return reply.status(invites.status || 400).send({ error: invites.error })
           }
+
           reply.status(200).send(invites)
         } catch (err) {
           fastify.log.error(err)
@@ -102,9 +105,11 @@ module.exports = fp(
           const userId = request.user.id
           const { tournamentId, response } = request.body
           const result = await fastify.dbTournaments.respondToTournamentInvite(inviteId, userId, response, tournamentId)
-          if (!result) {
-            reply.status(404).send({ error: 'Invite not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
           reply.status(200).send(result)
         } catch (err) {
@@ -124,10 +129,13 @@ module.exports = fp(
           const { tournamentId } = request.params
           const userId = request.user.id
           const result = await fastify.dbTournaments.leaveTournament(tournamentId, userId)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
+
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)
@@ -141,10 +149,7 @@ module.exports = fp(
       handler: async function getTournamentsHandler(request, reply) {
         try {
           const tournaments = await fastify.dbTournaments.getTournaments()
-          if (!tournaments) {
-            reply.status(400).send({ error: 'Failed to retrieve tournaments' })
-            return
-          }
+          
           reply.status(200).send(tournaments)
         } catch (err) {
           fastify.log.error(err)
@@ -162,9 +167,8 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const tournament = await fastify.dbTournaments.getTournamentById(tournamentId)
-          if (!tournament) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (tournament.error) {
+            return reply.status(tournament.status || 404).send({ error: tournament.error })
           }
           reply.status(200).send(tournament)
         } catch (err) {
@@ -183,9 +187,8 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const settings = await fastify.dbTournaments.getTournamentSettings(tournamentId)
-          if (!settings) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (settings.error) {
+            return reply.status(settings.status || 404).send({ error: settings.error })
           }
           reply.status(200).send(settings)
         } catch (err) {
@@ -204,10 +207,6 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const players = await fastify.dbTournaments.getTournamentPlayers(tournamentId)
-          if (!players) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
-          }
           reply.status(200).send(players)
         } catch (err) {
           fastify.log.error(err)
@@ -226,10 +225,13 @@ module.exports = fp(
           const { tournamentId } = request.params
           const userId = request.user.id
           const result = await fastify.dbTournaments.deleteTournament(tournamentId, userId)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
+
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)
@@ -248,10 +250,13 @@ module.exports = fp(
           const { tournamentId } = request.params
           const userId = request.user.id
           const result = await fastify.dbTournaments.startTournament(tournamentId, userId)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
+
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)
@@ -274,9 +279,11 @@ module.exports = fp(
           const userId = request.user.id
           const updatedTournament = await fastify.dbTournaments.updateTournamentOptions(
             tournamentId, userId, num_games, num_matches, ball_speed, death_timed, time_limit)
-          if (!updatedTournament) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (updatedTournament.error) {
+            if (updatedTournament.status) {
+              return reply.status(updatedTournament.status).send({ error: updatedTournament.error })
+            }
+            return reply.status(400).send({ error: updatedTournament.error })
           }
           reply.status(200).send(updatedTournament)
         } catch (err) {
@@ -298,9 +305,11 @@ module.exports = fp(
           const { tournamentId } = request.params
           const userId = request.user.id
           const result = await fastify.dbTournaments.createTournamentAlias(tournamentId, userId, alias)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
           reply.status(201).send(result)
         } catch (err) {
@@ -322,9 +331,11 @@ module.exports = fp(
           const { tournamentId } = request.params
           const userId = request.user.id
           const result = await fastify.dbTournaments.deleteTournamentAlias(tournamentId, userId, alias)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
           reply.status(200).send(result)
         } catch (err) {
@@ -343,10 +354,7 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const aliases = await fastify.dbTournaments.getTournamentAliases(tournamentId)
-          if (!aliases) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
-          }
+          
           reply.status(200).send(aliases)
         } catch (err) {
           fastify.log.error(err)
@@ -364,9 +372,11 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const brackets = await fastify.dbTournaments.getTournamentBrackets(tournamentId)
-          if (!brackets) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (brackets.error) {
+            if (brackets.status) {
+              return reply.status(brackets.status).send({ error: brackets.error })
+            }
+            return reply.status(400).send({ error: brackets.error })
           }
           reply.status(200).send(brackets)
         } catch (err) {
@@ -386,10 +396,13 @@ module.exports = fp(
           const { tournamentId } = request.params
           const userId = request.user.id
           const games = await fastify.dbTournaments.getTournamentGames(tournamentId, userId)
-          if (!games) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (games.error) {
+            if (games.status) {
+              return reply.status(games.status).send({ error: games.error })
+            }
+            return reply.status(400).send({ error: games.error })
           }
+
           reply.status(200).send(games)
         } catch (err) {
           fastify.log.error(err)
@@ -400,20 +413,20 @@ module.exports = fp(
 
     fastify.get('/tournaments/:tournamentId/summary', {
       schema: {
-        params: fastify.getSchema('schema:tournaments:tournamentID'),
-        // response: {
-        //   200: fastify.getSchema('schema:tournaments:tournamentSummary')
-        // }
+        params: fastify.getSchema('schema:tournaments:tournamentID')
       },
       onRequest: fastify.authenticate,
       handler: async function getTournamentSummaryHandler(request, reply) {
         try {
           const { tournamentId } = request.params
           const summary = await fastify.dbTournaments.getTournamentSummary(tournamentId)
-          if (!summary) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (summary.error) {
+            if (summary.status) {
+              return reply.status(summary.status).send({ error: summary.error })
+            }
+            return reply.status(400).send({ error: summary.error })
           }
+
           reply.status(200).send(summary)
         } catch (err) {
           fastify.log.error(err)
@@ -431,10 +444,7 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const availablePlayers = await fastify.dbTournaments.getAvailablePlayers(tournamentId)
-          if (!availablePlayers) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
-          }
+        
           reply.status(200).send(availablePlayers)
         } catch (err) {
           fastify.log.error(err)
@@ -452,10 +462,13 @@ module.exports = fp(
         try {
           const { tournamentId } = request.params
           const chat = await fastify.dbTournaments.getTournamentChat(tournamentId)
-          if (!chat) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (chat.error) {
+            if (chat.status) {
+              return reply.status(chat.status).send({ error: chat.error })
+            }
+            return reply.status(400).send({ error: chat.error })
           }
+
           return reply.status(200).send(chat)
         } catch (err) {
           fastify.log.error(err)
@@ -475,10 +488,13 @@ module.exports = fp(
           const { slotIndex } = request.body
           const userId = request.user.id
           const result = await fastify.dbTournaments.createTournamentAI(tournamentId, userId, slotIndex)
-          if (!result) {
-            reply.status(404).send({ error: 'Tournament not found' })
-            return
+          if (result.error) {
+            if (result.status) {
+              return reply.status(result.status).send({ error: result.error })
+            }
+            return reply.status(400).send({ error: result.error })
           }
+          
           reply.status(200).send(result)
         } catch (err) {
           fastify.log.error(err)

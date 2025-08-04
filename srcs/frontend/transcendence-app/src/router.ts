@@ -197,21 +197,41 @@ export async function deletePastLobby() {
 	const gameId = localStorage.getItem("gameId");
 	const tok = localStorage.getItem("token");
 	if (gameId && tok) {
-		await fetch(`/games/${gameId}`, {
-    		method: 'DELETE',
-    		headers: {
-       			'Authorization': `Bearer ${tok}`
-			},
-      		credentials: 'include'
-    	});
-		localStorage.removeItem("gameId");
-		localStorage.removeItem("user2");
-		localStorage.removeItem("user3");
-		localStorage.removeItem("user4");
-		localStorage.removeItem("user2");
-		localStorage.removeItem("user3");
-		localStorage.removeItem("user4");
-	} 
+    try {
+      const response = await fetch(`/games/${gameId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${tok}`
+        },
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log ("Game data:", data);
+        if (data.status === "pending") {
+          console.log("Deleting past lobby with gameId:", gameId); //! DELETE
+          await fetch(`/games/${gameId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${tok}`
+            },
+            credentials: 'include'
+          });
+        }
+      }
+
+      localStorage.removeItem("gameId");
+      for (let i = 2; i <= 4; i++) {
+        localStorage.removeItem(`user${i}`);
+        localStorage.removeItem(`username${i}`);
+        localStorage.removeItem(`id${i}`);
+        localStorage.removeItem(`pfp${i}`);
+        localStorage.removeItem(`invite_slot_user${i}`);
+      }
+    } catch (error) {
+      throw new Error("Failed to delete past lobby");
+    }
+	}
 }
 
 
@@ -232,8 +252,7 @@ export function initRouter() {
       // console.log("Regex match result:", m);
       
       if (m) {
-        const GAME_RELATED_ROUTES = [ROUTE_LOBBY, ROUTE_GAME_PLAY, ROUTE_GAMES_PAGE];
-        if (!GAME_RELATED_ROUTES.includes(r.pattern)) {
+        if (r.pattern !== ROUTE_LOBBY) {
           await deletePastLobby();
         }
         r.handler({ ...params, ...extractParams(m, r.pattern) });
