@@ -1489,7 +1489,6 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
           console.log("Processing player object:", gamePlayer); 
     			if (gamePlayer.slot) {
         			if (gamePlayer.slot === "user2") {
-                  localStorage.removeItem("invite_slot_user2");
           				localStorage.setItem("user2", "fromInvite");
           				localStorage.setItem("username2", gamePlayer.username);
           				localStorage.setItem("id2", String(gamePlayer.id));
@@ -1523,7 +1522,6 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 							cancelInvite2.classList.add('hidden');
 						}
         			} else if (gamePlayer.slot === "user3") {
-                  localStorage.removeItem("invite_slot_user3");
           				localStorage.setItem("user3", "fromInvite");
           				localStorage.setItem("username3", gamePlayer.username);
           				localStorage.setItem("id3", String(gamePlayer.id));
@@ -1557,7 +1555,6 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 							cancelInvite3.classList.add('hidden');
 						}
         			} else if (gamePlayer.slot === "user4") {
-                  localStorage.removeItem("invite_slot_user4");
           				localStorage.setItem("user4", "fromInvite");
           				localStorage.setItem("username4", gamePlayer.username);
           				localStorage.setItem("id4", String(gamePlayer.id));

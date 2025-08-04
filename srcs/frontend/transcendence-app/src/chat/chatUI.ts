@@ -331,10 +331,11 @@ export class ChatUIManager {
       });
       if (response.ok) {
         const gameSettings = await response.json();
-        console.log("Game settings retrieved successfully:", gameSettings); //! DELETE
 
+        let inviteRes;
+        let smallestSlot = 2;
         if (gameSettings.mode === "multiplayer" && gameSettings.max_players == 2) {
-          const inviteRes = await fetch(`/games/${gameId}/invite`, {
+          inviteRes = await fetch(`/games/${gameId}/invite`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -346,19 +347,46 @@ export class ChatUIManager {
               slot: "user2"
             })
           });
-          if (inviteRes.ok) {
-            const res = await inviteRes.json();
-            const message = JSON.stringify({
-              type: "game.invite",
-              senderId: res.senderId,
-              receiverId: res.receiverId,
-              notifId: res.notifId,
-              gameId: res.gameId,
-              username: localStorage.getItem("userName"),
-              roomId: res.roomId
-            });
-            chatWebSocket.sendMessage("dm", res.roomId, message);
+        } else if (gameSettings.mode === "multiplayer" && gameSettings.max_players == 4) {
+          for (let i = 2; i <= 4; i++) {
+            const slot = localStorage.getItem(`invite_slot_user${i}`);
+            if (!slot) {
+              smallestSlot = i;
+              break;
+            }
           }
+
+          inviteRes = await fetch(`/games/${gameId}/invite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              username: chatState.currentChatName,
+              slot: `user${smallestSlot}`
+            })
+          });
+        }
+        if (!inviteRes) {
+          alert("Error: Could not send game invite. Please try again.");
+          this.restoreDefaultChatForm();
+          return;
+        }
+        if (inviteRes.ok) {
+          localStorage.setItem(`invite_slot_user${smallestSlot}`, 'true');
+          const res = await inviteRes.json();
+          const message = JSON.stringify({
+            type: "game.invite",
+            senderId: res.senderId,
+            receiverId: res.receiverId,
+            notifId: res.notifId,
+            gameId: res.gameId,
+            username: localStorage.getItem("userName"),
+            roomId: res.roomId
+          });
+          chatWebSocket.sendMessage("dm", res.roomId, message);
         }
       }
 
@@ -593,6 +621,14 @@ export class ChatUIManager {
       declineBtn.addEventListener('click', () => {
         this.respondToGameInvite(gameId, 'decline', inviteId, userId, notifId);
       });
+    }
+  }
+
+  public async gameInviteFromNotif(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
+    try {
+      await this.respondToGameInvite(gameId, response, inviteId, userId, notifId);
+    } catch (error) {
+      console.error('Error handling game invite from notification:', error);
     }
   }
 
