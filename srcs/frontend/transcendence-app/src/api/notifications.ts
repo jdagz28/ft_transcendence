@@ -5,6 +5,7 @@ import { chatSwitcher } from "../chat/chatSwitcher";
 import { ROUTE_MAIN } from "../router";
 import { refreshSidebarChat } from "../sidebarChat";
 import { chatUI } from "../chat/chatUI";
+import { isGamePending } from "../api/game";
 
 
 let notificationWS: WebSocket | null = null;
@@ -624,6 +625,11 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 		}).then((res) => {
 			if (!res.ok) {
 				console.error(`Failed to mark notification ${notif_id} as read`);
+			} else {
+				const notifContainer = document.getElementById('notifContainer');
+				if (notifContainer) {
+					populateNotifContainer(notifContainer, user_id);
+				}
 			}
 		}).catch((err) => {
 			console.error(`Error marking notification ${notif_id} as read:`, err);
@@ -782,10 +788,26 @@ export async function populateNotifContainer(container: HTMLElement, id: number)
 	}
 	container.innerHTML = '';
 	emptyNotif = false;
-	data.notifications.forEach((notif: APINotif) => {
-		const notifDiv = generateAPINotifDiv(notif, token, id);
+	// data.notifications.forEach((notif: APINotif) => {
+	// 	const notifDiv = generateAPINotifDiv(notif, token, id);
+	// 	container.prepend(notifDiv);
+	// });
+	for (const raw of data.notifications) {
+		if (raw.type === "game.invite" && !(await isGamePending(raw.type_id))) {
+			await fetch(`notifications/${id.toString()}/${raw.id.toString()}`, {
+				method: "PATCH",
+				headers: {
+					'Authorization': `Bearer ${token}`,
+					'Content-Type': 'application/json'
+				},
+				credentials: 'include',
+				body: JSON.stringify({status: "read"})
+			});
+			continue;
+		}
+		const notifDiv = generateAPINotifDiv(raw, token, id);
 		container.prepend(notifDiv);
-	});
+	}
 }
 
 export async function connectNotifications(): Promise<WebSocket | null> {
@@ -902,6 +924,7 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 				notifContainer.innerHTML = '';
 			emptyNotif = false;
 			notifContainer.prepend(generateNotifDiv(msg, user.data.id, token || ''));
+			
 		}
 		notifString = notificationCount.toString();
 		if (notifString.length > 1)

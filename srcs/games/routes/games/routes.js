@@ -246,6 +246,10 @@ module.exports = fp(
         if (result.error) {
           return reply.code(result.status || 400).send({ error: result.error })
         }
+        if (slot) {
+          fastify.gameBroadcast(gameId, { type: "chat-invite-sent", slot })
+        }
+
         return reply.send(result)
       }
     })

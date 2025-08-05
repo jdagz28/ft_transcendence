@@ -1276,6 +1276,18 @@ function resetPlayerSlot(slotNumber: number) {
 	}
 }
 
+function updateButtons(slot: number) {
+	const connectBtn = document.getElementById(`con${slot}`) as HTMLButtonElement;
+	const inviteBtn = document.getElementById(`inv${slot}`) as HTMLButtonElement;
+	const cancelInviteBtn = document.getElementById(`cancelInvite${slot}`) as HTMLButtonElement;
+
+	if (connectBtn && inviteBtn && cancelInviteBtn) {
+		connectBtn.classList.add('hidden');
+		inviteBtn.classList.add('hidden');
+		cancelInviteBtn.classList.remove('hidden');
+	}
+}
+
 export async function renderLobbyPage(params: RouteParams): Promise<void> {
 	const root = setupAppLayout()
 	const gameId = params.gameId;
@@ -1287,7 +1299,6 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 	if (tempId && tempId !== params.gameId)
 		await deletePastLobby();
 	localStorage.setItem("gameId", gameId);
-	chatUI.lobbyShowGameInvitePrompt();
 
 	const token = localStorage.getItem("token") ?? "";
 	const user = await whoAmI();
@@ -1346,6 +1357,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 	}
 
 	const playerCount = String(gameSettings.max_players);
+	chatUI.lobbyShowGameInvitePrompt(gameSettings.max_players);
 
 	// const response = await fetch(`/games/${game}/join`, {
 	//   method: 'PATCH',
@@ -1484,7 +1496,18 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 
 	ws.onmessage = async (event) => {
 		const msg = JSON.parse(event.data);
-		console.log('WebSocket message received:', msg);
+
+		if (msg.type === 'chat-invite-sent') {
+			if (msg.slot === 'user2') {
+				updateButtons(2);
+			} else if (msg.slot === 'user3') {
+				updateButtons(3);
+			}
+			else if (msg.slot === 'user4') {
+				updateButtons(4);
+			}
+		}
+
 		if (msg.type === 'invite-declined') {
 			if (msg.slot === 'user2') {
 				resetPlayerSlot(2);
@@ -1493,6 +1516,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 			} else if (msg.slot === 'user4') {
 				resetPlayerSlot(4);
 			}
+			chatUI.updateInvitesCountOnSlotChange();
 		}
 
 		if (msg.type === 'player-joined') {
@@ -1614,6 +1638,7 @@ export async function renderLobbyPage(params: RouteParams): Promise<void> {
 						// }
 						// 	}
 					}
+					chatUI.updateInvitesCountOnSlotChange();
 				});
 			}
 		}

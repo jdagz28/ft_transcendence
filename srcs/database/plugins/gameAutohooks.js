@@ -204,13 +204,17 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     // Deletes a game if the user is the creator.
     async deleteGame(gameId, userId) {
       try {
-        const gameQuery = fastify.db.prepare('SELECT created_by FROM games WHERE id = ?');
+        const gameQuery = fastify.db.prepare('SELECT * FROM games WHERE id = ?');
         const game = gameQuery.get(gameId);
         if (!game) {
           return { error: 'Game not found', status: 404 };
         }
         if (game.created_by !== Number(userId)) {
           return { error: 'User not authorized to modify this game', status: 403 };
+        }
+
+        if (game.status !== 'pending') {
+          return { error: 'Game can no longer be deleted', status: 400 }
         }
 
         const query = fastify.db.prepare(
@@ -220,6 +224,28 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to delete game')
         }
+
+        const checkPendingInvites = fastify.db.prepare(
+          'SELECT * FROM game_invites WHERE game_id = ?'
+        )
+        const pendingInvites = checkPendingInvites.all(gameId)
+        if (pendingInvites.length > 0) {
+          const deleteInvites = fastify.db.prepare(
+            'DELETE FROM game_invites WHERE game_id = ?'
+          )
+          deleteInvites.run(gameId)
+        }
+
+        const deleteNotifications = fastify.db.prepare(
+          'DELETE FROM notifications WHERE type = ? AND type_id = ?'
+        )
+        deleteNotifications.run('game.invite', gameId)
+
+        const deleteInviteMessages = fastify.db.prepare(`
+          DELETE FROM messages WHERE content LIKE ? AND content LIKE ?
+        `);
+        deleteInviteMessages.run('%game.invite%', `%gameId":${gameId}%`);
+
         return { message: 'Game deleted successfully' }
       } catch (err) {
         fastify.log.error(err)
@@ -956,6 +982,21 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to cancel invite');
         }
+        const notificationId = fastify.db.prepare(`
+          SELECT id FROM notifications WHERE type = 'game.invite' AND type_id = ? AND sender_id = ?
+        `).get(gameId, userId);
+        if (notificationId) {
+          const deleteNotif = fastify.db.prepare(`
+            DELETE FROM notifications WHERE id = ?
+          `);
+          deleteNotif.run(notificationId);
+        }
+        const deleteMessagesQuery = fastify.db.prepare(`
+          DELETE FROM messages WHERE content LIKE ? AND content LIKE ? AND content LIKE ?
+        `);
+        deleteMessagesQuery.run('%game.invite%', `%gameId":${gameId}%`, `%slot":"${slot}"%`);
+
+        return { message: 'Invite successfully cancelled.' };
       } catch (err) {
         fastify.log.error(err);
         throw new Error('Failed to cancel invite');
