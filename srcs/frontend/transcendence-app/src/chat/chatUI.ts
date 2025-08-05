@@ -4,7 +4,6 @@ import { chatMessages } from './chatMessages';
 import { populateNotifContainer } from '../api/notifications';
 import { ROUTE_MAIN } from '../router';
 import { chatWebSocket } from './chatWebSocket';
-import { getGameOptions } from '../api/game';
 import { whoAmI } from '../setUpLayout';
 import { isGamePending } from '../api/game';
 
@@ -92,9 +91,8 @@ export class ChatUIManager {
     this.renderSidebarUI(chatName);
     await chatMessages.loadChatHistory(chatId, type);
     this.setupEventListeners();
-    
-    const gameSettings = await getGameOptions(Number(localStorage.getItem('gameId')) || -1);
-    this.lobbyShowGameInvitePrompt(gameSettings.max_players);
+
+    this.lobbyShowGameInvitePrompt(this.maxPlayers);
   }
 
   async openDefaultMainGroup(): Promise<void> {
@@ -331,7 +329,7 @@ export class ChatUIManager {
     this.setupChatForm();
   }
   
-  private maxPlayers = 0;
+  public maxPlayers = 0;
   private invitesSentCount = 0;
 
   public lobbyShowGameInvitePrompt(max_players: number): void {
@@ -460,8 +458,7 @@ export class ChatUIManager {
 
       const isPending = await isGamePending(Number(gameId));
       if (!isPending) {
-        console.log(`Game ${gameId} is already pending, not displaying invite.`);
-        return ;
+        return;
       }
 
 

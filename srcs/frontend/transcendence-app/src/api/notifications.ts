@@ -16,7 +16,9 @@ type wsNotif =
 	| { type: "friend.request"; requesterId: string; requesterName: string, message: string; id:number; img: "/icons8-invite.svg"; title: "Friend Request"}
 	| { type: "tournament.update"; tournamentId: string; message: string; id:number; img: "/icons8-sync.svg"; title: "Tournament Update"}
 	| { type: "game.turn"; gameId: string; message: string; id:number; img: "/icons8-double-left.svg"; title: "Game Turn"}
-	| { type: "chat.invite"; senderId: number; message: string; groupId: number; groupName: string; id: number; img: "/chatroom.svg"; title: "Chat Invitation"};
+	| { type: "chat.invite"; senderId: number; message: string; groupId: number; groupName: string; id: number; img: "/chatroom.svg"; title: "Chat Invitation"}
+	| { type: "game.deleted"; gameId: string; message: string; id:number; img: "/icons8-game-controller.svg"; title: "Game Deleted"}
+	| { type: "game.invite.cancelled"; gameId: string; message: string; id:number; img: "/icons8-game-controller.svg"; title: "Game Invite Cancelled"};
 
 type APINotif = {
 	id: number;
@@ -587,7 +589,8 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 		notif.img = "/icons8-double-left.svg";
 	} else if (notif.type === "chat.invite") {
 		notif.img = "/chatroom.svg";
-	}
+	} 
+
 	const iconImg = document.createElement("img");
 	iconImg.src = notif.img;
 	iconImg.className = "w-5 h-5 invert";
@@ -644,7 +647,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 		generateTournamentInviteButtons(contentWrapper, Number(notif.tournamentId), Number(notif.senderId), token, user_id, notif.id);
 	} else if (notif.type === "chat.invite") {
 		generateChatInviteButtons(contentWrapper, Number(notif.groupId), Number(notif.senderId), token, user_id, notif.id, notif.groupName);
-	}
+	} 
 
 	notifItem.appendChild(iconWrapper);
 	notifItem.appendChild(contentWrapper);
@@ -693,7 +696,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 		notif.title = "Tournament Update";
 	} else if (notif.type === "game.turn") {
 		notif.title = "Game Turn";
-	}
+	} 
 
 	const title = document.createElement("p");
 	title.className = "text-[10px] font-semibold text-gray-800";
@@ -749,7 +752,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 		generateChatInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id, notif.name || "Group Chat");
 	} else if (notif.is_read !== 0 && (notif.type === "game.invite" || notif.type === "tournament.invite" || notif.type === "friend.request" || notif.type === "chat.invite")) {
 		setAnsweredButtons(contentWrapper);
-	}
+	} 
 
 	notifItem.appendChild(iconWrapper);
 	notifItem.appendChild(contentWrapper);
@@ -917,6 +920,27 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 
     notificationWS.onmessage = (event) => {
     	const msg: wsNotif = JSON.parse(event.data);
+		console.log('[NOTIFICATIONS] Websocket message received:', msg); //! DELETE
+		if (msg.type === "game.deleted" || msg.type === "game.invite.cancelled") {
+			if (notifContainer) {
+				populateNotifContainer(notifContainer, user.data.id);
+			}
+			notificationCount--;
+			notifString = notificationCount.toString();
+			if(badge) {
+				if (notificationCount > 0) {
+					badge.classList.remove('hidden');
+					badge.classList.add('flex');
+					badge.textContent = notifString;
+				} else {
+					badge.classList.add('hidden');
+					badge.classList.remove('flex');
+					badge.textContent = '';
+				}
+			}
+			refreshSidebarChat();
+			return;
+		}
 		notificationCount++;
 		if (open && notifContainer) {
 			notificationCount--;
