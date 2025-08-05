@@ -92,6 +92,39 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
       return id;
     },
 
+    // Sends notification that the game was deleted.
+    async gameDeleted(gameId, recipientId) {
+      const message = `Game ${gameId} has been deleted`;
+      const result = await fastify.notifications.writeNotificationToDB(
+        recipientId, null, 'game.deleted', gameId, message, null
+      );
+      const id = result.id;
+      console.log(`Game deleted notification sent to user ${recipientId} for game ${gameId}`); //! DELETE
+      await fastify.notifications.notifyUser(recipientId, {
+        type: 'game.deleted',
+        gameId,
+        message,
+        id
+      });
+    },
+
+    // Game invite cancelled
+    async gameInviteCancelled(senderId, recipientId, gameId) {
+      const message = `Game invite from user ${senderId} has been cancelled`;
+      const result = await fastify.notifications.writeNotificationToDB(
+        recipientId, senderId, 'game.invite.cancelled', gameId, message, null
+      );
+      const id = result.id;
+      console.log(`Game invite cancelled notification sent to user ${recipientId} for game ${gameId}`); //! DELETE
+      await fastify.notifications.notifyUser(recipientId, {
+        type: 'game.invite.cancelled',
+        senderId,
+        gameId,
+        message,
+        id
+      });
+    },
+
     // Sends a tournament invite notification.
     async tournamentInvite(senderId, recipientId, tournamentId) {
       const message = `You have been invited to join a tournament by user ${senderId}`;
