@@ -2,6 +2,7 @@ import type { ChatMessage, ChatHistory } from './types';
 import { chatState } from './chatState';
 import { userModal } from './userModal';
 import { chatUI } from './chatUI';
+import { isGamePending } from '../api/game';
 
 // ============================================================================ //
 // CHAT MESSAGES HANDLER                                                        //
@@ -160,7 +161,9 @@ export class ChatMessagesHandler {
               if (isRead) {
                 chatUI.displayGameInviteResponded(isMe, msg.username);
               } else {
-                chatUI.displayGameInvite(senderId, gameId, receiverId, notifId, isMe, msg.username);
+                if (await isGamePending(Number(gameId))) {
+                  chatUI.displayGameInvite(senderId, gameId, receiverId, notifId, isMe, msg.username);
+                }
               }
             } else {
               this.addMessageToUI(msg.username, msg.content, isMe);

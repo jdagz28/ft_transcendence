@@ -6,6 +6,7 @@ import { ROUTE_MAIN } from '../router';
 import { chatWebSocket } from './chatWebSocket';
 import { getGameOptions } from '../api/game';
 import { whoAmI } from '../setUpLayout';
+import { isGamePending } from '../api/game';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -456,6 +457,13 @@ export class ChatUIManager {
   async displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): Promise<void> {
     try {
       console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
+
+      const isPending = await isGamePending(Number(gameId));
+      if (!isPending) {
+        console.log(`Game ${gameId} is already pending, not displaying invite.`);
+        return ;
+      }
+
 
       const currentUser = await whoAmI();
       if (!currentUser.success) {
