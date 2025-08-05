@@ -446,7 +446,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     // Deletes a tournament if it is in pending status and created by the user
     async deleteTournament(tournamentId, userId) {
       try {
-        const tourQuery = fastify.db.prepare('SELECT created_by, status FROM tournaments WHERE id = ?')
+        const tourQuery = fastify.db.prepare('SELECT * FROM tournaments WHERE id = ?')
         const tournament = tourQuery.get(tournamentId)
         if (!tournament) {
           return { error: 'Tournament not found', status: 404 }
@@ -475,8 +475,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
 
     // Starts a tournament by seeding the bracket and updating its status to active
     async startTournament(tournamentId, userId) {
-      try{        
-        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?')
+      try {
+        const tourQuery = fastify.db.prepare('SELECT * FROM tournaments WHERE id = ?')
         const tournament = tourQuery.get(tournamentId)
         if (!tournament) {
           return { error: 'Tournament not found', status: 404 }
@@ -1132,7 +1132,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
     async createTournamentAI(tournamentId, userId, slotIndex) {
       try {
         fastify.db.exec('BEGIN')
-        const tourQuery = fastify.db.prepare('SELECT created_by FROM tournaments WHERE id = ?')
+        const tourQuery = fastify.db.prepare('SELECT * FROM tournaments WHERE id = ?')
         const tournament = tourQuery.get(tournamentId)
         if (!tournament) {
           return { error: 'Tournament not found', status: 404 }
