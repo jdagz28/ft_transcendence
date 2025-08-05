@@ -241,6 +241,11 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         )
         deleteNotifications.run('game.invite', gameId)
 
+        const deleteInviteMessages = fastify.db.prepare(`
+          DELETE FROM messages WHERE content LIKE ? AND content LIKE ?
+        `);
+        deleteInviteMessages.run('%game.invite%', `%gameId":${gameId}%`);
+
         return { message: 'Game deleted successfully' }
       } catch (err) {
         fastify.log.error(err)
@@ -977,6 +982,21 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to cancel invite');
         }
+        const notificationId = fastify.db.prepare(`
+          SELECT id FROM notifications WHERE type = 'game.invite' AND type_id = ? AND sender_id = ?
+        `).get(gameId, userId);
+        if (notificationId) {
+          const deleteNotif = fastify.db.prepare(`
+            DELETE FROM notifications WHERE id = ?
+          `);
+          deleteNotif.run(notificationId);
+        }
+        const deleteMessagesQuery = fastify.db.prepare(`
+          DELETE FROM messages WHERE content LIKE ? AND content LIKE ? AND content LIKE ?
+        `);
+        deleteMessagesQuery.run('%game.invite%', `%gameId":${gameId}%`, `%slot":"${slot}"%`);
+
+        return { message: 'Invite successfully cancelled.' };
       } catch (err) {
         fastify.log.error(err);
         throw new Error('Failed to cancel invite');
