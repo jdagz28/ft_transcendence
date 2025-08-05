@@ -7,6 +7,7 @@ import type { GameStatusUpdate } from "../types/game_api";
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { getGamePlayers, isTournamentAdmin } from "../api/game";
 
+let ignoredkeys: string[] = [];
 
 function setupDom(root: HTMLElement): GamePageElements {
   root.innerHTML = "";
@@ -273,6 +274,8 @@ export async function renderGamePage(params: RouteParams) {
       upKey:    "ArrowUp",
       downKey:  "ArrowDown",
     });
+
+	ignoredkeys.push("ArrowUp", "ArrowDown");
   } else {
     const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
     const rightConfs = config.players.filter(p => p.paddle_loc === 'right');
@@ -432,6 +435,11 @@ export async function renderGamePage(params: RouteParams) {
   const consolidatedHandleKeyDown = (e: KeyboardEvent) => {
     const k = e.key;
     const c = e.code;
+
+	if (ignoredkeys.includes(k) || ignoredkeys.includes(c)) {
+	  e.preventDefault();
+	  return;
+	}
 
     if (k === 'Enter' && !localGameState.gameStarted) {
       localGameState.gameStarted = true;
