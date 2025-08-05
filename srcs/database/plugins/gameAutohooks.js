@@ -531,6 +531,23 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
           return { error: 'Game settings not found', status: 404 }
         }
 
+        if (checkTournament.mode === 'tournament' && status === 'aborted') {
+          const tournamentQuery = fastify.db.prepare(`
+            UPDATE games
+              SET status = 'pending',
+                  updated = CURRENT_TIMESTAMP,
+                  started = NULL,
+                  ended = NULL
+              WHERE id = ?
+          `)
+          tournamentQuery.run(gameId)
+          if (tournamentQuery.changes === 0) {
+            throw new Error('Failed to reset tournament game status')
+          }
+          
+          return { success: true, message: 'Tournament game aborted and reset to pending status' }
+        }
+
         if (checkTournament.mode !== 'tournament') {
           const gameQuery = fastify.db.prepare('SELECT created_by FROM games WHERE id = ?');
           const game = gameQuery.get(gameId);

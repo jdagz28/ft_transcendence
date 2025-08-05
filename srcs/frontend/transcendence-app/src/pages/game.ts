@@ -456,7 +456,7 @@ export async function renderGamePage(params: RouteParams) {
     if (!localGameState.gameStarted) {
       localGameState.gameStarted = true;
     } else if (localGameState.isPaused) {
-      togglePause(); // Resume the game if it's paused.
+      togglePause(); 
     }
   };
 
@@ -609,22 +609,24 @@ export async function renderGamePage(params: RouteParams) {
     }
   }
 
-  const handleBeforeUnload = () => {
-    if (!localGameState.gameOver) {
+  const handleHashChange = () => {
+    togglePause();
+    if (!localGameState.gameOver && window.location.hash != `#/games/${gameId}/play`) {
       sendStatus(gameId, {
         status: 'aborted',
         gameId: gameId,
         matchId: currMatchId,
       });
     }
+    cleanup();
   };
-  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('hashchange', handleHashChange);
 
   document.addEventListener('keydown', consolidatedHandleKeyDown);
   document.addEventListener('keyup', consolidatedHandleKeyUp);
 
   const cleanup = () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('hashchange', handleHashChange);
     document.removeEventListener('keydown', consolidatedHandleKeyDown);
     document.removeEventListener('keyup', consolidatedHandleKeyUp);
     
