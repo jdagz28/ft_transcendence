@@ -84,7 +84,6 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
         const userData = await response.json();
 
         const nickname = userData.nickname || userData.username;
-        // console.log("Nickname:", nickname);
 
         const aliasInput = $("local-alias-input") as HTMLInputElement;
         const aliasForm = $("local-alias-form");
@@ -212,7 +211,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   }
   const creatorAlias = await getTournamentAlias(tournamentId, created_by);
   if (!creatorAlias) {
-    console.log("Failed to retrieve tournament creator alias.");
     window.location.hash = `#/tournaments/${tournamentId}/alias`;
     return;
   }
@@ -239,6 +237,12 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
     return;
   }
   const userId = userData.data.id;
+  const userAlias = await getTournamentAlias(tournamentId, userId);
+  if (!userAlias) {
+    window.location.hash = `#/tournaments/${tournamentId}/alias`;
+    return;
+  }
+
   let authorized = false;
 
   if (players.some(p => p.id === userId) || created_by === userId) {
@@ -392,14 +396,15 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
         alert((err as Error).message ?? 'Could not start tournament');
       }
     });
+
+    const optionsBtn = document.createElement("button");
+    optionsBtn.textContent = "Options";
+    optionsBtn.className = `${commonBtn} bg-gradient-to-r from-blue-600 to-blue-500 hover:opacity-90`;
+    btnContainer.appendChild(optionsBtn);
+    optionsBtn.addEventListener("click", () => {
+      window.location.hash = `#/tournaments/${tournamentId}/options`;
+    });
   }
-  const optionsBtn = document.createElement("button");
-  optionsBtn.textContent = "Options";
-  optionsBtn.className = `${commonBtn} bg-gradient-to-r from-blue-600 to-blue-500 hover:opacity-90`;
-  btnContainer.appendChild(optionsBtn);
-  optionsBtn.addEventListener("click", () => {
-    window.location.hash = `#/tournaments/${tournamentId}/options`;
-  });
 
   const leaveBtn = document.createElement("button");
   if (isAdmin) {
@@ -445,7 +450,6 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
   );
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-    console.log('WebSocket message received:', msg);
     if (msg.type === 'player-joined' || msg.type === 'player-left') {
       renderTournamentLobby(tournamentId);
     }
