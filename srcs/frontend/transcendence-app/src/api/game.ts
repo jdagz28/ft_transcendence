@@ -175,3 +175,27 @@ export async function isGamePending(gameId: number): Promise<boolean> {
   
   return data.status === 'pending';
 }
+
+export async function isGameInvite(gameId: number): Promise<boolean> {
+  const token = localStorage.getItem("token");
+  const response = await fetch('/games/invites', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    console.log(response.status, response.statusText);
+    return false;
+  }
+  const data = await response.json();
+
+  for (const invite of data) {
+    if (invite.game_id === gameId) {
+      return true;
+    }
+  }
+
+  return false;
+}

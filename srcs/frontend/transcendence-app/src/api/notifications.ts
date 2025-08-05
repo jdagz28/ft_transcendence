@@ -925,7 +925,8 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 			if (notifContainer) {
 				populateNotifContainer(notifContainer, user.data.id);
 			}
-			notifString = (notificationCount - 1).toString();
+			notificationCount--;
+			notifString = notificationCount.toString();
 			if(badge) {
 				if (notificationCount > 0) {
 					badge.classList.remove('hidden');

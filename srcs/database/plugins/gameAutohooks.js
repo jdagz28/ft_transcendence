@@ -971,7 +971,7 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     async cancelInvite(gameId, userId, slot) {
       try {
         const check = fastify.db.prepare(`
-          SELECT * FROM game_invites WHERE game_id = ? AND inviter_id = ? AND slot = ? AND status = 'pending'
+          SELECT * FROM game_invites WHERE game_id = ? AND inviter_id = ? AND slot = ?
         `).get(gameId, userId, slot);
         if (!check) {
           return { error: 'Invite not found', status: 404 };
@@ -981,11 +981,14 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         }
 
         const recipient = fastify.db.prepare(`
-          SELECT user_id FROM game_invites WHERE game_id = ? AND slot = ? AND status = 'pending'
-        `).get(gameId, slot)
+          SELECT * FROM game_invites WHERE game_id = ? AND status = 'pending'
+        `).get(gameId)
         if (!recipient) {
           return { error: 'Recipient not found for this invite', status: 404 };
         }
+
+        console.log(`Invite cancelled for game ${gameId}, slot ${slot} by user ${userId}`); //! DELETE
+        await fastify.notifications.gameInviteCancelled(userId, recipient.user_id, gameId);
 
         const deleteQuery = fastify.db.prepare(`
           DELETE FROM game_invites WHERE game_id = ? AND inviter_id = ? AND slot = ? AND status = 'pending'
@@ -994,22 +997,19 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to cancel invite');
         }
-        const notificationId = fastify.db.prepare(`
+        const notificationRow = fastify.db.prepare(`
           SELECT id FROM notifications WHERE type = 'game.invite' AND type_id = ? AND sender_id = ?
         `).get(gameId, userId);
-        if (notificationId) {
+        if (notificationRow) {
           const deleteNotif = fastify.db.prepare(`
             DELETE FROM notifications WHERE id = ?
           `);
-          deleteNotif.run(notificationId);
+          deleteNotif.run(notificationRow.id);
         }
         const deleteMessagesQuery = fastify.db.prepare(`
           DELETE FROM messages WHERE content LIKE ? AND content LIKE ? AND content LIKE ?
         `);
         deleteMessagesQuery.run('%game.invite%', `%gameId":${gameId}%`, `%slot":"${slot}"%`);
-
-        console.log(`Invite cancelled for game ${gameId}, slot ${slot} by user ${userId}`); //! DELETE
-        await fastify.notifications.gameInviteCancelled(userId, recipient, gameId);
 
         return { message: 'Invite successfully cancelled.' };
       } catch (err) {
@@ -1098,41 +1098,6 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
       } catch (err) {
         fastify.log.error(err)
         throw new Error('Failed to respond to invite')
-      }
-    },
-
-    // Cancels a game invite.
-    async cancelInvite(gameId, requesterId, slotToCancel) {
-      try {
-        const invite = fastify.db.prepare(`
-          SELECT * FROM game_invites WHERE game_id = ? AND slot = ? AND status = 'pending'
-        `).get(gameId, slotToCancel);
-
-        if (!invite) {
-          return { error: 'No pending invite found for the specified slot', status: 404 };
-        }
-
-        if (invite.inviter_id !== Number(requesterId)) {
-          return { error: 'You are not the inviter for this slot', status: 403 };
-        }
-        if (invite.status !== 'pending') {
-          return { error: 'Invite is not pending', status: 409 };
-        }
-
-        const result = fastify.db.prepare(`
-          DELETE FROM game_invites WHERE game_id = ? AND slot = ? AND status = 'pending'
-        `).run(gameId, slotToCancel);
-
-        if (result.changes === 0) {
-          throw new Error('No pending invite found for the specified slot');
-        }
-
-        // 
-
-        return { message: 'Invite successfully cancelled.' };
-      } catch (err) {
-        fastify.log.error(err);
-        throw new Error('Failed to cancel invite');
       }
     },
 

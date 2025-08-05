@@ -458,8 +458,7 @@ export class ChatUIManager {
 
       const isPending = await isGamePending(Number(gameId));
       if (!isPending) {
-        console.log(`Game ${gameId} is already pending, not displaying invite.`);
-        return ;
+        return;
       }
 
 
