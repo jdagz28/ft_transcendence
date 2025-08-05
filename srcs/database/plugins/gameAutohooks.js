@@ -204,13 +204,17 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
     // Deletes a game if the user is the creator.
     async deleteGame(gameId, userId) {
       try {
-        const gameQuery = fastify.db.prepare('SELECT created_by FROM games WHERE id = ?');
+        const gameQuery = fastify.db.prepare('SELECT * FROM games WHERE id = ?');
         const game = gameQuery.get(gameId);
         if (!game) {
           return { error: 'Game not found', status: 404 };
         }
         if (game.created_by !== Number(userId)) {
           return { error: 'User not authorized to modify this game', status: 403 };
+        }
+
+        if (game.status !== 'pending') {
+          return { error: 'Game can no longer be deleted', status: 400 }
         }
 
         const query = fastify.db.prepare(
@@ -220,6 +224,23 @@ module.exports = fp(async function gameAutoHooks (fastify, opts) {
         if (result.changes === 0) {
           throw new Error('Failed to delete game')
         }
+
+        const checkPendingInvites = fastify.db.prepare(
+          'SELECT * FROM game_invites WHERE game_id = ?'
+        )
+        const pendingInvites = checkPendingInvites.all(gameId)
+        if (pendingInvites.length > 0) {
+          const deleteInvites = fastify.db.prepare(
+            'DELETE FROM game_invites WHERE game_id = ?'
+          )
+          deleteInvites.run(gameId)
+        }
+
+        const deleteNotifications = fastify.db.prepare(
+          'DELETE FROM notifications WHERE type = ? AND type_id = ?'
+        )
+        deleteNotifications.run('game.invite', gameId)
+
         return { message: 'Game deleted successfully' }
       } catch (err) {
         fastify.log.error(err)

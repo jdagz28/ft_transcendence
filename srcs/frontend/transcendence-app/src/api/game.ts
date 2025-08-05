@@ -158,3 +158,20 @@ export async function getGameDetails(gameId: number): Promise<any> {
     options: data.options
   };
 }
+
+export async function isGamePending(gameId: number): Promise<boolean> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`/games/${gameId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    return false;
+  }
+  const data = await response.json();
+  
+  return data.status === 'pending';
+}
