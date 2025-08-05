@@ -152,7 +152,6 @@ export class ChatMessagesHandler {
             const parsedContent = JSON.parse(msg.content);
             if (parsedContent.type === 'game.invite') {
               const gameId = parsedContent.gameId || '';
-              const senderId = parsedContent.senderId || '';
               const notifId = parsedContent.notifId || '';
               const receiverId = parsedContent.receiverId || '';
 
@@ -160,7 +159,7 @@ export class ChatMessagesHandler {
               if (isRead) {
                 chatUI.displayGameInviteResponded(isMe, msg.username);
               } else {
-                chatUI.displayGameInvite(senderId, gameId, receiverId, notifId, isMe, msg.username);
+                chatUI.displayGameInvite(gameId, receiverId, notifId, isMe, msg.username);
               }
             } else {
               this.addMessageToUI(msg.username, msg.content, isMe);
@@ -184,7 +183,6 @@ export class ChatMessagesHandler {
     if (!input || input.disabled || !input.value.trim() || !chatState.currentWs || !chatState.currentChatId) return;
 
     const message = input.value.trim();
-    console.log(`scope = ${chatState.currentChatType}, room = ${chatState.currentChatId}, message = ${message}`);
     
     chatState.currentWs.send(JSON.stringify({
       action: 'send',

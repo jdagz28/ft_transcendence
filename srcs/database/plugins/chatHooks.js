@@ -13,6 +13,15 @@ class HttpError extends Error {
 module.exports = fp(async function chatAutoHooks (fastify, opts) {
   fastify.decorate('dbChat', {
     
+    async notifyGameTurn(notification) {
+      try {
+        const axios = require('axios');
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-responded`, notification)
+      } catch (error) {
+        console.error('Error sending notification to chat', error.message);
+      }
+    },
+
     async userExist(userId) {
       const userQuery = fastify.db.prepare(`
         SELECT id FROM users WHERE id = ? LIMIT 1

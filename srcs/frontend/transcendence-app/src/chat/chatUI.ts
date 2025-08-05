@@ -176,7 +176,6 @@ export class ChatUIManager {
     if (!chatSwitcher) return;
 
     chatSwitcher.addEventListener('click', async () => {
-      console.log('Chat switcher button clicked from chatUI!');
       const { chatSwitcher: chatSwitcherModule } = await import('./chatSwitcher');
       await chatSwitcherModule.toggleChatSwitcher();
     });
@@ -400,9 +399,8 @@ export class ChatUIManager {
   // GAME INVITE UI                                                               //
   // ============================================================================ //
 
-  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): void {
+  displayGameInvite(gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): void {
     try {
-      console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
 
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (!messagesDiv) {
@@ -411,8 +409,8 @@ export class ChatUIManager {
 
       const inviteId = `game-invite-${gameId}-${Date.now()}`;
       const alignClass = isMe ? 'justify-end' : 'justify-start';
-      const bgColor = isMe ? 'bg-blue-100 text-[#1a2740]' : 'bg-yellow-100 text-[#1a2740]';
-      const borderColor = isMe ? 'border-blue-300' : 'border-yellow-300';
+      const bgColor = 'bg-blue-100 text-[#1a2740]';
+const borderColor = 'border-blue-300';
       const inviteText = isMe ? 'You sent a game invite' : 'You received a game invite';
       
       const displayName = isMe ? 'Me' : (senderUsername || 'Unknown');
@@ -687,7 +685,7 @@ export class ChatUIManager {
 
     } catch (error) {
       if (error instanceof Error) {
-        alert(`Error: ${error.message}`)
+        alert(`Failed to ${response} game invitation`);
       } 
       window.location.reload();
       // console.error('Error responding to game invite:', error);

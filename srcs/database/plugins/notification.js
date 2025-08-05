@@ -58,6 +58,13 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
         message,
         id
       });
+      await fastify.dbChat.notifyGameTurn({
+        type: 'game.turn',
+        gameId,
+        playerId,
+        message,
+        id
+      });
     },
 
     // Broadcast a tournament update notification

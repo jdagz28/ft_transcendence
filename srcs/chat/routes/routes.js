@@ -460,4 +460,27 @@ console.log(`in internal game invite`)
       return reply.status(500).send({ error: 'Failed to send notification' });
     }
   })
+
+  fastify.post('/internal/game-turn', async (request, reply) => {
+    const { type, gameId, message, playerId } = request.body;
+
+    if (!gameId || !message || !type || !playerId) {
+      return reply.status(400).send({ error: 'Missing required fields: gameId, message, type or playerId' });
+    }
+
+    try {
+      const notification = {
+        type: type,
+        gameId: gameId,
+        message: message,
+        playerId: playerId
+      };
+
+      const notificationSent = fastify.sendMessageToUser(playerId, notification);
+      reply.send({ success: true, notificationSent });
+    } catch (err) {
+      console.error(`Error sending game turn notification: ${err.message}`);
+      return reply.status(500).send({ error : 'Failed to send notification' });
+    }
+  })
 })

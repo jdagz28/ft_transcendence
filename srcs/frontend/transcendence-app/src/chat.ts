@@ -52,10 +52,8 @@ async function unblockUser(userId: number, token: string | null): Promise<{ succ
       return { success: false, error: json };
     }
 
-    // Supprimer du cache local
     blockedUsersCache.delete(userId);
     
-    // Rafraîchir la liste des DMs immédiatement
     refreshDMsList();
     
     return { success: true };
@@ -151,7 +149,6 @@ export function clearBlockedUsersCache(): void {
   blockedUsersCache.clear();
 }
 
-// Fonction pour rafraîchir la liste des DMs
 export function refreshDMsList(): void {
   const token = localStorage.getItem('token');
   if (token) {
@@ -286,7 +283,6 @@ async function loadDMs(token: string | null) {
   
   const dmList = document.getElementById('dm-list');
   if (!dmList) {
-    console.log('ERROR: dm-list element not found'); 
     return;
   }
 

@@ -157,7 +157,6 @@ export class ChatSwitcherManager {
       
       chatUI.enableChatForm();
       
-      console.log(`Switched to viewing group: ${chatName} (already connected via WebSocket)`);
       this.hideChatSwitcher();
     }
   }
@@ -210,7 +209,6 @@ export class ChatSwitcherManager {
         chatUI.enableChatForm();
         chatUI.lobbyShowGameInvitePrompt();
 
-        console.log(`Switched to viewing DM with: ${username} (already connected via WebSocket)`);
         this.hideChatSwitcher();
       }
     } catch (error) {
