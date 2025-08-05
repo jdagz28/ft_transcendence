@@ -146,31 +146,97 @@ export async function renderProfilePage(username: string): Promise<any> {
         table.className = "w-full text-left text-gray-300 min-w-[700px]";
         tableContainer.appendChild(table);
 
-        table.innerHTML = `
-            <thead>
-                <tr class="border-b border-gray-600">
-                    <th class="p-3 font-semibold">Opponent</th>
-                    <th class="p-3 font-semibold">Total Score</th>
-                    <th class="p-3 font-semibold">Game Scores</th>
-                    <th class="p-3 font-semibold">Duration</th>
-                    <th class="p-3 font-semibold text-right">Result</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${matchHistory.map(match => `
-                    <tr class="border-b border-gray-700 last:border-b-0 hover:bg-[#1a3a5e]">
-                        <td class="p-3">${match.opponent}</td>
-                        <td class="p-3">${match.finalScore}</td>
-                        <td class="p-3">${match.matchScores.map(s => s.scoreString).join(' , ')}</td>
-                        <td class="p-3">${match.duration}</td>
-                        <td class="p-3 text-right font-bold ${match.result === 'W' ? 'text-green-400' : 'text-red-400'}">
-                            ${match.result}
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        `;
-    }
+		const thead = document.createElement("thead");
+		const tr = document.createElement("tr");
+		tr.className = "border-b border-gray-600";
+		const dateTh = document.createElement("th");
+		dateTh.className = "p-3 font-semibold";
+		dateTh.textContent = "Date";
+		tr.appendChild(dateTh);
+		const opponentTh = document.createElement("th");
+		opponentTh.className = "p-3 font-semibold";
+		opponentTh.textContent = "Opponent";
+		tr.appendChild(opponentTh);
+		const totalScoreTh = document.createElement("th");
+		totalScoreTh.className = "p-3 font-semibold";
+		totalScoreTh.textContent = "Total Score";
+		tr.appendChild(totalScoreTh);
+		const gameScoresTh = document.createElement("th");
+		gameScoresTh.className = "p-3 font-semibold";
+		gameScoresTh.textContent = "Game Scores";
+		tr.appendChild(gameScoresTh);
+		const durationTh = document.createElement("th");
+		durationTh.className = "p-3 font-semibold";
+		durationTh.textContent = "Duration";
+		tr.appendChild(durationTh);
+		const resultTh = document.createElement("th");
+		resultTh.className = "p-3 font-semibold text-right";
+		resultTh.textContent = "Result";
+		tr.appendChild(resultTh);
+		thead.appendChild(tr);
+		table.appendChild(thead);
+
+		matchHistory.forEach(match => {
+			const date = new Date(match.ended)
+			date.setHours(date.getHours() + 2);
+			const timeStamp = date.toLocaleTimeString([], {year: 'numeric', month: 'long' , day: 'numeric' , hour: '2-digit', minute: '2-digit' });
+			const tbody = document.createElement("tbody");
+			const tbodyTr = document.createElement("tr");
+			tbodyTr.className = "border-b border-gray-700 last:border-b-0 hover:bg-[#1a3a5e]";
+			const dateTd = document.createElement("td");
+			dateTd.className = "p-3";
+			dateTd.textContent = timeStamp;
+			tbodyTr.appendChild(dateTd);
+			const opponentTd = document.createElement("td");
+			opponentTd.className = "p-3";
+			opponentTd.textContent = match.opponent;
+			tbodyTr.appendChild(opponentTd);
+			const totalScoreTd = document.createElement("td");
+			totalScoreTd.className = "p-3";
+			totalScoreTd.textContent = match.finalScore;
+			tbodyTr.appendChild(totalScoreTd);
+			const gameScoresTd = document.createElement("td");
+			gameScoresTd.className = "p-3";
+			gameScoresTd.textContent = match.matchScores.map(s => s.scoreString).join(' , ');
+			tbodyTr.appendChild(gameScoresTd);
+			const durationTd = document.createElement("td");
+			durationTd.className = "p-3";
+			durationTd.textContent = match.duration;
+			tbodyTr.appendChild(durationTd);
+			const resultTd = document.createElement("td");
+			resultTd.className = `p-3 text-right font-bold ${match.result === 'W' ? 'text-green-400' : 'text-red-400'}`;
+			resultTd.textContent = match.result;
+			tbodyTr.appendChild(resultTd);
+			tbody.appendChild(tbodyTr);
+			table.appendChild(tbody);
+		});
+	}
+    //     table.innerHTML = `
+    //         <thead>
+    //             <tr class="border-b border-gray-600">
+	// 				<th class="p-3 font-semibold">Date</th>
+    //                 <th class="p-3 font-semibold">Opponent</th>
+    //                 <th class="p-3 font-semibold">Total Score</th>
+    //                 <th class="p-3 font-semibold">Game Scores</th>
+    //                 <th class="p-3 font-semibold">Duration</th>
+    //                 <th class="p-3 font-semibold text-right">Result</th>
+    //             </tr>
+    //         </thead>
+    //         <tbody>
+    //             ${matchHistory.map(match => `
+    //                 <tr class="border-b border-gray-700 last:border-b-0 hover:bg-[#1a3a5e]">
+    //                     <td class="p-3">${match.opponent}</td>
+    //                     <td class="p-3">${match.finalScore}</td>
+    //                     <td class="p-3">${match.matchScores.map(s => s.scoreString).join(' , ')}</td>
+    //                     <td class="p-3">${match.duration}</td>
+    //                     <td class="p-3 text-right font-bold ${match.result === 'W' ? 'text-green-400' : 'text-red-400'}">
+    //                         ${match.result}
+    //                     </td>
+    //                 </tr>
+    //             `).join('')}
+    //         </tbody>
+    //     `;
+    // }
 
     const friendsContainer = document.createElement("div");
     friendsContainer.className = "lg:w-72 w-full flex-shrink-0 bg-[#0f2a4e] p-6 rounded-lg shadow-lg";
