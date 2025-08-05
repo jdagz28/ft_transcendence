@@ -191,6 +191,7 @@ export class ChatWebSocketManager {
             if (messageData.roomId === chatState.currentChatId)
             {
               chatUI.displayGameInvite(
+                messageData.senderId || '',
                 messageData.gameId || '',
                 messageData.receiverId || '',
                 messageData.notifId || '',
@@ -214,7 +215,7 @@ export class ChatWebSocketManager {
         'friend_request_accepted': async () => {
           await this.joinAllAvailableRooms();
         },
-        'game.invite': () => chatUI.displayGameInvite(data.gameId, data.receiverId, data.notifId),
+        'game.invite': () => chatUI.displayGameInvite(data.senderId, data.gameId, data.receiverId, data.notifId),
       };
       
       const handler = messageHandlers[data.type];

@@ -399,9 +399,9 @@ export class ChatUIManager {
   // GAME INVITE UI                                                               //
   // ============================================================================ //
 
-  displayGameInvite(gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): void {
+  displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): void {
     try {
-
+      console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
       const messagesDiv = document.getElementById('sidebar-chat-messages');
       if (!messagesDiv) {
         return;

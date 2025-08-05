@@ -152,6 +152,7 @@ export class ChatMessagesHandler {
             const parsedContent = JSON.parse(msg.content);
             if (parsedContent.type === 'game.invite') {
               const gameId = parsedContent.gameId || '';
+              const senderId = parsedContent.senderId || '';
               const notifId = parsedContent.notifId || '';
               const receiverId = parsedContent.receiverId || '';
 
@@ -159,7 +160,7 @@ export class ChatMessagesHandler {
               if (isRead) {
                 chatUI.displayGameInviteResponded(isMe, msg.username);
               } else {
-                chatUI.displayGameInvite(gameId, receiverId, notifId, isMe, msg.username);
+                chatUI.displayGameInvite(senderId, gameId, receiverId, notifId, isMe, msg.username);
               }
             } else {
               this.addMessageToUI(msg.username, msg.content, isMe);
