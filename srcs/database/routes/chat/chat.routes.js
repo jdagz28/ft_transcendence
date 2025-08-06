@@ -23,7 +23,6 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
     const userId = Number(request.params.userId)
     try {
       const response = await fastify.dbChat.canJoinGroup(userId, roomId)
-      console.log(response)
       reply.send(response)
     } catch (err) {
       console.error(`error checking if user can join group: ${err.message}`)

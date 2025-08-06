@@ -197,7 +197,8 @@ async function databaseConnector(fastify) {
         chat_room_id INTEGER,
         name TEXT NOT NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (chat_room_id) REFERENCES conversations(id) ON DELETE SET NULL
       );
     `);
   }
@@ -416,6 +417,7 @@ async function databaseConnector(fastify) {
         sender_id INTEGER NOT NULL,
         conversation_id INTEGER NOT NULL,
         content TEXT NOT NULL,
+        for INTEGER,
         created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,

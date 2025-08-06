@@ -14,13 +14,13 @@ export async function initializePermanentChat(): Promise<void> {
   
   const currentUser = await chatState.getCurrentUserFromAPI();
   if (!currentUser) {
-    console.warn('Cannot initialize chat: user not authenticated');
+
     return;
   }
   
   const token = chatState.getAuthToken();
   if (!token) {
-    console.warn('Cannot initialize chat: no authentication token');
+
     return;
   }
 

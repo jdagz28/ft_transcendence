@@ -488,6 +488,14 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (tournament.status !== 'pending') {
           throw new Error('Tournament is not in pending status')
         }
+
+        const tournamentPlayers = await fastify.dbTournaments.getTournamentPlayers(tournamentId)
+        const p1Id = tournamentPlayers[0]?.id || null;
+        const p2Id = tournamentPlayers[1]?.id || null;
+        const p3Id = tournamentPlayers[2]?.id || null;
+        const p4Id = tournamentPlayers[3]?.id || null;
+        const tournamentData = await fastify.dbTournaments.getTournamentById(tournamentId)
+        await fastify.dbChat.createGroupGame(userId, tournamentData.name, p1Id, p2Id, p3Id, p4Id, tournamentId);
         await fastify.dbTournaments.seedBracket(tournamentId)
         fastify.db.exec('BEGIN')
         const updateTournament = fastify.db.prepare(`
@@ -954,6 +962,8 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
             SET status = 'finished', winner_id = ?, ended = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(winners[0].winner_id, tournamentId)
+
+          fastify.dbChat.deleteChatRoom(tournamentId)
 
         const tournamentName = fastify.db.prepare(`
           SELECT name FROM tournaments WHERE id = ?

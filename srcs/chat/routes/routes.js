@@ -545,5 +545,24 @@ console.log(`in internal game invite`)
       console.error(`Error sending chat game created notification: ${err.message}`);
       return reply.status(500).send({ error: 'Failed to send notification' });
     }
+  }),
+  
+  fastify.delete('/internal/groupDeleted', async (request, reply) => {
+    const { type, u1, u2, u3, u4 } = request.body;
+    if (!type || !u1 || !u2 || !u3 || !u4) {
+      return reply.status(400).send({ error: 'Missing required fields: type, u1, u2, u3 or u4' });
+    }
+    try {
+      const notification = {
+        type: type
+      };
+      [ u1, u2, u3, u4 ].forEach(userId => {
+        fastify.sendMessageToUser(userId, notification);
+      });
+      reply.send({ success: true });
+    } catch (err) {
+      console.error(`Error sending group deleted notification: ${err.message}`);
+      return reply.status(500).send({ error: 'Failed to send notification' });
+    }
   })
 })

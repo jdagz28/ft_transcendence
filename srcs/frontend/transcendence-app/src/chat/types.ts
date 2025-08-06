@@ -9,6 +9,8 @@ export interface ChatMessage {
   content: string;
   from?: string;
   message?: string;
+  sender_id?: number;
+  for?: number;
 }
 
 export interface ChatHistory {

@@ -156,6 +156,22 @@ export function refreshDMsList(): void {
   }
 }
 
+export function refreshChatLists(): void {
+  const groupsList = document.getElementById("groups-list");
+  const dmList = document.getElementById('dm-list');
+  
+  if (!groupsList || !dmList) {
+    console.log('Not on chat page, skipping refresh');
+    return;
+  }
+  
+  const token = localStorage.getItem('token');
+  if (token) {
+    loadGroups(token);
+    loadDMs(token);
+  }
+}
+
 export function renderChat(): void {
   const token = localStorage.getItem('token');
   
@@ -173,7 +189,14 @@ export function renderChat(): void {
           <!-- Groups -->
           <div id="groups" class="flex-1 bg-[#15305a] rounded-2xl p-12 shadow-2xl shadow-black/60 min-h-[600px]">
             <h2 class="text-4xl font-bold text-center text-[#f8f8e7] mb-8">Groups</h2>
-            <div id="groups-list" class="flex flex-col gap-4 mb-8 max-h-[400px] overflow-y-auto"></div>
+            <div id="groups-list" class="flex flex-col gap-4 mb-8 overflow-y-auto"></div>
+            
+            <!-- Game Rooms Section (hidden by default) -->
+            <div id="game-rooms-section" class="hidden">
+              <h3 class="text-2xl font-bold text-center text-[#f8f8e7] mb-4 mt-6">Game Rooms</h3>
+              <div id="game-rooms-list" class="flex flex-col gap-4 mb-8 max-h-[200px] overflow-y-auto"></div>
+            </div>
+            
             <div class="flex justify-end">
               <button id="createButton" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-bold">CREATE</button>
             </div>
@@ -226,57 +249,120 @@ function setupCreateGroupButton(token: string | null) {
 
 async function loadGroups(token: string | null) {
   const groupsList = document.getElementById("groups-list");
-  if (!groupsList) return;
+  const gameRoomsList = document.getElementById("game-rooms-list");
+  const gameRoomsSection = document.getElementById("game-rooms-section");
+  if (!groupsList || !gameRoomsList || !gameRoomsSection) return;
 
   groupsList.innerHTML = `<div class="text-gray-400 text-center">Loading...</div>`;
+  gameRoomsList.innerHTML = `<div class="text-gray-400 text-center">Loading...</div>`;
+  
+  // Cacher la section game rooms par défaut
+  gameRoomsSection.classList.add('hidden');
+  
   const result = await getChats(token);
 
   if (!result.success) {
     groupsList.innerHTML = `<div class="text-red-400 text-center">Error while searching groups</div>`;
+    gameRoomsList.innerHTML = `<div class="text-red-400 text-center">Error while searching groups</div>`;
     return;
   }
 
-  const groups: { id: number, name: string }[] = result.data;
-  if (!groups || groups.length === 0) {
+  const allGroups: { id: number, name: string, is_game?: boolean }[] = result.data;
+  if (!allGroups || allGroups.length === 0) {
     groupsList.innerHTML = `<div class="text-gray-400 text-center">No group found.</div>`;
+    gameRoomsList.innerHTML = `<div class="text-gray-400 text-center">No game rooms found.</div>`;
     return;
   }
 
-  groupsList.innerHTML = "";
-  groups.forEach((group) => {
-    const divGroup = document.createElement("div");
-    divGroup.className = "flex items-center justify-between bg-[#18376b] rounded-xl px-6 py-4";
-    divGroup.innerHTML = `
-      <span class="text-lg text-[#f8f8e7] font-semibold">${group.name}</span>
-      <div class="flex gap-2">
-        <button class="join-btn bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
-      </div>
-    `;
-    const joinBtn = divGroup.querySelector('.join-btn');
-    if (joinBtn) {
-      joinBtn.addEventListener('click', async () => {
-        if (!token) {
-          alert("You should be logged in to join a group.");
-          return;
-        }
-        const res = await fetch('/chat/join/group', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ groupId: group.id }),
+  const normalGroups = allGroups.filter(group => !group.is_game);
+  const gameRooms = allGroups.filter(group => group.is_game);
+
+  
+  if (gameRooms.length > 0) {
+    groupsList.style.maxHeight = '200px';
+  } else {
+    groupsList.style.maxHeight = '400px';
+  }
+
+  // Afficher les groupes normaux
+  if (normalGroups.length === 0) {
+    groupsList.innerHTML = `<div class="text-gray-400 text-center">No normal groups found.</div>`;
+  } else {
+    groupsList.innerHTML = "";
+    normalGroups.forEach((group) => {
+      const divGroup = document.createElement("div");
+      divGroup.className = "flex items-center justify-between bg-[#18376b] rounded-xl px-6 py-4";
+      divGroup.innerHTML = `
+        <span class="text-lg text-[#f8f8e7] font-semibold">${group.name}</span>
+        <div class="flex gap-2">
+          <button class="join-btn bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
+        </div>
+      `;
+      const joinBtn = divGroup.querySelector('.join-btn');
+      if (joinBtn) {
+        joinBtn.addEventListener('click', async () => {
+          if (!token) {
+            alert("You should be logged in to join a group.");
+            return;
+          }
+          const res = await fetch('/chat/join/group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ groupId: group.id }),
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            alert(json.error || "Impossible to join the group");
+            return;
+          }
+          openSidebarChat(group.id, group.name, "group");
         });
-        const json = await res.json();
-        if (!res.ok) {
-          alert(json.error || "Impossible to join the group");
-          return;
-        }
-        openSidebarChat(group.id, group.name, "group");
-      });
-    }
-    groupsList.appendChild(divGroup);
-  });
+      }
+      groupsList.appendChild(divGroup);
+    });
+  }
+
+  if (gameRooms.length > 0) {
+    gameRoomsSection.classList.remove('hidden');
+    gameRoomsList.innerHTML = "";
+    gameRooms.forEach((gameRoom) => {
+      const divGameRoom = document.createElement("div");
+      divGameRoom.className = "flex items-center justify-between bg-[#18376b] rounded-xl px-6 py-4";
+      divGameRoom.innerHTML = `
+        <span class="text-lg text-[#f8f8e7] font-semibold">${gameRoom.name}</span>
+        <div class="flex gap-2">
+          <button class="join-game-btn bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded font-bold">Join</button>
+        </div>
+      `;
+      const joinGameBtn = divGameRoom.querySelector('.join-game-btn');
+      if (joinGameBtn) {
+        joinGameBtn.addEventListener('click', async () => {
+          if (!token) {
+            alert("You should be logged in to join a game room.");
+            return;
+          }
+          const res = await fetch('/chat/join/group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ groupId: gameRoom.id }),
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            alert(json.error || "Impossible to join the game room");
+            return;
+          }
+          openSidebarChat(gameRoom.id, gameRoom.name, "group");
+        });
+      }
+      gameRoomsList.appendChild(divGameRoom);
+    });
+  }
 }
 
 async function loadDMs(token: string | null) {
@@ -455,6 +541,7 @@ export async function getChats(token: string | null) {
       },
     });
     const json = await response.json();
+    console.log('getChats response:', json);
     if (!response.ok) {
       console.error('Mychats request failed', json);
       return { success: false, error: json };

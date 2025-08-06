@@ -390,42 +390,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
         if (!response.ok) {
           throw new Error("Failed to start tournament");
         }
-        console.log(`response`, response);
-
-        const tournamentData = await fetch(`/tournaments/${tournamentId}/players`, {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          },
-          credentials: "include"
-        });
-        const tournamentDataJson = await tournamentData.json();
-
-        const p1Id = tournamentDataJson[0]?.id || null;
-        const p2Id = tournamentDataJson[1]?.id || null;
-        const p3Id = tournamentDataJson[2]?.id || null;
-        const p4Id = tournamentDataJson[3]?.id || null;
-        
-        const createGroupResponse = await fetch(`/chat/createGroupGame`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            name: tournamentName, 
-            p1: p1Id, 
-            p2: p2Id, 
-            p3: p3Id, 
-            p4: p4Id, 
-            tournamentId
-          })
-        })
-        
-        if (!createGroupResponse.ok) {
-          throw new Error("Failed to create group chat");
-        }
+        console.log(`response`, await response.json());
 
         window.location.hash = `#/tournaments/${tournamentId}/bracket`;
       } catch (err) {

@@ -6,6 +6,7 @@ import { ROUTE_MAIN } from '../router';
 import { chatWebSocket } from './chatWebSocket';
 import { whoAmI } from '../setUpLayout';
 import { isGamePending } from '../api/game';
+import { refreshSidebarChat } from '../sidebarChat';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -769,12 +770,27 @@ const borderColor = 'border-blue-300';
     }
   }
 
-  displayGameTurn(message: string): void {
-    void message
+  displayGameTurn(): void {
+    refreshSidebarChat();
   }
 
-  displayGameChat(roomId: string): void {
-    void roomId;
+  displayGameChat(): void {
+    import('../chat').then(({ refreshChatLists }) => {
+      refreshChatLists();
+      chatWebSocket.joinAllAvailableRooms();
+    }).catch(err => {
+      console.error('Error refreshing chat lists:', err);
+    });
+  }
+
+  refreshChats(): void {
+    refreshSidebarChat();
+    import('../chat').then(({ refreshChatLists }) => {
+      refreshChatLists();
+      chatWebSocket.joinAllAvailableRooms();
+    }).catch(err => {
+      console.error('Error refreshing chat lists:', err);
+    });
   }
   
 }

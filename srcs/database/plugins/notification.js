@@ -64,7 +64,7 @@ module.exports = fp(async function notificationPlugin(fastify, opts) {
         playerId,
         message,
         id
-      });
+      }, gameId);
     },
 
     // Broadcast a tournament update notification

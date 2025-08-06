@@ -211,8 +211,9 @@ export class ChatWebSocketManager {
         'user_blocked_by_me': () => userBlocking.handleUserBlockedByMe(data.blocked_user_id),
         'user_unblocked': () => userBlocking.handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username),
         'user_unblocked_by_me': () => userBlocking.handleUserUnblockedByMe(data.unblocked_user_id),
-        // 'game.turn': () => chatUI.displayGameTurn(data.message),
-        // 'chatGameCreated': () => chatUI.refreshSidebarChat(data.roomId),
+        'game.turn': () => chatUI.displayGameTurn(),
+        'chatGameCreated': () => chatUI.displayGameChat(),
+        'groupDeleted': () => chatUI.refreshChats(),
         'friend_request_accepted': async () => {
           await this.joinAllAvailableRooms();
         },
