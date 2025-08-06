@@ -225,7 +225,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		})
 		if (response.ok) {
 			btnDiv.remove();
-			chatUI.gameInviteFromNotif(String(gameId), "accept", String(sender_id), String(user_id), String(notif_id));
+			chatUI.gameInviteFromNotif("accept", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
 			const overlay = document.createElement('div');
@@ -283,7 +283,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		})
 		if (response.ok) {
 			btnDiv.remove();
-			chatUI.gameInviteFromNotif(String(gameId), "decline", String(sender_id), String(user_id), String(notif_id));
+			chatUI.gameInviteFromNotif("decline", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
 		} else {
@@ -920,7 +920,6 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 
     notificationWS.onmessage = (event) => {
     	const msg: wsNotif = JSON.parse(event.data);
-		console.log('[NOTIFICATIONS] Websocket message received:', msg); //! DELETE
 		if (msg.type === "game.deleted" || msg.type === "game.invite.cancelled") {
 			if (notifContainer) {
 				populateNotifContainer(notifContainer, user.data.id);

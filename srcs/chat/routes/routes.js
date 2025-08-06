@@ -547,7 +547,7 @@ console.log(`in internal game invite`)
     }
   }),
   
-  fastify.delete('/internal/groupDeleted', async (request, reply) => {
+  fastify.post('/internal/groupDeleted', async (request, reply) => {
     const { type, u1, u2, u3, u4 } = request.body;
     if (!type || !u1 || !u2 || !u3 || !u4) {
       return reply.status(400).send({ error: 'Missing required fields: type, u1, u2, u3 or u4' });

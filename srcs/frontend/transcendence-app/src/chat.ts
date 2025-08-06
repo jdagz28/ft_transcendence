@@ -64,7 +64,7 @@ async function unblockUser(userId: number, token: string | null): Promise<{ succ
 
 async function loadBlockedUsers(token: string | null): Promise<void> {
   if (!token) {
-    console.log('No token provided to loadBlockedUsers'); 
+
     return;
   }
   
@@ -161,7 +161,6 @@ export function refreshChatLists(): void {
   const dmList = document.getElementById('dm-list');
   
   if (!groupsList || !dmList) {
-    console.log('Not on chat page, skipping refresh');
     return;
   }
   
@@ -177,7 +176,7 @@ export function renderChat(): void {
   
   const root = setupAppLayout().contentContainer;
   if (!root) {
-    console.log('ERROR: root contentContainer not found'); 
+
     return;
   }
 
@@ -377,7 +376,7 @@ async function loadDMs(token: string | null) {
   const result = await getFriends(token);
   
   if (!result.success) {
-    console.log('getFriends failed:', result.error); 
+
     dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
@@ -385,7 +384,7 @@ async function loadDMs(token: string | null) {
   const dms: { id: number, username: string, avatar: string }[] = result.data.data;
   
   if (!dms || dms.length === 0) {
-    console.log('No DMs found'); 
+
     dmList.innerHTML = `<div class="text-gray-400 text-center">Add friends to start using DMs!</div>`;
     return;
   }
@@ -541,7 +540,7 @@ export async function getChats(token: string | null) {
       },
     });
     const json = await response.json();
-    console.log('getChats response:', json);
+
     if (!response.ok) {
       console.error('Mychats request failed', json);
       return { success: false, error: json };

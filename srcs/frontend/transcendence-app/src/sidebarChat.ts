@@ -39,7 +39,7 @@ export async function initializePermanentChat(): Promise<void> {
 // ============================================================================ //
 
 export function disconnectPermanentChat(): void {
-  console.log("Disconnecting permanent chat");
+
   chatWebSocket.closeWebSocket();
   chatState.reset();
 
@@ -121,7 +121,6 @@ export async function showUserActions(userId: number, username: string): Promise
     }
     
     if (success) {
-      console.log(`${isBlocked ? 'Unblocked' : 'Blocked'} user ${username}`);
       if (chatState.currentChatType === 'dm' && chatState.currentUserId === userId) {
         await openSidebarChat(chatState.currentChatId || 0, chatState.currentChatName, chatState.currentChatType, userId);
       }
@@ -158,6 +157,19 @@ export async function refreshSidebarChat(): Promise<void> {
   }
 
   try {
+    const token = chatState.getAuthToken();
+    const checkUrl = chatState.currentChatType === 'group' 
+      ? `/chat/group/${chatState.currentChatId}/history`
+      : `/chat/dm/${chatState.currentChatId}/history`;
+    
+    const response = await fetch(checkUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) {
+      await openDefaultMainGroup();
+      return;
+    }
     
     await openSidebarChat(
       chatState.currentChatId,
@@ -168,5 +180,6 @@ export async function refreshSidebarChat(): Promise<void> {
     
   } catch (error) {
     console.error('Error refreshing sidebar chat:', error);
+    await openDefaultMainGroup();
   }
 }

@@ -87,7 +87,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         }
         console.log(`[DELETE_CHAT_ROOM] Chat room ${roomId} deleted successfully`);
         const axios = require('axios');
-        await axios.delete(`http://chat:${process.env.CHAT_PORT}/internal/groupDeleted`, {
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/groupDeleted`, {
           type: 'groupDeleted',
           u1: p1Id,
           u2: p2Id,

@@ -454,7 +454,6 @@ export class ChatUIManager {
 
   async displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): Promise<void> {
     try {
-      console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
 
       const isPending = await isGamePending(Number(gameId));
       if (!isPending) {
@@ -610,12 +609,11 @@ const borderColor = 'border-blue-300';
     }
   }
 
-  public async gameInviteFromNotif(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
+  public async gameInviteFromNotif(response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
     try {
       void(notifId);
       const notifContainer = document.getElementById('notifContainer');
       if (notifContainer) {
-        console.log('Clearing notification container');
         notifContainer.innerHTML = '';
         populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
       }
@@ -632,7 +630,6 @@ const borderColor = 'border-blue-300';
         }
       }
 
-      console.log(`Game invite ${response}ed for game ${gameId}`);
       
       if (response === 'accept') {
         // setTimeout(() => {
@@ -701,7 +698,6 @@ const borderColor = 'border-blue-300';
 
       const notifContainer = document.getElementById('notifContainer');
       if (notifContainer) {
-        console.log('Clearing notification container');
         notifContainer.innerHTML = '';
         populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
       }
@@ -723,8 +719,6 @@ const borderColor = 'border-blue-300';
           container.innerHTML = `<p class="${textColor} font-medium">${responseText}</p>`;
         }
       }
-
-      console.log(`Game invite ${response}ed for game ${gameId}`);
       
       if (response === 'accept') {
         // setTimeout(() => {

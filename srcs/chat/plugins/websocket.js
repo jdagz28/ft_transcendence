@@ -34,7 +34,6 @@ function sendMessageToUser(userId, message) {
     socket.send(JSON.stringify(message));
     return true;
   } else {
-    console.log(`User ${userId} not connected or connection not open`);
     return false;
   }
 }

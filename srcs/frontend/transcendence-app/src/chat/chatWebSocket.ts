@@ -97,7 +97,6 @@ export class ChatWebSocketManager {
 
   async joinSpecificRoom(chatId: number, type: 'group' | 'dm'): Promise<void> {
     if (!chatState.currentWs || chatState.currentWs.readyState !== WebSocket.OPEN) {
-      // console.log('WebSocket not ready for joining specific room');
       return;
     }
 
@@ -151,7 +150,6 @@ export class ChatWebSocketManager {
     chatState.setWebSocket(new WebSocket(`wss://${window.location.host}/chat?token=${encodeURIComponent(token)}`));
 
     chatState.currentWs!.onopen = async () => {
-      // console.log('Chat WebSocket connected');
       await this.joinAllAvailableRooms();
     };
 
@@ -160,7 +158,6 @@ export class ChatWebSocketManager {
     };
 
     chatState.currentWs!.onclose = (event) => {
-      // console.log('Chat WebSocket closed:', event.code, event.reason);
       chatState.setWebSocket(null);
       
       if (event.code !== 1000 && chatState.isInitialized) {
@@ -181,7 +178,6 @@ export class ChatWebSocketManager {
   }
 
   private handleWebSocketMessage(event: MessageEvent): void {
-    console.log('WebSocket message received:', event.data);
     try {
       const data = JSON.parse(event.data);
       if (data.message) {

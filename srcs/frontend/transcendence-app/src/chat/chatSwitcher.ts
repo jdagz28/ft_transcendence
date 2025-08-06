@@ -128,7 +128,6 @@ export class ChatSwitcherManager {
 
   async switchToChat(chatId: number, chatName: string, type: ChatType): Promise<void> {
     if (chatState.currentChatId === chatId && chatState.currentChatType === type) {
-      console.log('Already viewing this chat, skipping switch');
       this.hideChatSwitcher();
       return;
     }
@@ -191,7 +190,6 @@ export class ChatSwitcherManager {
         const canJoinData = await canJoinResponse.json();
       
         if (chatState.currentChatType === 'dm' && chatState.currentChatId === canJoinData.Room) {
-          console.log('Already viewing this DM, skipping switch');
           this.hideChatSwitcher();
           return;
         }
