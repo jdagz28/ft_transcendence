@@ -101,7 +101,7 @@ export async function renderAliasTournamentPage(tournamentId: number): Promise<v
       });
 
       if (!ok.ok) {
-        alert("Failed to set alias. Please try again.");
+        alert(`Failed to set alias. ${ok.status}`);
         return;
       }
       window.location.hash = `#/tournaments/${tournamentId}/lobby`;

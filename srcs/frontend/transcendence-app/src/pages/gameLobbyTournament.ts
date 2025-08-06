@@ -85,7 +85,6 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
   const userId = user.data.id;
 
   const creatorId = await getTournamentCreator(tournamentId);
-  console.log("Tournament creator ID:", creatorId); //!DELTE
   if (creatorId === -1) {
     console.error("Failed to retrieve tournament creator ID.");
     window.location.hash = "#/400";
@@ -93,7 +92,6 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
   }
   
   const players: TourPlayer[] = await getGamePlayers(gameId);
-  console.log("Game players:", players); //!DELETE
   if (players.length !== 2) {
     console.error("This game lobby does not have exactly 2 players.");
     window.location.hash = DEFAULT; 
@@ -102,9 +100,7 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
 
   const isPlayerInGame = players.some((p) => p.id === userId);
   const isTournamentAdmin = (userId === creatorId);
-  console.log(`User ${userId} is in game: ${isPlayerInGame}, is admin: ${isTournamentAdmin}`); //!DELETE
   if (!isPlayerInGame && !isTournamentAdmin) {
-    console.log(`Access denied. User ${userId} is not a player and not admin (creator is ${creatorId}).`);
     window.location.hash = "/403";
     return;
   }
@@ -128,6 +124,36 @@ export async function renderTournamentGameLobby(params: RouteParams): Promise<vo
   lobbyWrap.appendChild(startBtn);
 
   startBtn.addEventListener("click", async () => {
+    if (!isTournamentAdmin) {
+      const overlay = document.createElement('div');
+      overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+      
+      const box = document.createElement('div');
+      box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
+      
+      const h = document.createElement("h1");
+      h.textContent = `Remote Multiplayer:
+                        Not Implemented`;
+      h.className = "text-2xl font-bold text-center";
+
+      const p = document.createElement("p");
+      p.textContent = "Player can only be started by the tournament creator or admin.";
+      p.className = "text-center"
+      box.appendChild(h);
+      box.appendChild(p);
+
+      let buttonLabel = "Return to Bracket";
+      const btn = document.createElement("button");
+      btn.textContent = buttonLabel;
+      btn.className = "w-full py-3 rounded-md text-lg font-semibold bg-gradient-to-r from-orange-500 to-orange-400 hover:opacity-90 transition";
+      btn.onclick = () => {
+        window.location.hash = `#/tournaments/${tournamentId}/bracket`;
+        overlay.remove();
+      };
+      box.appendChild(btn);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+    }
     startBtn.disabled = true;
     try {
       const res = await startGame(gameId, p1, p2);
