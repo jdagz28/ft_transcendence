@@ -67,17 +67,17 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
-    async OAuthReadUser(usernameORemail) {
+    async OAuthReadUser(email) {
       try {
-        fastify.log.debug(`Looking for OAuth user: ${usernameORemail}`)
         const query = fastify.db.prepare(`
           SELECT users.id, users.username, users.email, users.nickname, oauth.provider, oauth.provider_uid
           FROM users
           JOIN oauth ON users.id = oauth.user_id
-          WHERE oauth.provider_uid = ? OR users.email = ? OR users.username = ?
+          WHERE users.email = ?
         `)
-        const row = query.get(usernameORemail, usernameORemail, usernameORemail)
-        return row
+        const user = query.get(email)
+
+        return user
       } catch (err) {
         fastify.log.error(`OAuthReadUser error: ${err.message}`)
         throw new Error('OAuth user retrieval failed')
