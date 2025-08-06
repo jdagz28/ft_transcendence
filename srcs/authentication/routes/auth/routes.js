@@ -120,7 +120,7 @@ module.exports = fp(
         const params = new URLSearchParams({
           client_id: process.env.CLIENT_UID_42,
           redirect_uri: process.env.CLIENT_REDIRECT_URI_42,
-          response_type: 'code',
+          response_type: 'code'
         })
         reply.redirect(`${authorizeURL}?${params.toString()}`)
       }
@@ -151,19 +151,11 @@ module.exports = fp(
           }
 
           const { login: username, email } = userResponse
-          const existingUser = await fastify.usersDataSource.OAuthReadUser(username)
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
-          if (existingUser || existingEmail) {
-            if (existingUser) {
-              request.user = {
-                id: existingUser.id,
-                username: existingUser.username,
-              }
-            } else {
-              request.user = {
-                id: existingEmail.id,
-                username: existingEmail.username,
-              }
+          if (existingEmail) {
+            request.user = {
+              id: existingEmail.id,
+              username: existingEmail.username,
             }
             const token = await request.generateToken()
             return OAuthRedirect(reply, token, username, "42")
@@ -230,19 +222,11 @@ module.exports = fp(
 
           const { email } = userResponse
           const username = email.split('@')[0]
-          const existingUser = await fastify.usersDataSource.OAuthReadUser(username)
           const existingEmail = await fastify.usersDataSource.OAuthReadUser(email)
-          if (existingUser || existingEmail) {
-            if (existingUser) {
-              request.user = {
-                id: existingUser.id,
-                username: existingUser.username,
-              }
-            } else {
-              request.user = {
-                id: existingEmail.id,
-                username: existingEmail.username,
-              }
+          if (existingEmail) {
+            request.user = {
+              id: existingEmail.id,
+              username: existingEmail.username,
             }
             const token = await request.generateToken()
             return OAuthRedirect(reply, token, username, "Google")
