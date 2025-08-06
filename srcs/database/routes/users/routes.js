@@ -536,6 +536,9 @@ module.exports = fp(
         const userId = request.params.userId
         try {
           const remoteUser = await fastify.dbUsers.getRemoteUser(userId)
+          if (remoteUser.error) {
+            return reply.code(404).send({ error: remoteUser.error })
+          }
           return reply.send(remoteUser)
         } catch (err) {
           fastify.log.error(`Error retrieving remote user for ID ${userId}: ${err.message}`)
@@ -543,6 +546,28 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.delete('/users/:username', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function deleteUserHandler (request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Deleting user with ID:', userId) //! DELETE
+          const response = await fastify.dbUsers.deleteUser(userId)
+          if (response.error) {
+            return reply.code(400).send({ error: response.error })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error deleting user ${username}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to delete user' })
+        }
+      }
+    }
+    )
 
   }, {
     name: 'user',

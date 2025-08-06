@@ -45,6 +45,17 @@ module.exports = fp(
         return reply.send(user)
       }
     })
+    
+    fastify.delete('/users/me/settings/delete', {
+      onRequest: fastify.authenticate,
+      handler: async function deleteUserHandler (request, reply) {
+        const response = await fastify.usersDataSource.deleteUser(request)
+        if (response.error) {
+          return reply.code(400).send({ error: response.error })
+        }
+        return reply.send({ success: true })
+      }
+    })
   
     fastify.put('/users/me/settings/avatar', {
       schema: {
@@ -347,12 +358,13 @@ module.exports = fp(
         const userId = request.params.userId
         try {
           const remoteUser = await fastify.usersDataSource.getRemoteUser(request, userId)
-          if (!remoteUser) {
-            return reply.code(404).send({ error: 'Remote user not found' })
-          }
+          
           return reply.send(remoteUser)
         } catch (err) {
           fastify.log.error(err)
+          if (err.response && err.response.status === 404) {
+            return reply.code(404).send({ error: "User not found" })
+          }
           return reply.code(500).send({ error: 'Failed to fetch remote user' })
         }
       }

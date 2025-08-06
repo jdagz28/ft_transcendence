@@ -45,6 +45,18 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
+    async deleteUser(userId) {
+      try {
+        const query = fastify.db.prepare(`DELETE FROM users WHERE id = ?`)
+        const result = query.run(userId)
+        fastify.log.debug(`deleteUser: ${userId} -> ${result.changes} rows deleted`) //! DELETE
+        return { success: true }
+      } catch (err) {
+        fastify.log.error(`deleteUser error: ${err.message}`)
+        throw new Error('User deletion failed')
+      }
+    },
+
     async OAuthCreateUser(user) {
       try {
         const {
@@ -784,7 +796,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         `)
         const row = query.get(userId)
         if (!row) {
-          return {}
+          return { error: 'User not found', status: 404 }
         }
         return {
           id: row.id,
