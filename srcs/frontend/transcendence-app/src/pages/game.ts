@@ -151,6 +151,11 @@ export async function renderGamePage(params: RouteParams) {
     tournamentId = await getTournamentId(gameId);
   }
 
+  ignoredkeys = [];
+  if (mode === "single-player" || mode === "training") {
+    ignoredkeys.push("ArrowUp", "ArrowDown");
+  }
+
   if (config.status !== "active") {
     window.location.hash = '#/403';
     return;
@@ -163,7 +168,6 @@ export async function renderGamePage(params: RouteParams) {
   const { canvas, leftNames, rightNames, abortBtn } = setupDom(contentContainer);
   const ctx = canvas.getContext("2d")!;
 
-  
   const totalGames = config.settings.num_games; 
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
@@ -274,8 +278,6 @@ export async function renderGamePage(params: RouteParams) {
       upKey:    "ArrowUp",
       downKey:  "ArrowDown",
     });
-
-	ignoredkeys.push("ArrowUp", "ArrowDown");
   } else {
     const leftConfs = config.players.filter(p => p.paddle_loc === 'left');
     const rightConfs = config.players.filter(p => p.paddle_loc === 'right');

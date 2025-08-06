@@ -228,7 +228,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 			chatUI.gameInviteFromNotif(String(gameId), "accept", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
-				const overlay = document.createElement('div');
+			const overlay = document.createElement('div');
 			overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
 			
 			const box = document.createElement('div');

@@ -245,9 +245,13 @@ module.exports = fp(
       handler: async function createTournamentAliasHandler(request, reply) {
         const { tournamentId } = request.params
         const alias = await fastify.tournamentService.createTournamentAlias(request, tournamentId)
-        if (!alias) {
-          return reply.code(404).send({ error: 'Tournament not found' })
+        if (alias.error) {
+          if (alias.status) {
+            return reply.code(alias.status).send({ error: alias.error })
+          }
+          return reply.code(400).send({ error: 'Failed to create tournament alias' })
         }
+
         return reply.code(201).send(alias)
       }
     })

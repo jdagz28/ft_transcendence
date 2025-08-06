@@ -647,6 +647,14 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
         if (!checkPlayer) {
           return { error: 'User not found in tournament', status: 404 }
         }
+
+        const aliasCheck = fastify.db.prepare(
+          `SELECT * FROM tournament_aliases WHERE tournament_id = ? and alias = ?`
+        ).get(tournamentId, alias)
+        if (aliasCheck && aliasCheck.user_id !== userId) {
+          return { error: 'Alias already claimed by other user', status: 409 }
+        }
+
         const insertAlias = fastify.db.prepare(
           'INSERT INTO tournament_aliases (tournament_id, user_id, alias) VALUES (?, ?, ?)'
         )
