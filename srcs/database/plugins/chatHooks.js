@@ -16,7 +16,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
     async notifyGameTurn(notification) {
       try {
         const axios = require('axios');
-        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-responded`, notification)
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-turn`, notification)
       } catch (error) {
         console.error('Error sending notification to chat', error.message);
       }
@@ -558,6 +558,33 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return { refused: true, groupId };
     },
 
+    async getTournamentGroups(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new HttpError(`User ${userId} does not exist`, 404);
+      }
+
+      const tournamentGroupsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type, c.created, c.updated
+        FROM conversations c
+        JOIN convo_members m ON c.id = m.conversation_id
+        WHERE m.user_id = ?
+          AND c.type = 'group'
+          AND c.is_game = 1
+          AND m.banned_at IS NULL
+          AND m.kicked_at IS NULL
+        ORDER BY c.created DESC
+      `);
+      
+      const tournamentGroups = tournamentGroupsQuery.all(userId);
+      
+      return {
+        success: true,
+        user_id: userId,
+        tournament_groups_count: tournamentGroups.length,
+        tournament_groups: tournamentGroups
+      };
+    },
+
     async getUserChats(userId) {
       if (!(await this.userExist(userId))) {
         throw new HttpError(`User ${userId} does not exist`, 404)
@@ -801,6 +828,65 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         blocker_id: userId,
         target_id: targetUserId
       };
+    },
+
+    async createGroupGame(userId, name, p1, p2, p3, p4, tournamentId) {
+      try {
+        const createGroupQuery = fastify.db.prepare(`
+          INSERT INTO conversations (is_group, name, type, group_type, is_game, message_id)
+          VALUES (1, ?, 'group', 'private', 1, NULL)
+        `);
+        const result = createGroupQuery.run(name);
+        const conversationId = result.lastInsertRowid;
+
+        const addMemberQuery = fastify.db.prepare(`
+          INSERT INTO convo_members (conversation_id, user_id, role)
+          VALUES (?, ?, ?)
+        `);
+
+        addMemberQuery.run(conversationId, userId, 'admin');
+
+        const players = [p2, p3, p4].filter(playerId => 
+          playerId && 
+          playerId !== userId && 
+          typeof playerId === 'number'
+        );
+
+        for (const playerId of players) {
+          if (await this.userExist(playerId)) {
+            const existingMember = fastify.db.prepare(`
+              SELECT 1 FROM convo_members 
+              WHERE conversation_id = ? AND user_id = ?
+            `).get(conversationId, playerId);
+            
+            if (!existingMember) {
+              addMemberQuery.run(conversationId, playerId, 'member');
+            }
+          }
+        }
+
+        const axios = require('axios');
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/chatGameCreated`, {
+          p1: p1,
+          p2: p2,
+          p3: p3,
+          p4: p4,
+          type: 'chatGameCreated',
+          roomId: conversationId
+        }),
+
+        fastify.log.info(`Game group created with ID ${conversationId} for tournament ${tournamentId}`);
+        
+        return { 
+          success: true, 
+          conversationId, 
+          name,
+          players: players.length + 1
+        };
+      } catch (error) {
+        fastify.log.error(`Error creating game group: ${error.message}`);
+        throw new HttpError('Failed to create game group', 500);
+      }
     }
 
   })

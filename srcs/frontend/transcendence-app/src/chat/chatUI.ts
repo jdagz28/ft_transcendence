@@ -771,6 +771,15 @@ const borderColor = 'border-blue-300';
       // alert(`Failed to ${response} game invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  displayGameTurn(message: string): void {
+    void message
+  }
+
+  displayGameChat(roomId: string): void {
+    void roomId;
+  }
+  
 }
 
 export const chatUI = new ChatUIManager();

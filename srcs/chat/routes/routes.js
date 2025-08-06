@@ -108,6 +108,46 @@ module.exports = fp(async function applicationAuth(fastify, opts) {
 
   }),
 
+  fastify.post(`/chat/createGroupGame`, async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return
+
+    const userId = data.user.id
+    const {  name, p1, p2, p3, p4, tournamentId } = request.body
+
+    try{
+      const response  = await axios.post(`http://database:${process.env.DB_PORT}/chat/createGroupGame`, {
+        userId: userId,
+        name: name,
+        p1: p1,
+        p2: p2,
+        p3: p3,
+        p4: p4,
+        tournamentId: tournamentId
+      })
+      reply.send(response.data)
+    } catch (err) {
+
+    }
+  }),
+
+  fastify.get('/chat/getGroupGames', async (request, reply) => {
+    const data = await fastify.authenticate(request, reply)
+    if (reply.sent)
+      return
+
+    const userId = data.user.id
+
+    try {
+      const response = await axios.get(`http://database:${process.env.DB_PORT}/chat/getGroupGames/${userId}`)
+      reply.send(response.data)
+    } catch (err) {
+      const statusCode = err.response?.status || 500;
+      return reply.status(statusCode).send({error: `${err.response?.data?.error || err.message}`})
+    }
+  }),
+
   fastify.post('/chat/join/group', async (request, reply) => {
     const data = await fastify.authenticate(request, reply)
     if (reply.sent)
@@ -481,6 +521,29 @@ console.log(`in internal game invite`)
     } catch (err) {
       console.error(`Error sending game turn notification: ${err.message}`);
       return reply.status(500).send({ error : 'Failed to send notification' });
+    }
+  })
+
+  fastify.post('/internal/chatGameCreated', async (request, reply) => {
+    const { p1, p2, p3, p4, type, roomId } = request.body
+
+    if (!p1 || !p2 || !p3 || !p4 || !type) {
+      return reply.status(400).send({ error: 'Missing required fields: p1, p2, p3, p4 or type' });
+    }
+
+
+    try {
+      const notification = {
+        type: type,
+        roomId: roomId
+      };
+      [ p1, p2, p3, p4 ].forEach(playerId => {
+        fastify.sendMessageToUser(playerId, notification);
+      });
+      reply.send({ success: true });
+    } catch (err) {
+      console.error(`Error sending chat game created notification: ${err.message}`);
+      return reply.status(500).send({ error: 'Failed to send notification' });
     }
   })
 })

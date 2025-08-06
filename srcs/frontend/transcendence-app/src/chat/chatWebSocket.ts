@@ -181,9 +181,9 @@ export class ChatWebSocketManager {
   }
 
   private handleWebSocketMessage(event: MessageEvent): void {
+    console.log('WebSocket message received:', event.data);
     try {
       const data = JSON.parse(event.data);
-
       if (data.message) {
         try {
           const messageData = JSON.parse(data.message);
@@ -211,7 +211,8 @@ export class ChatWebSocketManager {
         'user_blocked_by_me': () => userBlocking.handleUserBlockedByMe(data.blocked_user_id),
         'user_unblocked': () => userBlocking.handleUserUnblocked(data.unblocked_by_user_id, data.unblocked_by_username),
         'user_unblocked_by_me': () => userBlocking.handleUserUnblockedByMe(data.unblocked_user_id),
-        'game.turn': () => console.log('Game turn notification received:', data),
+        // 'game.turn': () => chatUI.displayGameTurn(data.message),
+        // 'chatGameCreated': () => chatUI.refreshSidebarChat(data.roomId),
         'friend_request_accepted': async () => {
           await this.joinAllAvailableRooms();
         },
