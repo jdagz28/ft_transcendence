@@ -1057,11 +1057,13 @@ function setUpEventListeners(root: HTMLDivElement, playerCount: string, game: st
 		}
 
 		try {
+      const usernameVal = username.value;
+      const passwordVal = password.value;
 			const response = await fetch('/auth/authenticate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
-				body: JSON.stringify({ username, password }),
+				body: JSON.stringify({ username: usernameVal, password: passwordVal }),
 			});
 
 			if (!response.ok) {

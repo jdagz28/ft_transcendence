@@ -306,6 +306,9 @@ module.exports = fp(
           const userId = request.user.id
           const result = await fastify.dbTournaments.createTournamentAlias(tournamentId, userId, alias)
           if (result.error) {
+            if (fastify.db.inTransaction) {
+              fastify.db.exec('ROLLBACK')
+            }
             if (result.status) {
               return reply.status(result.status).send({ error: result.error })
             }

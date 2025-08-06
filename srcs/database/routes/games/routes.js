@@ -273,6 +273,9 @@ module.exports = fp(
             }
             return reply.status(400).send({ error: updatedGame.error })
           }
+          if (fastify.db.inTransaction) {
+            fastify.db.exec('COMMIT')
+          }
           reply.status(200).send(updatedGame)
         } catch (err) {
           fastify.log.error(err)

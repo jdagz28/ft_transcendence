@@ -7,6 +7,7 @@ import type { GameStatusUpdate } from "../types/game_api";
 import { setupAppLayout, whoAmI } from "../setUpLayout";
 import { getGamePlayers, isTournamentAdmin } from "../api/game";
 
+let ignoredkeys: string[] = [];
 
 function setupDom(root: HTMLElement): GamePageElements {
   root.innerHTML = "";
@@ -150,6 +151,11 @@ export async function renderGamePage(params: RouteParams) {
     tournamentId = await getTournamentId(gameId);
   }
 
+  ignoredkeys = [];
+  if (mode === "single-player" || mode === "training") {
+    ignoredkeys.push("ArrowUp", "ArrowDown");
+  }
+
   if (config.status !== "active") {
     window.location.hash = '#/403';
     return;
@@ -162,7 +168,6 @@ export async function renderGamePage(params: RouteParams) {
   const { canvas, leftNames, rightNames, abortBtn } = setupDom(contentContainer);
   const ctx = canvas.getContext("2d")!;
 
-  
   const totalGames = config.settings.num_games; 
   const totalMatches = config.settings.num_matches;
   const totalPlayers = config.settings.max_players;
@@ -433,6 +438,11 @@ export async function renderGamePage(params: RouteParams) {
     const k = e.key;
     const c = e.code;
 
+	if (ignoredkeys.includes(k) || ignoredkeys.includes(c)) {
+	  e.preventDefault();
+	  return;
+	}
+
     if (k === 'Enter' && !localGameState.gameStarted) {
       localGameState.gameStarted = true;
     }
@@ -456,7 +466,7 @@ export async function renderGamePage(params: RouteParams) {
     if (!localGameState.gameStarted) {
       localGameState.gameStarted = true;
     } else if (localGameState.isPaused) {
-      togglePause(); // Resume the game if it's paused.
+      togglePause(); 
     }
   };
 
@@ -609,22 +619,24 @@ export async function renderGamePage(params: RouteParams) {
     }
   }
 
-  const handleBeforeUnload = () => {
-    if (!localGameState.gameOver) {
+  const handleHashChange = () => {
+    togglePause();
+    if (!localGameState.gameOver && window.location.hash != `#/games/${gameId}/play`) {
       sendStatus(gameId, {
         status: 'aborted',
         gameId: gameId,
         matchId: currMatchId,
       });
     }
+    cleanup();
   };
-  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('hashchange', handleHashChange);
 
   document.addEventListener('keydown', consolidatedHandleKeyDown);
   document.addEventListener('keyup', consolidatedHandleKeyUp);
 
   const cleanup = () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('hashchange', handleHashChange);
     document.removeEventListener('keydown', consolidatedHandleKeyDown);
     document.removeEventListener('keyup', consolidatedHandleKeyUp);
     
