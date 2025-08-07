@@ -920,7 +920,6 @@ export async function connectNotifications(): Promise<WebSocket | null> {
 
     notificationWS.onmessage = (event) => {
     	const msg: wsNotif = JSON.parse(event.data);
-		console.log('[NOTIFICATIONS] Websocket message received:', msg); //! DELETE
 		if (msg.type === "game.deleted" || msg.type === "game.invite.cancelled") {
 			if (notifContainer) {
 				populateNotifContainer(notifContainer, user.data.id);

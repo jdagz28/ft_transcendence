@@ -19,7 +19,7 @@ export async function sendStatus(
   gameId: number,
   body: GameStatusUpdate
 ) {
-  console.log('Sending status update:', body);
+  // console.log('Sending status update:', body);
 
   const json = JSON.stringify(body);
   const token = localStorage.getItem('token');
