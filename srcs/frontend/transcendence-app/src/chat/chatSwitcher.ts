@@ -144,6 +144,15 @@ export class ChatSwitcherManager {
     });
     
     if (joinResponse.ok) {
+
+      if (chatState.currentWs && chatState.currentWs.readyState === WebSocket.OPEN) {
+        chatState.currentWs.send(JSON.stringify({
+          action: 'join',
+          scope: 'group',
+          room: chatId
+        }));
+      }
+
       chatState.setCurrentChat(chatId, chatName, type, null);
       
       chatMessages.clearMessages();
