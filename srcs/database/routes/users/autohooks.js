@@ -72,7 +72,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
         const oauthQuery = fastify.db.prepare(`INSERT INTO oauth (user_id, provider, provider_uid) VALUES (?, ?, ?)`)
         const result2 = oauthQuery.run(userId, provider, username)
-        return result2.lastInsertRowid
+        return userId
       } catch (err) {
         fastify.log.error(`OAuthCreateUser error: ${err.message}`)
         throw new Error('OAuth user creation failed')
