@@ -7,8 +7,8 @@ export const createTournamentSpec: FormBoxSpec = {
   fields: [
     { type: "text",  label: "Tournament Name", name: "tournamentName", placeholder: "Tournament Name" },
     { type: "select", label: "Number of players", name: "numPlayers", options: ["4"] },
-    { type: "select", label: "Type",             name: "type",        options: ["Singles", "Doubles"] },
-    { type: "select", label: "Game mode",        name: "gameMode",    options: ["Public", "Private"] },
+    { type: "select", label: "Type",             name: "type",        options: ["Singles"] },
+    { type: "select", label: "Game mode",        name: "gameMode",    options: ["Public"] },
   ],
 };
 

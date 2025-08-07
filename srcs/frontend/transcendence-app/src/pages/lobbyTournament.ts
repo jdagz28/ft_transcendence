@@ -60,6 +60,8 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
   }
 
   const $ = (id: string) => document.getElementById(id)!;
+  const userEntry = $("local-username") as HTMLInputElement;
+  const passEntry = $("local-password") as HTMLInputElement;
   const loginModal = $("local-login-modal");
   const mfaModal = $("local-mfa-modal");
   const aliasModal = $("local-alias-modal"); 
@@ -121,14 +123,18 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
       loginModal.classList.remove("hidden");
 
       $("local-login-close").onclick = () => {
+		userEntry.value = "";
+		passEntry.value = "";
+		$("local-login-error").textContent = "";
+        $("local-login-error").classList.add("hidden");
         loginModal.classList.add("hidden");
         reject("cancel");
       };
 
       $("local-login-form").onsubmit = async (e) => {
         e.preventDefault();
-        const user = ($("local-username") as HTMLInputElement).value.trim();
-        const pass = ($("local-password") as HTMLInputElement).value;
+        const user = userEntry.value.trim();
+        const pass = passEntry.value;
 
         if (!user || !pass) return;
 
@@ -140,7 +146,15 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
             body: JSON.stringify({ username: user, password: pass })
           });
           const data = await r.json();
-          if (!r.ok) throw new Error(data.message ?? "login failed");
+          if (!r.ok) {
+			passEntry.value = "";
+			throw new Error(data.message ?? "login failed");
+		  }
+
+		  userEntry.value = "";
+		  passEntry.value = "";
+		  $("local-login-error").textContent = "";
+          $("local-login-error").classList.add("hidden");
 
           if (data.mfaRequired) {
             loginModal.classList.add("hidden");
@@ -152,6 +166,8 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
             inputs[0].focus();
 
             $("local-mfa-close").onclick = () => {
+			  $("local-mfa-error").textContent = "";
+              $("local-mfa-error").classList.add("hidden");
               mfaModal.classList.add("hidden");
               reject("cancel");
             };
@@ -173,6 +189,8 @@ function ensureAuthModals(): () => Promise<{token: string, alias: string}> {
                 $("local-mfa-error").classList.remove("hidden");
                 return;
               }
+			  $("local-mfa-error").textContent = "";
+              $("local-mfa-error").classList.add("hidden");
               handleAuthSuccess(vData.token);
             };
 
