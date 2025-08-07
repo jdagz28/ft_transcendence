@@ -425,6 +425,10 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
             credentials: "include"
           });
           if (res.ok) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("userId");
+            localStorage.removeItem("username");
+            localStorage.removeItem("avatar");
             alert("Your account has been deleted successfully.");
             window.location.href = "#/login";
           } else {
