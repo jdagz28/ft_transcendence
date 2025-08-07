@@ -4,7 +4,7 @@ set -euo pipefail
 API_URL=${API_URL:-https://localhost:4242/auth/register}
 LOGIN_URL=${LOGIN_URL:-https://localhost:4242/auth/authenticate}
 AVATAR_UPLOAD_URL=${AVATAR_UPLOAD_URL:-https://localhost:4242/users/me/settings/avatar}
-PASSWORD=password
+PASSWORD=Password1!
 AVATARS_FOLDER=${AVATARS_FOLDER:-./avatars}
 
 declare -a USERS=(

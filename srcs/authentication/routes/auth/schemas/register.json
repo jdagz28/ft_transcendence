@@ -14,7 +14,8 @@
     "password": {
       "type": "string",
       "minLength": 8,
-      "maxLength": 20
+      "maxLength": 20,
+      "pattern": "^(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{8,20}$"
     },
     "email": {
       "type": "string",
