@@ -312,6 +312,25 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
       onLocalConnect = async (slotIndex: number) => {
         try {
           const { token, alias } = await authFlow(); 
+          const loginPlayer = await fetch (`/users/me`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` },
+            credentials: "include"
+          });
+          if (!loginPlayer.ok) {
+            throw new Error("Failed to fetch logged-in user data");
+          }
+          const data = await loginPlayer.json();
+          for (const player of players) {
+            if (player.id === data.id) {
+              alert("You are already in this tournament.");
+              return;
+            } else if (player.alias === alias) {
+              alert("This alias is already taken in this tournament.");
+              return;
+            }
+          }
+
           const response = await fetch(`/tournaments/${tournamentId}/join`, {
             method: "PATCH",
             headers: { "Authorization": `Bearer ${token}` ,
@@ -328,7 +347,7 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
             credentials: "include",
             body: JSON.stringify({ alias })
           });
-          if (!aliasResponse.ok) throw new Error("could not set alias");
+          if (!aliasResponse.ok) throw new Error(aliasResponse.statusText || "could not set alias");
 
           await renderTournamentLobby(tournamentId);  
         } catch (err) {

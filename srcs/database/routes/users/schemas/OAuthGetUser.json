@@ -1,13 +1,6 @@
 {
   "type": "object",
   "$id": "schema:users:OAuthGetUser",
-  "required": [
-    "id",
-    "username",
-    "email",
-    "provider",
-    "provider_uid"
-  ],
   "properties": {
     "id": { "type": "number" },
     "username": { "type": "string" },

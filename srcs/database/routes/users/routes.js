@@ -173,13 +173,19 @@ module.exports = fp(
       onRequest: [fastify.authenticate, fastify.checkInternalKey], 
       handler: async function avatarHandler (request, reply) {
         try {
-          const { avatar, userId } = request.body;
+          const { avatar } = request.body;
           if (!avatar)
             return reply.badRequest('No avatar file provided');
           const uid = Number(request.user.id)
           if (!uid) 
             return reply.badRequest('Missing user ID');
-          await fastify.dbUsers.createAvatar(uid, await avatar.toBuffer());
+          const response = await fastify.dbUsers.createAvatar(uid, await avatar.toBuffer());
+          if (response.error) {
+            if (response.status === 415) {
+              return reply.code(response.status).send({ error: response.error })
+            }
+            return reply.code(400).send({ error: response.error })
+          }
           reply.send({ success: true });
         } catch (err) {
           reply.status(500).send({ error: 'Failed to update avatar' })
@@ -198,7 +204,13 @@ module.exports = fp(
         
 
         try {
-          await fastify.dbUsers.updateUserDetails(userId, field, value)
+          const response = await fastify.dbUsers.updateUserDetails(userId, field, value)
+          if (response.error) {
+            if (response.status === 409) {
+              return reply.code(response.status).send({ error: response.error })
+            }
+            return reply.code(400).send({ error: response.error })
+          }
           return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error updating user details: ${err.message}`)
@@ -536,6 +548,9 @@ module.exports = fp(
         const userId = request.params.userId
         try {
           const remoteUser = await fastify.dbUsers.getRemoteUser(userId)
+          if (remoteUser.error) {
+            return reply.code(404).send({ error: remoteUser.error })
+          }
           return reply.send(remoteUser)
         } catch (err) {
           fastify.log.error(`Error retrieving remote user for ID ${userId}: ${err.message}`)
@@ -543,6 +558,28 @@ module.exports = fp(
         }
       }
     })
+
+    fastify.delete('/users/:username', {
+      schema: {
+        params: fastify.getSchema('schema:users:getUserByUsername')
+      },
+      onRequest: [fastify.authenticate, fastify.checkInternalKey],
+      handler: async function deleteUserHandler (request, reply) {
+        try {
+          const userId = request.user.id
+          console.log('Deleting user with ID:', userId) //! DELETE
+          const response = await fastify.dbUsers.deleteUser(userId)
+          if (response.error) {
+            return reply.code(400).send({ error: response.error })
+          }
+          return reply.send({ success: true })
+        } catch (err) {
+          fastify.log.error(`Error deleting user ${username}: ${err.message}`)
+          reply.code(500).send({ error: 'Failed to delete user' })
+        }
+      }
+    }
+    )
 
   }, {
     name: 'user',

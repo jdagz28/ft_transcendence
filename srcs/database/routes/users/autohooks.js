@@ -45,6 +45,18 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       }
     },
 
+    async deleteUser(userId) {
+      try {
+        const query = fastify.db.prepare(`DELETE FROM users WHERE id = ?`)
+        const result = query.run(userId)
+        fastify.log.debug(`deleteUser: ${userId} -> ${result.changes} rows deleted`) //! DELETE
+        return { success: true }
+      } catch (err) {
+        fastify.log.error(`deleteUser error: ${err.message}`)
+        throw new Error('User deletion failed')
+      }
+    },
+
     async OAuthCreateUser(user) {
       try {
         const {
@@ -60,7 +72,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
         const oauthQuery = fastify.db.prepare(`INSERT INTO oauth (user_id, provider, provider_uid) VALUES (?, ?, ?)`)
         const result2 = oauthQuery.run(userId, provider, username)
-        return result2.lastInsertRowid
+        return userId
       } catch (err) {
         fastify.log.error(`OAuthCreateUser error: ${err.message}`)
         throw new Error('OAuth user creation failed')
@@ -166,15 +178,32 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const avatarBuffer = Buffer.isBuffer(avatar) ? avatar : Buffer.from(avatar)
         const type = await fileTypeFromBuffer(avatarBuffer)
         if (!type || !['image/jpeg', 'image/png', 'image/jpg'].includes(type.mime)) {
-          throw new Error(`Unsupported image format: ${type?.mime || 'unknown'}`)
+          return { error: 'Unsupported image type', status: 415 }
         }    
         const mimeType = type.mime
-        const query = fastify.db.prepare(`
-          INSERT INTO user_avatars (user_id, avatar, mime_type)
-          VALUES (?, ?, ?)
+        const ifExists = fastify.db.prepare(`
+          SELECT id FROM user_avatars WHERE user_id = ?
         `)
-        const result = query.run(userId, avatarBuffer, mimeType)
-        fastify.log.debug(`createAvatar: ${userId} -> ID ${result.lastInsertRowid}`)
+        const existingAvatar = ifExists.get(userId)
+        let result
+        if (existingAvatar) {
+          const query = fastify.db.prepare(`
+            UPDATE user_avatars
+            SET avatar = ?, mime_type = ?
+            WHERE user_id = ?
+          `)
+          result = query.run(avatarBuffer, mimeType, userId)
+        } else {
+          const query = fastify.db.prepare(`
+            INSERT INTO user_avatars (user_id, avatar, mime_type)
+            VALUES (?, ?, ?)
+          `)
+          result = query.run(userId, avatarBuffer, mimeType)
+        }
+        if (result.changes === 0) {
+          return { error: 'Avatar creation failed', status: 500 }
+        }
+
         return result.lastInsertRowid
       } catch (err) {
         fastify.log.error(`createAvatar error: ${err.message}`)
@@ -188,6 +217,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         throw new Error('Invalid field for update')
       }
 
+      const check = fastify.db.prepare(`SELECT * FROM users WHERE ${field} = ? `)
+      const existing = check.get(value)
+      if (existing && existing.id !== userId) {
+        return { success: false, error: `${field}: ${value} already exists`, status: 409 }
+      }
+
       const query = fastify.db.prepare(`
         UPDATE users
           SET ${field} = ?
@@ -196,10 +231,9 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
       const result = query.run(value, userId)
       if (result.changes === 0) {
-        fastify.log.error(`Failed to update user ${userId} field ${field}`)
-        throw new Error('User update failed')
+        return { success: false, error: `Failed to update ${field}`, status: 500 }
       }
-      return true
+      return { success: true }
     },
 
     async updatePassword(userId, hashedPassword, salt) {
@@ -784,7 +818,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         `)
         const row = query.get(userId)
         if (!row) {
-          return {}
+          return { error: 'User not found', status: 404 }
         }
         return {
           id: row.id,

@@ -138,6 +138,16 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       )
       console.log('Remote user retrieved successfully:', data) //! DELETE
       return data
+    },
+
+    async deleteUser(request) {
+      const username = request.user.username
+      const userId = request.user.id
+      const data = await dbApi.delete(`/users/${encodeURIComponent(username)}`,
+        { headers: internalHeaders(request) }
+      )
+      console.log('User deleted successfully:', data) //! DELETE
+      return data
     }
 
   })
