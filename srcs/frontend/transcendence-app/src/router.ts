@@ -18,7 +18,7 @@ import { whoAmI } from "./setUpLayout";
 import { renderAccountSettingsPage } from "./pages/accountSettings";
 import { renderProfilePage } from "./pages/profile";
 import { renderLeaderboardPage } from "./pages/leaderboard";
-import { renderFriendRequestsPage } from "./pages/friendRequests";
+// import { renderFriendRequestsPage } from "./pages/friendRequests";
 import { renderError403 } from "./pages/403";
 import { renderError400 } from "./pages/400";
 
@@ -43,7 +43,7 @@ export const ROUTE_GAME_PLAY              = "/games/:gameId/play";
 export const ROUTE_ACCOUNT_SETTINGS       = "/users/:username/settings";
 export const ROUTE_PROFILE                = "/users/:username";
 export const ROUTE_LEADERBOARD            = "/leaderboard";
-export const ROUTE_FRIEND_REQUESTS        = "/users/me/friend-requests";
+// export const ROUTE_FRIEND_REQUESTS        = "/users/me/friend-requests";
 export const ERROR_403                    = "/403";
 export const ERROR_400                    = "/400";
 
@@ -88,7 +88,7 @@ const routes: RouteEntry[] = [
 
   { pattern: ROUTE_LEADERBOARD, regex: tokenToRegex(ROUTE_LEADERBOARD), handler: () => renderLeaderboardPage() },
 
-  { pattern: ROUTE_FRIEND_REQUESTS, regex: tokenToRegex(ROUTE_FRIEND_REQUESTS), handler: () => renderFriendRequestsPage() },
+  // { pattern: ROUTE_FRIEND_REQUESTS, regex: tokenToRegex(ROUTE_FRIEND_REQUESTS), handler: () => renderFriendRequestsPage() },
 
   { pattern: ERROR_403, regex: tokenToRegex(ERROR_403), handler: () => renderError403() },
   { pattern: ERROR_400, regex: tokenToRegex(ERROR_400), handler: () => renderError400() },

@@ -68,15 +68,16 @@ export async function renderProfilePage(username: string): Promise<any> {
             alert(`Friend request sent to ${profile.username}`);
         };
         usernameRow.appendChild(addFriendButton);
-    } else if (profile.id === currentUser) {
-        const friendRequestsButton = document.createElement("button");
-        friendRequestsButton.className = "bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
-        friendRequestsButton.textContent = "Friend Requests";
-        friendRequestsButton.onclick = () => {
-            window.location.hash = `#/users/me/friend-requests`;
-        };
-        usernameRow.appendChild(friendRequestsButton);
     }
+    // } else if (profile.id === currentUser) {
+    //     const friendRequestsButton = document.createElement("button");
+    //     friendRequestsButton.className = "bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200";
+    //     friendRequestsButton.textContent = "Friend Requests";
+    //     friendRequestsButton.onclick = () => {
+    //         window.location.hash = `#/users/me/friend-requests`;
+    //     };
+    //     usernameRow.appendChild(friendRequestsButton);
+    // }
 
     const nicknameEl = document.createElement("p");
     nicknameEl.className = "text-2xl text-gray-300 mt-2 mb-1";
