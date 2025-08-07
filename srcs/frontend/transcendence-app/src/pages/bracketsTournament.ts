@@ -206,7 +206,7 @@ export async function renderTournamentBracket(tournamentId: number): Promise<voi
 
   const lastRound = slots.brackets[slots.brackets.length - 1];
   const finalMatch = lastRound?.slots[0];
-  const winner = finalMatch?.status === 'finished' && finalMatch.winnerId && slots.brackets.length === 1 && finalMatch.round === 2
+  const winner = finalMatch?.status === 'finished' && finalMatch.winnerId && lastRound.slots.length === 1
     ? getPlayerById(finalMatch.winnerId)
     : undefined;
 
