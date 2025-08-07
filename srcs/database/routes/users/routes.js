@@ -179,7 +179,13 @@ module.exports = fp(
           const uid = Number(request.user.id)
           if (!uid) 
             return reply.badRequest('Missing user ID');
-          await fastify.dbUsers.createAvatar(uid, await avatar.toBuffer());
+          const response = await fastify.dbUsers.createAvatar(uid, await avatar.toBuffer());
+          if (response.error) {
+            if (response.status === 415) {
+              return reply.code(response.status).send({ error: response.error })
+            }
+            return reply.code(400).send({ error: response.error })
+          }
           reply.send({ success: true });
         } catch (err) {
           reply.status(500).send({ error: 'Failed to update avatar' })

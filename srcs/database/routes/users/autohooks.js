@@ -178,7 +178,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         const avatarBuffer = Buffer.isBuffer(avatar) ? avatar : Buffer.from(avatar)
         const type = await fileTypeFromBuffer(avatarBuffer)
         if (!type || !['image/jpeg', 'image/png', 'image/jpg'].includes(type.mime)) {
-          throw new Error(`Unsupported image format: ${type?.mime || 'unknown'}`)
+          return { error: 'Unsupported image type', status: 415 }
         }    
         const mimeType = type.mime
         const query = fastify.db.prepare(`
