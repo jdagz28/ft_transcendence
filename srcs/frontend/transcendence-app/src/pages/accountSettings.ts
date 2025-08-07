@@ -5,7 +5,7 @@ import { getMfaDetails } from "../api/mfa";
 async function validatePassword(username: string): Promise<boolean> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
-    overlay.className = "absolute inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
+    overlay.className = "fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-10";
     
     const box = document.createElement('div');
     box.className = "w-full max-w-md rounded-xl shadow-xl/20 bg-[#0d2551] text-white backdrop-blur-sm bg-opacity-90 p-8 space-y-6";
@@ -384,6 +384,65 @@ export async function renderAccountSettingsPage(username: string): Promise<void>
 
     await refreshMfaUI();
   }
+
+  const response = await fetch (`users/${userId}/remote`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    credentials: "include"
+  });
+  let deleteLabel = "Delete Account";
+  let passwordValid = false;
+  let isRemote = false;
+
+  if (response.ok) {
+    isRemote = await response.json();
+    if (isRemote) {
+      deleteLabel = "Unlink Remote Account";
+      passwordValid = true;
+    }
+  }
+
+  const deleteAccountBtn = document.createElement("button");
+  deleteAccountBtn.textContent = deleteLabel;
+  deleteAccountBtn.className = "bg-red-600 hover:bg-red-700 text-white p-3 rounded mt-8 w-full max-w-md";
+
+  deleteAccountBtn.addEventListener("click", async () => {
+    if (!isRemote) {
+      passwordValid = await validatePassword(username);
+    }
+    if (passwordValid) {
+      const confirmation = confirm("Are you sure you want to delete your account? This action is irreversible.");
+      if (confirmation) {
+        try {
+          const res = await fetch(`/users/me/settings/delete`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            },
+            credentials: "include"
+          });
+          if (res.ok) {
+            alert("Your account has been deleted successfully.");
+            window.location.href = "#/login";
+          } else {
+            alert("An error occurred while deleting your account. Please try again.");
+          }
+        } catch (error) {
+          console.error("Error deleting account:", error);
+          alert("An error occurred while deleting your account. Please try again.");
+        }
+      }
+    }
+  });
+
+  const deleteBtnContainer = document.createElement("div");
+  deleteBtnContainer.className = "flex justify-center w-full mb-10"; 
+  deleteBtnContainer.appendChild(deleteAccountBtn);
+
+  contentContainer.appendChild(deleteBtnContainer);
 }
 
 function createIndividualForm(username: string, { label, value, inputType, inputName, endpoint }: {
