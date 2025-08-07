@@ -198,7 +198,13 @@ module.exports = fp(
         
 
         try {
-          await fastify.dbUsers.updateUserDetails(userId, field, value)
+          const response = await fastify.dbUsers.updateUserDetails(userId, field, value)
+          if (response.error) {
+            if (response.status === 409) {
+              return reply.code(response.status).send({ error: response.error })
+            }
+            return reply.code(400).send({ error: response.error })
+          }
           return reply.send({ success: true })
         } catch (err) {
           fastify.log.error(`Error updating user details: ${err.message}`)

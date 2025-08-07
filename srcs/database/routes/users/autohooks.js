@@ -200,6 +200,12 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
         throw new Error('Invalid field for update')
       }
 
+      const check = fastify.db.prepare(`SELECT * FROM users WHERE ${field} = ? `)
+      const existing = check.get(value)
+      if (existing && existing.id !== userId) {
+        return { success: false, error: `${field}: ${value} already exists`, status: 409 }
+      }
+
       const query = fastify.db.prepare(`
         UPDATE users
           SET ${field} = ?
@@ -208,10 +214,9 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
 
       const result = query.run(value, userId)
       if (result.changes === 0) {
-        fastify.log.error(`Failed to update user ${userId} field ${field}`)
-        throw new Error('User update failed')
+        return { success: false, error: `Failed to update ${field}`, status: 500 }
       }
-      return true
+      return { success: true }
     },
 
     async updatePassword(userId, hashedPassword, salt) {
