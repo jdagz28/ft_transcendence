@@ -24,7 +24,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       const gameInfo = await fastify.dbChat.getGameTournament(gameId);
       console.log(`[GAME_INFO] Game ${gameId} tournament data: ${JSON.stringify(gameInfo)}`);
       if (gameInfo.isPartOfTournament) {
-        fastify.dbChat.addMessageToTournamentChat(gameInfo.tournament.chat_room_id, notification.message, notification.playerId);
+        await fastify.dbChat.addMessageToTournamentChat(gameInfo.tournament.chat_room_id, notification.message, notification.playerId);
         console.log(`Message added to tournament chat for game ${gameId}: ${notification.message}`);
       }
     },
@@ -913,15 +913,11 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
     },
 
     async getGameTournament(gameId) {
-      console.log(`getGameTournament called with gameId: ${gameId}, type: ${typeof gameId}`);
-      
       if (!gameId) {
-        console.log('gameId is falsy');
         throw new HttpError('Invalid game ID provided', 400);
       }
 
       const numericGameId = typeof gameId === 'string' ? parseInt(gameId) : gameId;
-      console.log(`numericGameId: ${numericGameId}, type: ${typeof numericGameId}`);
       
       if (isNaN(numericGameId)) {
         console.log('gameId is not a valid number');
@@ -945,12 +941,9 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         LIMIT 1
       `);
       
-      console.log(`Executing tournament query with gameId: ${numericGameId}`);
       const tournament = tournamentQuery.get(numericGameId);
-      console.log(`Tournament query result:`, tournament);
       
       if (tournament) {
-        console.log('Tournament found, returning tournament info');
         return {
           isPartOfTournament: true,
           tournament: {
@@ -967,7 +960,6 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         };
       }
 
-      console.log('No tournament found for this game');
       return {
         isPartOfTournament: false,
         game_id: numericGameId

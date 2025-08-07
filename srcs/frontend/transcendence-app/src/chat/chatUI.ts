@@ -764,27 +764,29 @@ const borderColor = 'border-blue-300';
     }
   }
 
-  displayGameTurn(): void {
-    refreshSidebarChat();
+  async displayGameTurn(): Promise<void> {
+    await refreshSidebarChat();
   }
 
-  displayGameChat(): void {
-    import('../chat').then(({ refreshChatLists }) => {
+  async displayGameChat(): Promise<void> {
+    try {
+      const { refreshChatLists } = await import('../chat');
       refreshChatLists();
       chatWebSocket.joinAllAvailableRooms();
-    }).catch(err => {
+    } catch (err) {
       console.error('Error refreshing chat lists:', err);
-    });
+    }
   }
 
-  refreshChats(): void {
-    refreshSidebarChat();
-    import('../chat').then(({ refreshChatLists }) => {
+  async refreshChats(): Promise<void> {
+    await refreshSidebarChat();
+    try {
+      const { refreshChatLists } = await import('../chat');
       refreshChatLists();
       chatWebSocket.joinAllAvailableRooms();
-    }).catch(err => {
+    } catch (err) {
       console.error('Error refreshing chat lists:', err);
-    });
+    }
   }
   
 }

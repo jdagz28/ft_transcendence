@@ -73,7 +73,32 @@ function renderPermanentMiniButton(): void {
   if (miniButton) {
     miniButton.addEventListener('click', async () => {
       if (chatState.currentChatId && chatState.currentChatName && chatState.currentChatType) {
-        openSidebarChat(chatState.currentChatId, chatState.currentChatName, chatState.currentChatType, chatState.currentUserId);
+        const token = chatState.getAuthToken();
+        if (!token) {
+          await openDefaultMainGroup();
+          return;
+        }
+        
+        try {
+          const checkUrl = chatState.currentChatType === 'group' 
+            ? `/chat/group/${chatState.currentChatId}/history`
+            : `/chat/dm/${chatState.currentChatId}/history`;
+          
+          const response = await fetch(checkUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (!response.ok) {
+            console.log('Current chat no longer exists, opening default main group');
+            await openDefaultMainGroup();
+            return;
+          }
+          
+          await openSidebarChat(chatState.currentChatId, chatState.currentChatName, chatState.currentChatType, chatState.currentUserId);
+        } catch (error) {
+          console.error('Error checking chat existence:', error);
+          await openDefaultMainGroup();
+        }
       } else {
         await openDefaultMainGroup();
       }
@@ -155,13 +180,12 @@ export async function refreshSidebarChat(): Promise<void> {
   if (!chatState.currentChatId || !chatState.currentChatType) {
     return;
   }
-
   try {
     const token = chatState.getAuthToken();
     const checkUrl = chatState.currentChatType === 'group' 
       ? `/chat/group/${chatState.currentChatId}/history`
       : `/chat/dm/${chatState.currentChatId}/history`;
-    
+
     const response = await fetch(checkUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -170,7 +194,7 @@ export async function refreshSidebarChat(): Promise<void> {
       await openDefaultMainGroup();
       return;
     }
-    
+    console.log('response ok')
     await openSidebarChat(
       chatState.currentChatId,
       chatState.currentChatName,

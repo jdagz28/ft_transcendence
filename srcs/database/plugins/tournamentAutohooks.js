@@ -963,7 +963,7 @@ module.exports = fp(async function tournamnentAutoHooks(fastify, opts) {
           WHERE id = ?
         `).run(winners[0].winner_id, tournamentId)
 
-          fastify.dbChat.deleteChatRoom(tournamentId)
+        await fastify.dbChat.deleteChatRoom(tournamentId)
 
         const tournamentName = fastify.db.prepare(`
           SELECT name FROM tournaments WHERE id = ?
