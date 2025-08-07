@@ -173,7 +173,7 @@ module.exports = fp(
       onRequest: [fastify.authenticate, fastify.checkInternalKey], 
       handler: async function avatarHandler (request, reply) {
         try {
-          const { avatar, userId } = request.body;
+          const { avatar } = request.body;
           if (!avatar)
             return reply.badRequest('No avatar file provided');
           const uid = Number(request.user.id)
