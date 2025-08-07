@@ -306,7 +306,7 @@ export async function renderProfilePage(username: string): Promise<any> {
                 removeFriendButton.textContent = "Remove";
                 removeFriendButton.onclick = async () => {
                     const token = localStorage.getItem("token");
-                    await fetch(`/users/friends`, {
+                    await fetch(`/users/me/friends`, {
                         method: "DELETE",
                         headers: {
                             "Authorization": `Bearer ${token}`,

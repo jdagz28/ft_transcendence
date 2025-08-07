@@ -77,8 +77,7 @@ module.exports = fp(async function userAutoHooks (fastify, opts) {
       const username = request.user.username
       const friend = request.body.friend
       const { data } = await dbApi.delete(`/users/${username}/friends`, 
-        { friend }, 
-        { headers: internalHeaders(request) }
+        { headers: internalHeaders(request), data: { friend } }
       )
       console.log('Friend removed successfully:', data) //! DELETE
       return data
