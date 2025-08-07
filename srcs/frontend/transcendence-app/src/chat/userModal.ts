@@ -25,8 +25,6 @@ export class UserModalHandler {
     const windowHeight = window.innerHeight;
 
     const gameId = localStorage.getItem('gameId');
-    console.log(`Game ID from localStorage: ${gameId}`);
-    console.log(`Current chat type: ${chatState.currentChatType}`);
     const shouldShowGameInvite = gameId && chatState.currentChatType === 'dm';
 
     const dropdown = document.createElement('div');
@@ -122,7 +120,6 @@ export class UserModalHandler {
   }
 
   private async inviteUserToGame(username: string): Promise<void> {
-    console.log(`Inviting ${username} to game...`);
     const game = localStorage.getItem('gameId');
     const token = chatState.getAuthToken();
     

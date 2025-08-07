@@ -79,7 +79,7 @@ function setErrorButtons(contentWrapper:HTMLDivElement) {
 	contentWrapper.appendChild(div);
 }
 
-function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:number, sender:string, token: string, user_id:number, notif_id:number) {
+function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender:string, token: string, user_id:number, notif_id:number) {
 	const btnDiv = document.createElement("div");
 	btnDiv.className = "mt-1 flex gap-2";
 	const acceptBtn = document.createElement("button");
@@ -90,10 +90,10 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 	denyBtn.className = "rounded bg-red-500 px-1 py-0.5 text-[8px] font-semibold text-white hover:bg-red-600";
 	denyBtn.textContent = "Deny";
 	btnDiv.appendChild(denyBtn);
-	const blockBtn = document.createElement("button");
-	blockBtn.className = "rounded bg-red-800 px-1 py-0.5 text-[8px] font-semibold text-white hover:bg-red-950";
-	blockBtn.textContent = "Block";
-	btnDiv.appendChild(blockBtn);
+	// const blockBtn = document.createElement("button");
+	// blockBtn.className = "rounded bg-red-800 px-1 py-0.5 text-[8px] font-semibold text-white hover:bg-red-950";
+	// blockBtn.textContent = "Block";
+	// btnDiv.appendChild(blockBtn);
 	contentWrapper.appendChild(btnDiv);
 	acceptBtn.onclick = async () => {
 		const response = await fetch(`/users/me/friends`, {
@@ -155,33 +155,33 @@ function generateFriendRequestButtons(contentWrapper:HTMLDivElement, sender_id:n
 			setErrorButtons(contentWrapper);
 		}
 	}
-	blockBtn.onclick = async () => {
-		const response = await fetch(`/chat/block-user`, {
-			method: 'PUT',
-			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			},
-			credentials: 'include',
-			body: JSON.stringify({ blockedUserId: sender_id })
-		});
-		fetch(`/notifications/${user_id}/${notif_id}`, {
-    		method: 'PATCH',
-   			headers: {
-      			'Authorization': `Bearer ${token}`,
-      			'Content-Type': 'application/json'
-    		},
-    		credentials: 'include',
-    		body: JSON.stringify({status: "read"})
-		})
-		if (response.ok) {
-			btnDiv.remove();
-			setAnsweredButtons(contentWrapper);
-		} else {
-			btnDiv.remove();
-			setErrorButtons(contentWrapper);
-		}
-	}
+	// blockBtn.onclick = async () => {
+	// 	const response = await fetch(`/chat/block-user`, {
+	// 		method: 'PUT',
+	// 		headers: {
+	// 			'Authorization': `Bearer ${token}`,
+	// 			'Content-Type': 'application/json'
+	// 		},
+	// 		credentials: 'include',
+	// 		body: JSON.stringify({ blockedUserId: sender_id })
+	// 	});
+	// 	fetch(`/notifications/${user_id}/${notif_id}`, {
+    // 		method: 'PATCH',
+   	// 		headers: {
+    //   			'Authorization': `Bearer ${token}`,
+    //   			'Content-Type': 'application/json'
+    // 		},
+    // 		credentials: 'include',
+    // 		body: JSON.stringify({status: "read"})
+	// 	})
+	// 	if (response.ok) {
+	// 		btnDiv.remove();
+	// 		setAnsweredButtons(contentWrapper);
+	// 	} else {
+	// 		btnDiv.remove();
+	// 		setErrorButtons(contentWrapper);
+	// 	}
+	// }
 }
 
 function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number | null, sender_id: number, token: string, user_id: number, notif_id:number) {
@@ -225,7 +225,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		})
 		if (response.ok) {
 			btnDiv.remove();
-			chatUI.gameInviteFromNotif(String(gameId), "accept", String(sender_id), String(user_id), String(notif_id));
+			chatUI.gameInviteFromNotif("accept", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
 			const overlay = document.createElement('div');
@@ -283,7 +283,7 @@ function generateGameInviteButtons(contentWrapper:HTMLDivElement, gameId:number 
 		})
 		if (response.ok) {
 			btnDiv.remove();
-			chatUI.gameInviteFromNotif(String(gameId), "decline", String(sender_id), String(user_id), String(notif_id));
+			chatUI.gameInviteFromNotif("decline", String(sender_id), String(user_id), String(notif_id));
 			setAnsweredButtons(contentWrapper);
 				refreshSidebarChat();
 		} else {
@@ -640,7 +640,7 @@ function generateNotifDiv(notif: wsNotif, user_id:number, token:string): HTMLDiv
 	}
 
 	if (notif.type === "friend.request") {
-		generateFriendRequestButtons(contentWrapper, Number(notif.requesterId), notif.message.replace(/ .*/,''), token, user_id, notif.id);
+		generateFriendRequestButtons(contentWrapper, notif.message.replace(/ .*/,''), token, user_id, notif.id);
 	} else if (notif.type === "game.invite") {
 		generateGameInviteButtons(contentWrapper, Number(notif.gameId), Number(notif.senderId), token, user_id, notif.id);
 	} else if (notif.type === "tournament.invite") {
@@ -743,7 +743,7 @@ function generateAPINotifDiv(notif: APINotif, token: string, id:number): HTMLDiv
 	contentWrapper.appendChild(timeStamp);
 
 	if (notif.type === "friend.request" && notif.is_read === 0) {
-		generateFriendRequestButtons(contentWrapper, notif.sender_id, notif.content.replace(/ .*/,''), token, id, notif.id);
+		generateFriendRequestButtons(contentWrapper, notif.content.replace(/ .*/,''), token, id, notif.id);
 	} else if (notif.type === "game.invite" && notif.is_read === 0) {
 		generateGameInviteButtons(contentWrapper, notif.type_id, notif.sender_id, token, id, notif.id);
 	} else if (notif.type === "tournament.invite" && notif.is_read === 0) {

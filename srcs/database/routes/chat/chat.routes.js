@@ -23,7 +23,6 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
     const userId = Number(request.params.userId)
     try {
       const response = await fastify.dbChat.canJoinGroup(userId, roomId)
-      console.log(response)
       reply.send(response)
     } catch (err) {
       console.error(`error checking if user can join group: ${err.message}`)
@@ -87,6 +86,18 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
     }
   }),
 
+  fastify.post('/chat/createGroupGame', async (request, reply) => {
+    const { userId, name, p1, p2, p3, p4, tournamentId } = request.body
+
+    try {
+      const response = await fastify.dbChat.createGroupGame(userId, name, p1, p2, p3, p4, tournamentId)
+      return reply.send(response)
+    } catch (err) {
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
+    }
+  })
+
   fastify.post('/chat/join/group', async (request, reply) => {
     const { userId, groupId } = request.body
 
@@ -140,6 +151,17 @@ module.exports = fp(async function chatRoutes(fastify, opts) {
 
     try {
       const response = await fastify.dbChat.getUserChats(userId)
+      return reply.send(response)
+    } catch (err) {
+      const statusCode = err.statusCode || 500;
+      return reply.status(statusCode).send({error: `${err.message}`})
+    }
+  }),
+
+  fastify.get('/chat/getGroupGames/:userId', async (request, reply) => {
+    const userId = Number(request.params.userId)
+    try {
+      const response = await fastify.dbChat.getTournamentGroups(userId)
       return reply.send(response)
     } catch (err) {
       const statusCode = err.statusCode || 500;

@@ -73,6 +73,21 @@ export class ChatMessagesHandler {
     setTimeout(() => this.setupUsernameClickHandlers(), 0);
   }
 
+  private addGameNotificationToUI(content: string): void {
+    const messagesDiv = document.getElementById('sidebar-chat-messages');
+    if (!messagesDiv) return;
+
+    messagesDiv.innerHTML += `
+      <div class="mb-2 flex justify-center">
+        <div class="bg-gray-600 text-white rounded-lg px-2 py-1 text-xs font-medium shadow-md border border-gray-500">
+          🎮 ${content}
+        </div>
+      </div>
+    `;
+    
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
   private setupUsernameClickHandlers(): void {
     const usernameElements = document.querySelectorAll('b[data-username]');
     
@@ -134,6 +149,12 @@ export class ChatMessagesHandler {
 
   async loadChatHistory(chatId: number, type: string): Promise<void> {
     const token = chatState.getAuthToken();
+    
+    if (!chatState.currentUserId) {
+      const userId = await chatState.getCurrentUserIdFromAPI();
+      chatState.setCurrentChat(chatState.currentChatId, chatState.currentChatName, chatState.currentChatType, userId);
+    }
+    
     const historyUrl = type === 'group' 
       ? `/chat/group/${chatId}/history`
       : `/chat/dm/${chatId}/history`;
@@ -148,6 +169,15 @@ export class ChatMessagesHandler {
       if (Array.isArray(history)) {
         for (const msg of history) {
           const isMe = msg.username === chatState.currentUser;
+          
+          if (msg.sender_id === 1 && msg.username === 'AiOpponent') {
+            if (msg.for !== undefined) {
+              if (msg.for === chatState.currentUserId) {
+                this.addGameNotificationToUI(msg.content);
+              }
+              continue;
+            }
+          }
 
           try {
             const parsedContent = JSON.parse(msg.content);
@@ -187,7 +217,6 @@ export class ChatMessagesHandler {
     if (!input || input.disabled || !input.value.trim() || !chatState.currentWs || !chatState.currentChatId) return;
 
     const message = input.value.trim();
-    console.log(`scope = ${chatState.currentChatType}, room = ${chatState.currentChatId}, message = ${message}`);
     
     chatState.currentWs.send(JSON.stringify({
       action: 'send',

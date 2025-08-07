@@ -409,6 +409,8 @@ export async function renderTournamentLobby(tournamentId: number): Promise<void>
         if (!response.ok) {
           throw new Error("Failed to start tournament");
         }
+        console.log(`response`, await response.json());
+
         window.location.hash = `#/tournaments/${tournamentId}/bracket`;
       } catch (err) {
         console.error(err);

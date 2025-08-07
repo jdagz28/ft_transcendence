@@ -6,6 +6,7 @@ import { ROUTE_MAIN } from '../router';
 import { chatWebSocket } from './chatWebSocket';
 import { whoAmI } from '../setUpLayout';
 import { isGamePending } from '../api/game';
+import { refreshSidebarChat } from '../sidebarChat';
 
 // ============================================================================ //
 // CHAT UI MANAGER                                                              //
@@ -177,7 +178,6 @@ export class ChatUIManager {
     if (!chatSwitcher) return;
 
     chatSwitcher.addEventListener('click', async () => {
-      console.log('Chat switcher button clicked from chatUI!');
       const { chatSwitcher: chatSwitcherModule } = await import('./chatSwitcher');
       await chatSwitcherModule.toggleChatSwitcher();
     });
@@ -454,7 +454,6 @@ export class ChatUIManager {
 
   async displayGameInvite(senderId: string, gameId: string, userId: string, notifId: string, isMe: boolean = false, senderUsername?: string): Promise<void> {
     try {
-      console.log('Displaying game invite in chat UI from', senderId, 'for game', gameId);
 
       const isPending = await isGamePending(Number(gameId));
       if (!isPending) {
@@ -478,8 +477,8 @@ export class ChatUIManager {
 
       const inviteId = `game-invite-${gameId}-${Date.now()}`;
       const alignClass = isMe ? 'justify-end' : 'justify-start';
-      const bgColor = isMe ? 'bg-blue-100 text-[#1a2740]' : 'bg-yellow-100 text-[#1a2740]';
-      const borderColor = isMe ? 'border-blue-300' : 'border-yellow-300';
+      const bgColor = 'bg-blue-100 text-[#1a2740]';
+const borderColor = 'border-blue-300';
       const inviteText = isMe ? 'You sent a game invite' : 'You received a game invite';
       
       const displayName = isMe ? 'Me' : (senderUsername || 'Unknown');
@@ -610,12 +609,11 @@ export class ChatUIManager {
     }
   }
 
-  public async gameInviteFromNotif(gameId: string, response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
+  public async gameInviteFromNotif(response: 'accept' | 'decline', inviteId: string, userId: string, notifId: string): Promise<void> {
     try {
       void(notifId);
       const notifContainer = document.getElementById('notifContainer');
       if (notifContainer) {
-        console.log('Clearing notification container');
         notifContainer.innerHTML = '';
         populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
       }
@@ -632,7 +630,6 @@ export class ChatUIManager {
         }
       }
 
-      console.log(`Game invite ${response}ed for game ${gameId}`);
       
       if (response === 'accept') {
         // setTimeout(() => {
@@ -701,7 +698,6 @@ export class ChatUIManager {
 
       const notifContainer = document.getElementById('notifContainer');
       if (notifContainer) {
-        console.log('Clearing notification container');
         notifContainer.innerHTML = '';
         populateNotifContainer(notifContainer as HTMLElement, parseInt(userId));
       }
@@ -723,8 +719,6 @@ export class ChatUIManager {
           container.innerHTML = `<p class="${textColor} font-medium">${responseText}</p>`;
         }
       }
-
-      console.log(`Game invite ${response}ed for game ${gameId}`);
       
       if (response === 'accept') {
         // setTimeout(() => {
@@ -762,13 +756,39 @@ export class ChatUIManager {
 
     } catch (error) {
       if (error instanceof Error) {
-        alert(`Error: ${error.message}`)
+        alert(`Failed to ${response} game invitation`);
       } 
       window.location.reload();
       // console.error('Error responding to game invite:', error);
       // alert(`Failed to ${response} game invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  async displayGameTurn(): Promise<void> {
+    await refreshSidebarChat();
+  }
+
+  async displayGameChat(): Promise<void> {
+    try {
+      const { refreshChatLists } = await import('../chat');
+      refreshChatLists();
+      chatWebSocket.joinAllAvailableRooms();
+    } catch (err) {
+      console.error('Error refreshing chat lists:', err);
+    }
+  }
+
+  async refreshChats(): Promise<void> {
+    await refreshSidebarChat();
+    try {
+      const { refreshChatLists } = await import('../chat');
+      refreshChatLists();
+      chatWebSocket.joinAllAvailableRooms();
+    } catch (err) {
+      console.error('Error refreshing chat lists:', err);
+    }
+  }
+  
 }
 
 export const chatUI = new ChatUIManager();

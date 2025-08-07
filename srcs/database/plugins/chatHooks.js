@@ -13,6 +13,99 @@ class HttpError extends Error {
 module.exports = fp(async function chatAutoHooks (fastify, opts) {
   fastify.decorate('dbChat', {
     
+    async notifyGameTurn(notification, gameId) {
+      try {
+        const axios = require('axios');
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/game-turn`, notification)
+      } catch (error) {
+        console.error('Error sending notification to chat', error.message);
+      }
+
+      const gameInfo = await fastify.dbChat.getGameTournament(gameId);
+      console.log(`[GAME_INFO] Game ${gameId} tournament data: ${JSON.stringify(gameInfo)}`);
+      if (gameInfo.isPartOfTournament) {
+        await fastify.dbChat.addMessageToTournamentChat(gameInfo.tournament.chat_room_id, notification.message, notification.playerId);
+        console.log(`Message added to tournament chat for game ${gameId}: ${notification.message}`);
+      }
+    },
+
+    async addMessageToTournamentChat(chatId, message, userId) {
+      try {
+        const chatQuery = fastify.db.prepare(`
+          SELECT id, type, is_game FROM conversations
+          WHERE id = ? AND type = 'group' AND is_game = 1
+          LIMIT 1
+        `);
+        const chat = chatQuery.get(chatId);
+        
+        if (!chat) {
+          return { success: false, reason: 'Tournament chat not found' };
+        }
+
+        const senderId = fastify.aiUserId;
+        
+        const insertQuery = fastify.db.prepare(`
+          INSERT INTO messages (sender_id, conversation_id, content, for)
+          VALUES (?, ?, ?, ?)
+        `);
+        const result = insertQuery.run(senderId, chatId, message, userId);
+        
+        return { 
+          success: true, 
+          messageId: result.lastInsertRowid,
+          chatId: chatId,
+          message: message
+        };
+      } catch (error) {
+        fastify.log.error(`Error adding message to tournament chat: ${error.message}`);
+        return { success: false, reason: 'Failed to add message to tournament chat' };
+      }
+    },
+
+    async deleteChatRoom(tournamentId) {
+      try {
+        const tournament = await fastify.dbTournaments.getTournamentById(tournamentId);
+        const roomId = tournament.chat_room_id;
+
+        const tournamentPlayers = await fastify.dbTournaments.getTournamentPlayers(tournamentId)
+        const p1Id = tournamentPlayers[0]?.id || null;
+        const p2Id = tournamentPlayers[1]?.id || null;
+        const p3Id = tournamentPlayers[2]?.id || null;
+        const p4Id = tournamentPlayers[3]?.id || null;
+        console.log(`[DELETE_CHAT_ROOM] Deleting chat room for tournament ${tournamentId}, room ID: ${roomId}, players: ${p1Id}, ${p2Id}, ${p3Id}, ${p4Id}`);
+        if (!roomId) {
+          return { success: false, reason: 'No chat room found for this tournament' };
+        }
+
+        const deleteConversationQuery = fastify.db.prepare(`
+          DELETE FROM conversations WHERE id = ?
+        `);
+        const result = deleteConversationQuery.run(roomId);
+        console.log(`[DELETE_CHAT_ROOM] Result of delete operation: ${JSON.stringify(result)}`);
+        if (result.changes === 0) {
+          return { success: false, reason: 'Failed to delete chat room' };
+        }
+        console.log(`[DELETE_CHAT_ROOM] Chat room ${roomId} deleted successfully`);
+        const axios = require('axios');
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/groupDeleted`, {
+          type: 'groupDeleted',
+          u1: p1Id,
+          u2: p2Id,
+          u3: p3Id,
+          u4: p4Id,
+        });
+        console.log(`[DELETE_CHAT_ROOM] Chat room ${roomId} deleted and notification sent successfully`);
+        return { 
+          success: true, 
+          deletedRoomId: roomId,
+          message: 'Tournament chat room deleted successfully' 
+        };
+      } catch (error) {
+        fastify.log.error(`Error deleting chat room: ${error.message}`);
+        return { success: false, reason: 'Failed to delete chat room' };
+      }
+    },
+
     async userExist(userId) {
       const userQuery = fastify.db.prepare(`
         SELECT id FROM users WHERE id = ? LIMIT 1
@@ -549,29 +642,54 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       return { refused: true, groupId };
     },
 
+    async getTournamentGroups(userId) {
+      if (!(await this.userExist(userId))) {
+        throw new HttpError(`User ${userId} does not exist`, 404);
+      }
+
+      const tournamentGroupsQuery = fastify.db.prepare(`
+        SELECT c.id, c.name, c.group_type, c.created, c.updated
+        FROM conversations c
+        JOIN convo_members m ON c.id = m.conversation_id
+        WHERE m.user_id = ?
+          AND c.type = 'group'
+          AND c.is_game = 1
+          AND m.banned_at IS NULL
+          AND m.kicked_at IS NULL
+        ORDER BY c.created DESC
+      `);
+      
+      const tournamentGroups = tournamentGroupsQuery.all(userId);
+      
+      return {
+        success: true,
+        user_id: userId,
+        tournament_groups_count: tournamentGroups.length,
+        tournament_groups: tournamentGroups
+      };
+    },
+
     async getUserChats(userId) {
       if (!(await this.userExist(userId))) {
         throw new HttpError(`User ${userId} does not exist`, 404)
       }
 
       const memberGroupsQuery = fastify.db.prepare(`
-        SELECT c.id, c.name, c.group_type
+        SELECT c.id, c.name, c.group_type, c.is_game
         FROM conversations c
         JOIN convo_members m ON c.id = m.conversation_id
         WHERE m.user_id = ?
           AND c.type = 'group'
-          AND c.is_game = 0
           AND m.banned_at IS NULL
           AND m.kicked_at IS NULL
       `);
       const memberGroups = memberGroupsQuery.all(userId);
 
       const publicGroupsQuery = fastify.db.prepare(`
-        SELECT c.id, c.name, c.group_type
+        SELECT c.id, c.name, c.group_type, c.is_game
         FROM conversations c
         WHERE c.type = 'group'
           AND c.group_type = 'public'
-          AND c.is_game = 0
           AND c.id NOT IN (
             SELECT conversation_id FROM convo_members WHERE user_id = ?
           )
@@ -610,7 +728,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
 
       const messagesQuery = fastify.db.prepare(`
-        SELECT m.id, m.sender_id, u.username, m.content, m.created
+        SELECT m.id, m.sender_id, u.username, m.content, m.created, m.for
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = ?
@@ -644,7 +762,7 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
       }
  
       const messagesQuery = fastify.db.prepare(`
-        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created
+        SELECT m.id, m.sender_id, u.username, u.id as user_id, u.email, m.content, m.created, m.for
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = ?
@@ -792,6 +910,126 @@ module.exports = fp(async function chatAutoHooks (fastify, opts) {
         blocker_id: userId,
         target_id: targetUserId
       };
+    },
+
+    async getGameTournament(gameId) {
+      if (!gameId) {
+        throw new HttpError('Invalid game ID provided', 400);
+      }
+
+      const numericGameId = typeof gameId === 'string' ? parseInt(gameId) : gameId;
+      
+      if (isNaN(numericGameId)) {
+        console.log('gameId is not a valid number');
+        throw new HttpError('Invalid game ID provided', 400);
+      }
+
+      const tournamentQuery = fastify.db.prepare(`
+        SELECT 
+          t.id as tournament_id,
+          t.name as tournament_name,
+          t.status as tournament_status,
+          t.created_by,
+          t.chat_room_id,
+          t.created as tournament_created,
+          tg.round,
+          tg.slot,
+          tg.status as game_status
+        FROM tournaments t
+        JOIN tournament_games tg ON t.id = tg.tournament_id
+        WHERE tg.game_id = ?
+        LIMIT 1
+      `);
+      
+      const tournament = tournamentQuery.get(numericGameId);
+      
+      if (tournament) {
+        return {
+          isPartOfTournament: true,
+          tournament: {
+            id: tournament.tournament_id,
+            name: tournament.tournament_name,
+            status: tournament.tournament_status,
+            created_by: tournament.created_by,
+            chat_room_id: tournament.chat_room_id,
+            created: tournament.tournament_created,
+            game_round: tournament.round,
+            game_slot: tournament.slot,
+            game_status: tournament.game_status
+          }
+        };
+      }
+
+      return {
+        isPartOfTournament: false,
+        game_id: numericGameId
+      };
+    },
+
+    async createGroupGame(userId, name, p1, p2, p3, p4, tournamentId) {
+      try {
+        const createGroupQuery = fastify.db.prepare(`
+          INSERT INTO conversations (is_group, name, type, group_type, is_game, message_id)
+          VALUES (1, ?, 'group', 'private', 1, NULL)
+        `);
+        const result = createGroupQuery.run(name);
+        const conversationId = result.lastInsertRowid;
+
+        const addMemberQuery = fastify.db.prepare(`
+          INSERT INTO convo_members (conversation_id, user_id, role)
+          VALUES (?, ?, ?)
+        `);
+
+        addMemberQuery.run(conversationId, userId, 'admin');
+
+        const players = [p2, p3, p4].filter(playerId => 
+          playerId && 
+          playerId !== userId && 
+          typeof playerId === 'number'
+        );
+
+        for (const playerId of players) {
+          if (await this.userExist(playerId)) {
+            const existingMember = fastify.db.prepare(`
+              SELECT 1 FROM convo_members 
+              WHERE conversation_id = ? AND user_id = ?
+            `).get(conversationId, playerId);
+            
+            if (!existingMember) {
+              addMemberQuery.run(conversationId, playerId, 'member');
+            }
+          }
+        }
+
+        const axios = require('axios');
+        await axios.post(`http://chat:${process.env.CHAT_PORT}/internal/chatGameCreated`, {
+          p1: p1,
+          p2: p2,
+          p3: p3,
+          p4: p4,
+          type: 'chatGameCreated',
+          roomId: conversationId
+        });
+
+        if (tournamentId) {
+          const updateTournamentQuery = fastify.db.prepare(`
+            UPDATE tournaments 
+            SET chat_room_id = ? 
+            WHERE id = ?
+          `);
+          updateTournamentQuery.run(conversationId, tournamentId);
+        }
+        
+        return { 
+          success: true, 
+          conversationId, 
+          name,
+          players: players.length + 1
+        };
+      } catch (error) {
+        fastify.log.error(`Error creating game group: ${error.message}`);
+        throw new HttpError('Failed to create game group', 500);
+      }
     }
 
   })

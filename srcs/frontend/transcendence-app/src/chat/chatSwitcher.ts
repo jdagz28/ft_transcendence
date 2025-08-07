@@ -128,7 +128,6 @@ export class ChatSwitcherManager {
 
   async switchToChat(chatId: number, chatName: string, type: ChatType): Promise<void> {
     if (chatState.currentChatId === chatId && chatState.currentChatType === type) {
-      console.log('Already viewing this chat, skipping switch');
       this.hideChatSwitcher();
       return;
     }
@@ -157,7 +156,6 @@ export class ChatSwitcherManager {
       
       chatUI.enableChatForm();
       
-      console.log(`Switched to viewing group: ${chatName} (already connected via WebSocket)`);
       this.hideChatSwitcher();
     }
   }
@@ -192,7 +190,6 @@ export class ChatSwitcherManager {
         const canJoinData = await canJoinResponse.json();
       
         if (chatState.currentChatType === 'dm' && chatState.currentChatId === canJoinData.Room) {
-          console.log('Already viewing this DM, skipping switch');
           this.hideChatSwitcher();
           return;
         }
@@ -210,7 +207,6 @@ export class ChatSwitcherManager {
         chatUI.enableChatForm();
         chatUI.lobbyShowGameInvitePrompt(chatUI.maxPlayers);
 
-        console.log(`Switched to viewing DM with: ${username} (already connected via WebSocket)`);
         this.hideChatSwitcher();
       }
     } catch (error) {
